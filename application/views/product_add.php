@@ -1,0 +1,188 @@
+<div class="row mb-4">
+    <div class="col-12">
+        <h3 class="fw-bold" style="color: var(--dark-sidebar);">Add New Product</h3>
+        <p class="text-muted">Create a brand new product item.</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <!-- Display form validation errors locally if any -->
+        <?php if (validation_errors()): ?>
+            <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm mb-4" role="alert" style="border-left: 4px solid #dc3545 !important;">
+                <i class="fa-solid fa-circle-exclamation me-2 text-danger"></i>
+                <?php echo validation_errors(' ', ' '); ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        <?php endif; ?>
+
+        <div class="card border-0 shadow-sm" style="border-radius: 12px; overflow: hidden;">
+            <div class="p-4 text-white" style="background: linear-gradient(135deg, var(--dark-sidebar) 0%, #1f2937 100%); border-bottom: 3px solid var(--primary-gold);">
+                <span class="badge mb-2 text-uppercase" style="background-color: var(--primary-pink); font-size: 0.75rem; font-weight: 600; padding: 5px 10px;">
+                    Product Properties
+                </span>
+                <h5 class="fw-bold mb-0">Add New Product</h5>
+            </div>
+            
+            <div class="card-body p-4">
+                <form action="<?php echo base_url('admin/products/add'); ?>" method="POST" enctype="multipart/form-data">
+                    <div class="row">
+                        <!-- Image Upload Block (Left Side inside form) -->
+                        <div class="col-md-4 text-center mb-4 mb-md-0 border-end pe-md-4">
+                            <label class="form-label fw-semibold d-block text-start text-dark mb-3">Product Image Preview</label>
+                            
+                            <!-- Static Preview Card Wrapper (No camera icon overlay) -->
+                            <div class="mb-3 d-inline-block position-relative shadow-sm rounded border" style="width: 150px; height: 150px; overflow: hidden; border: 2px solid var(--primary-gold) !important; background-color: #f9fafb;">
+                                <img id="productImagePreview" src="https://placehold.co/150x150/1f2937/d4af37?text=No+Image" 
+                                     alt="Product Preview" 
+                                     class="img-fluid w-100 h-100" 
+                                     style="object-fit: cover;">
+                            </div>
+                            
+                            <!-- Standard file input field -->
+                            <div class="text-start px-2">
+                                <label for="productImageInput" class="form-label small fw-semibold text-dark mb-1">Select Image File</label>
+                                <input type="file" name="image" id="productImageInput" class="form-control" accept="image/png, image/jpeg, image/jpg, image/gif, image/webp" required>
+                                <span class="text-muted extra-small d-block mt-1" style="font-size: 0.75rem;">Allowed formats: PNG, JPG, GIF, WebP (Max 2MB)</span>
+                            </div>
+                        </div>
+
+                        <!-- Data Fields (Right Side inside form) -->
+                        <div class="col-md-8 ps-md-4">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="category_id" class="form-label fw-semibold text-dark">Category</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fa-solid fa-folder-open"></i></span>
+                                        <select name="category_id" id="category_id" class="form-select" required>
+                                            <option value="">Select Category</option>
+                                            <?php foreach ($categories as $cat): ?>
+                                                <option value="<?php echo $cat->id; ?>" <?php echo set_select('category_id', $cat->id); ?>>
+                                                    <?php echo htmlspecialchars($cat->name); ?>
+                                                </option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-6 mb-3">
+                                    <label for="name" class="form-label fw-semibold text-dark">Product Name</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fa-solid fa-box"></i></span>
+                                        <input type="text" name="name" id="name" class="form-control" placeholder="e.g. Protein Powder" value="<?php echo set_value('name'); ?>" required>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="slug" class="form-label fw-semibold text-dark">URL Slug</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fa-solid fa-link"></i></span>
+                                    <input type="text" name="slug" id="slug" class="form-control" placeholder="e.g. protein-powder" value="<?php echo set_value('slug'); ?>" required>
+                                </div>
+                                <span class="text-muted small">URL-safe name. Automatically generated as you type.</span>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="price" class="form-label fw-semibold text-dark">Price (₹)</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fa-solid fa-indian-rupee-sign"></i></span>
+                                        <input type="number" step="0.01" name="price" id="price" class="form-control" placeholder="0.00" value="<?php echo set_value('price'); ?>" required>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-6 mb-3">
+                                    <label for="stock" class="form-label fw-semibold text-dark">Stock Count</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fa-solid fa-cubes"></i></span>
+                                        <input type="number" name="stock" id="stock" class="form-control" placeholder="0" value="<?php echo set_value('stock', '0'); ?>" required>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="description" class="form-label fw-semibold text-dark">Description</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fa-solid fa-align-left"></i></span>
+                                    <textarea name="description" id="description" class="form-control" rows="3" placeholder="Enter product description..."><?php echo set_value('description'); ?></textarea>
+                                </div>
+                            </div>
+
+                            <div class="mb-4">
+                                <label for="status" class="form-label fw-semibold text-dark">Status</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fa-solid fa-toggle-on"></i></span>
+                                    <select name="status" id="status" class="form-select">
+                                        <option value="1" <?php echo set_select('status', '1', true); ?>>Active</option>
+                                        <option value="0" <?php echo set_select('status', '0'); ?>>Inactive</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="d-flex align-items-center justify-content-end gap-2">
+                                <a href="<?php echo base_url('admin/products'); ?>" class="btn btn-secondary px-4 py-2" style="border-radius: 8px;">
+                                    Cancel
+                                </a>
+                                <button type="submit" class="btn px-4 py-2 fw-semibold text-white" style="background: linear-gradient(45deg, var(--primary-pink), var(--primary-gold)); border: none; border-radius: 8px; box-shadow: 0 4px 10px rgba(236, 64, 122, 0.15);">
+                                    <i class="fa-solid fa-floppy-disk me-2"></i> Save Product
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- JS Script for Live Image Preview and Auto-slug Generation -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const imageInput = document.getElementById('productImageInput');
+    const imagePreview = document.getElementById('productImagePreview');
+    const nameInput = document.getElementById('name');
+    const slugInput = document.getElementById('slug');
+
+    // Live preview selected image
+    if (imageInput && imagePreview) {
+        imageInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                // Size validation (2MB limit)
+                if (file.size > 2 * 1024 * 1024) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'File too large',
+                        text: 'Please select an image smaller than 2MB.',
+                        confirmButtonColor: '#ec407a'
+                    });
+                    imageInput.value = '';
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    imagePreview.src = event.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+
+    // Auto-generate URL Slug from Product Name as they type
+    if (nameInput && slugInput) {
+        nameInput.addEventListener('input', function() {
+            const nameValue = this.value;
+            // Slugify routine
+            const slugValue = nameValue
+                .toLowerCase()
+                .trim()
+                .replace(/[^\w\s-]/g, '') // remove special characters
+                .replace(/[\s_]+/g, '-')   // replace spaces and underscores with hyphens
+                .replace(/-+/g, '-');      // remove duplicate hyphens
+            slugInput.value = slugValue;
+        });
+    }
+});
+</script>
