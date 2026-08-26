@@ -59,6 +59,7 @@ $route['api/login'] = 'Api/login';
 $route['api/logout'] = 'Api/logout';
 $route['api/get_profile'] = 'Api/get_profile';
 $route['api/update_profile'] = 'Api/update_profile';
+$route['api/get_referrals'] = 'Api/get_referrals';
 $route['api/get_category_list'] = 'Api/get_category_list';
 $route['api/get_category_detail'] = 'Api/get_category_detail';
 $route['api/get_product_list'] = 'Api/get_product_list';
@@ -130,6 +131,11 @@ $route['admin/logout'] = 'Login/logout';
 $route['admin/members'] = 'Member/index';
 $route['admin/members/view/(:num)'] = 'Member/view/$1';
 $route['admin/members/wallet/(:num)'] = 'Member/add_wallet/$1';
+$route['admin/members/network'] = 'Member/network';
+$route['admin/members/search'] = 'Member/search_autocomplete';
+$route['admin/members/getReferralTree'] = 'Member/getReferralTree';
+$route['admin/members/getReferralTree/(:num)'] = 'Member/getReferralTree/$1';
+$route['admin/members/transactions/(:num)'] = 'Member/transactions/$1';
 
 // Admin Order Routes
 $route['admin/orders'] = 'Order/index';
@@ -144,3 +150,9 @@ $route['admin/commissions/update'] = 'Commission/update';
 $route['admin/deposits'] = 'Deposit/index';
 $route['admin/deposits/approve/(:num)'] = 'Deposit/approve/$1';
 $route['admin/deposits/reject/(:num)'] = 'Deposit/reject/$1';
+
+// Static Pages & Account Deletion APIs
+$route['api/privacy_policy'] = 'Api/privacy_policy';
+$route['api/terms_conditions'] = 'Api/terms_conditions';
+$route['api/delete_account'] = 'Api/delete_account';
+

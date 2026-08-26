@@ -136,7 +136,7 @@ class Order extends CI_Controller
         }
 
         $new_status = $this->input->post('status', TRUE);
-        if (!in_array($new_status, ['pending', 'completed', 'cancelled'])) {
+        if (!in_array($new_status, ['pending', 'confirmed', 'packed', 'out_for_delivery', 'delivered', 'cancelled'])) {
             $this->session->set_flashdata('error', 'Invalid status selected.');
             redirect("admin/orders/detail/{$id}");
         }
@@ -158,8 +158,10 @@ class Order extends CI_Controller
 
         $this->db->trans_begin();
 
-        // Pending to Completed Transition (Offline payment / manual approval)
-        if ($order->status === 'pending' && $new_status === 'completed') {
+        // Pending to Confirmed/Packed/Out for Delivery/Delivered Transition (Offline payment / manual approval)
+        $paid_statuses = ['completed', 'confirmed', 'packed', 'out_for_delivery', 'delivered'];
+        
+        if ($order->status === 'pending' && in_array($new_status, $paid_statuses)) {
             // Verify buyer balance
             if ((float)$buyer->wallet_balance < $order_amount) {
                 $this->db->trans_rollback();
@@ -194,7 +196,7 @@ class Order extends CI_Controller
             $this->db->update('products', ['stock' => $new_stock], ['id' => $product->id]);
 
             // 4. Update order status
-            $this->db->update('orders', ['status' => 'completed', 'updated_at' => date('Y-m-d H:i:s')], ['id' => $order->id]);
+            $this->db->update('orders', ['status' => $new_status, 'updated_at' => date('Y-m-d H:i:s')], ['id' => $order->id]);
 
             // 5. MLM level commission chain traversal
             $levels_percentage = [];
@@ -290,8 +292,8 @@ class Order extends CI_Controller
             }
         }
 
-        // Completed to Cancelled Transition (Full refund & payout reversals)
-        elseif ($order->status === 'completed' && $new_status === 'cancelled') {
+        // 2. Transition from any Paid status (confirmed, packed, out_for_delivery, delivered) to Cancelled (Reverse everything)
+        elseif (in_array($order->status, $paid_statuses) && $new_status === 'cancelled') {
             // 1. Refund buyer balance
             $buyer_new_balance = (float)$buyer->wallet_balance + $order_amount;
             $this->db->update('users', ['wallet_balance' => $buyer_new_balance], ['id' => $buyer->id]);
@@ -368,7 +370,12 @@ class Order extends CI_Controller
             $this->db->update('orders', ['status' => 'cancelled', 'updated_at' => date('Y-m-d H:i:s')], ['id' => $order->id]);
         }
 
-        // Pending to Cancelled Transition (Simple cancel, no money transactions done yet)
+        // 3. Transition between Paid statuses (confirmed -> packed -> out_for_delivery -> delivered) - simple status update
+        elseif (in_array($order->status, $paid_statuses) && in_array($new_status, $paid_statuses)) {
+            $this->db->update('orders', ['status' => $new_status, 'updated_at' => date('Y-m-d H:i:s')], ['id' => $order->id]);
+        }
+
+        // 4. Pending to Cancelled Transition (Simple cancel, no money transactions done yet)
         elseif ($order->status === 'pending' && $new_status === 'cancelled') {
             $this->db->update('orders', ['status' => 'cancelled', 'updated_at' => date('Y-m-d H:i:s')], ['id' => $order->id]);
         }

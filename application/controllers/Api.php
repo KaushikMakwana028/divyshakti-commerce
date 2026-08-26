@@ -439,12 +439,12 @@ class Api extends CI_Controller
                 $this->response(false, $this->upload->display_errors('', ''), null, 400);
             } else {
                 $upload_data = $this->upload->data();
-                
+
                 // Delete old image if exists
                 if (!empty($user->profile_image) && file_exists('./' . $user->profile_image)) {
                     @unlink('./' . $user->profile_image);
                 }
-                
+
                 $update_data['profile_image'] = 'uploads/profile_images/' . $upload_data['file_name'];
             }
         }
@@ -1012,7 +1012,7 @@ class Api extends CI_Controller
         $this->db->join('products', 'products.id = cart.product_id', 'inner');
         $this->db->where('cart.id', $cart_row_id);
         $full_cart_item = $this->db->get()->row();
-        
+
         if ($full_cart_item) {
             $full_cart_item->id = (int)$full_cart_item->id;
             $full_cart_item->product_id = (int)$full_cart_item->product_id;
@@ -1122,7 +1122,7 @@ class Api extends CI_Controller
         $this->db->join('products', 'products.id = cart.product_id', 'inner');
         $this->db->where('cart.id', (int)$existing->id);
         $full_cart_item = $this->db->get()->row();
-        
+
         if ($full_cart_item) {
             $full_cart_item->id = (int)$full_cart_item->id;
             $full_cart_item->product_id = (int)$full_cart_item->product_id;
@@ -1418,7 +1418,6 @@ class Api extends CI_Controller
             }
 
             $this->response(true, 'Orders placed successfully from cart. Please verify payment to complete.', $placed_orders, 201);
-
         } else {
             // Flow B: Buy Now (Single Product)
             if (empty($quantity) || !is_numeric($quantity) || (int)$quantity <= 0) {
@@ -1583,8 +1582,8 @@ class Api extends CI_Controller
         $new_stock = (int)$product->stock - (int)$order->quantity;
         $this->db->update('products', ['stock' => $new_stock], ['id' => $product->id]);
 
-        // 4. Update order status to completed
-        $this->db->update('orders', ['status' => 'completed', 'updated_at' => date('Y-m-d H:i:s')], ['id' => $order->id]);
+        // 4. Update order status to confirmed
+        $this->db->update('orders', ['status' => 'confirmed', 'updated_at' => date('Y-m-d H:i:s')], ['id' => $order->id]);
 
         // 5. MLM level commission chain traversal
         $levels_percentage = [];
@@ -1595,7 +1594,7 @@ class Api extends CI_Controller
 
         $total_allocated_percentage_sum = 0.00;
         $buyer_role = (int)$buyer->role;
-        
+
         // If buyer is admin or has no parent chain, skip referral commissions (remainder pool gets 100%)
         $ancestor_id = ($buyer_role !== 1) ? $buyer->parent_id : null;
 
@@ -1741,7 +1740,7 @@ class Api extends CI_Controller
                 ];
             }
 
-            $this->response(true, 'Payment verified and order completed successfully', $order_detail, 200);
+            $this->response(true, 'Payment verified and order confirmed successfully', $order_detail, 200);
         }
     }
 
@@ -2268,7 +2267,7 @@ class Api extends CI_Controller
         }
 
         $existing_count = $this->db->where('user_id', $user_id)->count_all_results('user_addresses');
-        
+
         $is_default = (int)$address->is_default;
         if (isset($_POST['is_default'])) {
             $is_default = (int)$this->input->post('is_default');
@@ -2334,10 +2333,10 @@ class Api extends CI_Controller
         // 2. If it was the default address, promote another one
         if ($was_default === 1) {
             $next_address = $this->db->where('user_id', $user_id)
-                                    ->order_by('id', 'DESC')
-                                    ->limit(1)
-                                    ->get('user_addresses')
-                                    ->row();
+                ->order_by('id', 'DESC')
+                ->limit(1)
+                ->get('user_addresses')
+                ->row();
             if ($next_address) {
                 $this->db->update('user_addresses', ['is_default' => 1], ['id' => $next_address->id]);
             }
@@ -2349,6 +2348,230 @@ class Api extends CI_Controller
         } else {
             $this->db->trans_commit();
             $this->response(true, 'Address deleted successfully', null, 200);
+        }
+    }
+
+    /**
+     * GET api/get_referrals
+     * Authenticated endpoint to fetch the user's direct referrals list
+     */
+    public function get_referrals()
+    {
+        if ($this->input->method(TRUE) !== 'GET') {
+            $this->response(false, 'Method Not Allowed', null, 405);
+        }
+
+        $auth = $this->check_auth();
+        $user_id = (int)$auth['decoded']->user_id;
+
+        // Fetch users who registered using the current user's referral code (parent_id = current user's ID)
+        $this->db->select('id, name, email, referral_code, status, created_at');
+        $this->db->from('users');
+        $this->db->where('parent_id', $user_id);
+        $this->db->order_by('id', 'DESC');
+        $query = $this->db->get();
+        $rows = $query->result();
+
+        $referrals = [];
+        foreach ($rows as $row) {
+            $referrals[] = [
+                'id'            => (int)$row->id,
+                'name'          => $row->name,
+                'email'         => $row->email,
+                'referral_code' => $row->referral_code,
+                'status'        => (int)$row->status,
+                'created_at'    => $row->created_at
+            ];
+        }
+
+        $this->response(true, 'Direct referrals retrieved successfully', [
+            'referrals' => $referrals,
+            'total'     => count($referrals)
+        ], 200);
+    }
+
+    /**
+     * GET api/privacy_policy
+     * Returns the default Privacy Policy text
+     */
+    public function privacy_policy()
+    {
+        if ($this->input->method(TRUE) !== 'GET') {
+            $this->response(false, 'Method Not Allowed', null, 405);
+        }
+
+        $policy_text =
+            "<h3>Privacy Policy</h3>" .
+            "<p><em>Last updated: " . date('F Y') . "</em></p>" .
+            "<p>Your privacy is important to us. It is Divy Shakti's policy to respect your privacy regarding any information we may collect from you across our website and mobile application.</p>" .
+
+            "<h4>1. Information We Collect</h4>" .
+            "<p>We collect information you provide directly, such as your name, email address, phone number, delivery address, and payment details when you register, place an order, or request a wallet deposit. We may also collect referral and network data (such as your sponsor/referrer relationship) required to operate our MLM commission structure.</p>" .
+
+            "<h4>2. How We Use Your Information</h4>" .
+            "<ul>" .
+            "<li>To create and manage your account</li>" .
+            "<li>To process orders, payments, and wallet transactions</li>" .
+            "<li>To calculate and credit referral commissions accurately</li>" .
+            "<li>To communicate order updates, promotions, and support responses</li>" .
+            "<li>To improve our app, detect fraud, and maintain security</li>" .
+            "</ul>" .
+
+            "<h4>3. Data Storage & Security</h4>" .
+            "<p>We only retain collected information for as long as necessary to provide you with your requested service. What data we store, we protect within commercially acceptable means to prevent loss, theft, unauthorized access, disclosure, copying, use, or modification.</p>" .
+
+            "<h4>4. Sharing of Information</h4>" .
+            "<p>We do not sell your personal information. We do not share personally identifying information publicly or with third parties, except:</p>" .
+            "<ul>" .
+            "<li>When required to by law or a valid legal process</li>" .
+            "<li>With payment gateways strictly to process transactions</li>" .
+            "<li>With delivery partners strictly to fulfill your orders</li>" .
+            "</ul>" .
+
+            "<h4>5. Your Rights & Choices</h4>" .
+            "<p>You may access, update, or request deletion of your personal data at any time via the app's Profile settings or the Delete Account option. You are free to refuse providing certain personal information, understanding that we may then be unable to offer some services.</p>" .
+
+            "<h4>6. Third-Party Links</h4>" .
+            "<p>Our website/app may link to external sites that are not operated by us. We have no control over the content and practices of these sites and cannot accept responsibility or liability for their respective privacy policies.</p>" .
+
+            "<h4>7. Children's Privacy</h4>" .
+            "<p>Our services are not directed at individuals under the age of 18. We do not knowingly collect personal information from minors.</p>" .
+
+            "<h4>8. Changes to This Policy</h4>" .
+            "<p>We may update this Privacy Policy from time to time. Continued use of our website/app after changes are posted constitutes acceptance of the revised policy.</p>" .
+
+            "<h4>9. Contact Us</h4>" .
+            "<p>If you have any questions about how we handle your data, please reach out to us through the Support section of the app.</p>";
+
+        $this->response(true, 'Privacy Policy retrieved successfully', [
+            'title'   => 'Privacy Policy',
+            'content' => $policy_text
+        ], 200);
+    }
+
+    /**
+     * GET api/terms_conditions
+     * Returns the default Terms & Conditions text
+     */
+    public function terms_conditions()
+    {
+        if ($this->input->method(TRUE) !== 'GET') {
+            $this->response(false, 'Method Not Allowed', null, 405);
+        }
+
+        $terms_text =
+            "<h3>Terms & Conditions</h3>" .
+            "<p><em>Last updated: " . date('F Y') . "</em></p>" .
+            "<p>Welcome to Divy Shakti. By accessing or using our mobile application and services, you agree to be bound by the following terms and conditions. Please read them carefully.</p>" .
+
+            "<ol>" .
+            "<li><strong>Acceptance of Terms:</strong> By creating an account or purchasing products, you agree to comply with and be bound by these terms. If you do not agree, please discontinue use of the app.</li>" .
+
+            "<li><strong>Eligibility:</strong> You must be at least 18 years old and legally capable of entering into binding contracts to register and use our services.</li>" .
+
+            "<li><strong>User Account:</strong> You are responsible for maintaining the confidentiality of your account credentials and authentication token. You are liable for all activity performed under your account, and must notify us immediately of any unauthorized use.</li>" .
+
+            "<li><strong>MLM and Referrals:</strong> Referral commissions and network structures must strictly follow our published commission guidelines. Fake accounts, self-referrals, or any attempt to manipulate the referral network for undue gain is strictly prohibited and will result in immediate account suspension and forfeiture of pending commissions.</li>" .
+
+            "<li><strong>Orders and Products:</strong> Product availability, pricing, and delivery timelines are subject to change without prior notice. We reserve the right to cancel or refuse any order at our discretion, including in cases of suspected fraud or pricing errors.</li>" .
+
+            "<li><strong>Wallet and Transactions:</strong> Wallet balances, deposits, withdrawals, and commission credits are subject to validation and approval by the admin team. All transactions are logged for audit purposes. Any dispute regarding a wallet transaction must be raised through Support within 7 days of the transaction date.</li>" .
+
+            "<li><strong>Payments:</strong> All payments made through the app are processed via secure third-party payment gateways. Divy Shakti does not store your full payment card details.</li>" .
+
+            "<li><strong>Prohibited Conduct:</strong> You agree not to misuse the platform for unlawful purposes, harass other users, attempt to breach system security, or reverse-engineer any part of the application.</li>" .
+
+            "<li><strong>Account Suspension & Termination:</strong> We reserve the right to suspend or terminate accounts found to be in violation of these terms, including fraudulent referral activity, chargebacks, or abusive behavior.</li>" .
+
+            "<li><strong>Account Deletion:</strong> You have the right to delete your account at any time using the Delete Account option. Deletion is permanent — your wallet balance, transaction history, and referral position will be permanently and irreversibly deleted.</li>" .
+
+            "<li><strong>Limitation of Liability:</strong> Divy Shakti shall not be liable for any indirect, incidental, special, or consequential damages resulting from the use of, or inability to use, our services.</li>" .
+
+            "<li><strong>Governing Law:</strong> These terms shall be governed by and construed in accordance with the applicable laws of India, without regard to conflict of law principles.</li>" .
+
+            "<li><strong>Changes to Terms:</strong> We reserve the right to update these terms at any time. Your continued use of the application after such changes constitutes your acceptance of the new terms.</li>" .
+            "</ol>" .
+
+            "<p>If you have any questions regarding these Terms & Conditions, please contact our support team through the app.</p>";
+
+        $this->response(true, 'Terms & Conditions retrieved successfully', [
+            'title'   => 'Terms & Conditions',
+            'content' => $terms_text
+        ], 200);
+    }
+
+    /**
+     * GET/POST/DELETE api/delete_account
+     * - GET: Returns steps to delete the account.
+     * - POST/DELETE: Performs authenticated account deletion.
+     */
+    public function delete_account()
+    {
+        $method = $this->input->method(TRUE);
+
+        if ($method === 'GET') {
+            $steps = [
+                "steps" => [
+                    "Step 1: Go to the 'Profile' or 'Settings' tab in your app.",
+                    "Step 2: Scroll down and tap on the 'Delete Account' button.",
+                    "Step 3: Review the warning message carefully.",
+                    "Step 4: Confirm the action on the confirmation dialog by entering your password or OTP if prompted.",
+                    "Step 5: All of your personal profile data, addresses, active cart, wallet balance, and transaction history will be permanently deleted.",
+                    "Step 6: Your referral position in the network tree will be removed, and any downline members will be reassigned per platform policy."
+                ],
+                "what_gets_deleted" => [
+                    "Profile information (name, email, phone, address)",
+                    "Profile image / avatar",
+                    "Wallet balance and full transaction history",
+                    "Saved addresses",
+                    "Active and past cart data",
+                    "Referral code and network position"
+                ],
+                "what_is_retained" => [
+                    "Order records may be retained in anonymized form for legal, tax, and accounting compliance, as required by applicable law."
+                ],
+                "warning" => "WARNING: This action is permanent and irreversible. Your wallet balance and referral position will be permanently lost and cannot be recovered."
+            ];
+            $this->response(true, 'Steps to delete account retrieved successfully', $steps, 200);
+        }
+
+        if ($method !== 'DELETE' && $method !== 'POST') {
+            $this->response(false, 'Method Not Allowed', null, 405);
+        }
+
+        // Authenticate the user token
+        $auth = $this->check_auth();
+        $user_id = (int) $auth['decoded']->user_id;
+
+        // Retrieve user to check profile image
+        $user = $this->General_model->getOne('users', ['id' => $user_id]);
+        if (!$user) {
+            $this->response(false, 'User not found.', null, 404);
+        }
+
+        // Delete profile image file if exists
+        if (!empty($user->profile_image) && file_exists('./' . $user->profile_image)) {
+            @unlink('./' . $user->profile_image);
+        }
+
+        $this->db->trans_begin();
+
+        // Delete dependent records first to avoid orphaned rows / FK constraint issues
+        $this->db->delete('wallet_transactions', ['user_id' => $user_id]);
+        $this->db->delete('addresses', ['user_id' => $user_id]);
+        $this->db->delete('cart', ['user_id' => $user_id]);
+
+        // Finally delete the user account itself
+        $this->db->delete('users', ['id' => $user_id]);
+
+        if ($this->db->trans_status() === FALSE) {
+            $this->db->trans_rollback();
+            $this->response(false, 'Failed to delete account due to a database transaction error.', null, 500);
+        } else {
+            $this->db->trans_commit();
+            $this->response(true, 'Your account has been deleted successfully.', [
+                'message_detail' => 'All associated profile information, wallet history, addresses, and network position have been permanently deleted.'
+            ], 200);
         }
     }
 }

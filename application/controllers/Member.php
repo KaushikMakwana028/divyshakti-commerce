@@ -96,9 +96,14 @@ class Member extends CI_Controller
 
         $data['user'] = $this->General_model->getOne('users', ['id' => $this->session->userdata('user_id')]);
 
-        $this->load->view('templates/header', $data);
-        $this->load->view('member_detail', $data);
-        $this->load->view('templates/footer');
+        if ($this->input->is_ajax_request()) {
+            $data['is_ajax'] = true;
+            $this->load->view('member_detail', $data);
+        } else {
+            $this->load->view('templates/header', $data);
+            $this->load->view('member_detail', $data);
+            $this->load->view('templates/footer');
+        }
     }
 
     /**
@@ -160,5 +165,177 @@ class Member extends CI_Controller
         }
 
         redirect($this->input->server('HTTP_REFERER') ?: 'admin/members');
+    }
+
+    /**
+     * Renders the referral network tree visualization page
+     */
+    public function network()
+    {
+        $data['user'] = $this->General_model->getOne('users', ['id' => $this->session->userdata('user_id')]);
+        $data['initial_user_id'] = $this->input->get('user_id', TRUE) ?: null;
+
+        $this->load->view('templates/header', $data);
+        $this->load->view('member_network_view', $data);
+        $this->load->view('templates/footer');
+    }
+
+    /**
+     * AJAX endpoint to query node and child data for the referral tree chart
+     */
+    public function getReferralTree($id = null)
+    {
+        // Helper to fetch user list with fields and children count subquery
+        $fetch_users = function ($where_conds) {
+            $this->db->select("u.id, u.parent_id, u.name, u.email, u.phone, u.profile_image, u.referral_code, u.wallet_balance, u.status, u.created_at, 
+                (SELECT COUNT(*) FROM users WHERE parent_id = u.id AND role = 0) as children_count");
+            $this->db->from('users u');
+            $this->db->where($where_conds);
+            $query = $this->db->get();
+            $rows = $query->result();
+
+            $list = [];
+            foreach ($rows as $row) {
+                $list[] = [
+                    'id'             => (int)$row->id,
+                    'parent_id'      => $row->parent_id !== null ? (int)$row->parent_id : null,
+                    'name'           => $row->name,
+                    'email'          => $row->email,
+                    'phone'          => $row->phone,
+                    'profile_image'  => (!empty($row->profile_image) && file_exists(FCPATH . ltrim($row->profile_image, '/'))) ? base_url(ltrim($row->profile_image, '/')) : null,
+                    'referral_code'  => $row->referral_code,
+                    'wallet_balance' => (float)$row->wallet_balance,
+                    'status'         => (int)$row->status,
+                    'created_at'     => $row->created_at,
+                    'has_children'   => (int)$row->children_count > 0
+                ];
+            }
+            return $list;
+        };
+
+        if ($id === null) {
+            // Return root members (parent_id IS NULL and role = 0)
+            $children = $fetch_users(['u.parent_id' => null, 'u.role' => 0]);
+            $response = [
+                'status' => true,
+                'user' => null,
+                'children' => $children
+            ];
+        } else {
+            // Validate user exists and return their own profile + direct children (parent_id = $id and role = 0)
+            $user_list = $fetch_users(['u.id' => (int)$id, 'u.role' => 0]);
+            if (empty($user_list)) {
+                return $this->output
+                    ->set_content_type('application/json')
+                    ->set_output(json_encode([
+                        'status' => false,
+                        'message' => 'Member not found.'
+                    ]));
+            }
+
+            $user = $user_list[0];
+            $children = $fetch_users(['u.parent_id' => (int)$id, 'u.role' => 0]);
+
+            // Fetch all ancestors of the user up to the root (parent_id is null)
+            $ancestors = [];
+            $current_parent_id = $user['parent_id'];
+            while ($current_parent_id !== null) {
+                $parent_list = $fetch_users(['u.id' => $current_parent_id, 'u.role' => 0]);
+                if (empty($parent_list)) {
+                    break;
+                }
+                $parent = $parent_list[0];
+                $ancestors[] = $parent;
+                $current_parent_id = $parent['parent_id'];
+            }
+
+            $response = [
+                'status' => true,
+                'user' => $user,
+                'children' => $children,
+                'ancestors' => $ancestors
+            ];
+        }
+
+        return $this->output
+            ->set_content_type('application/json')
+            ->set_output(json_encode($response));
+    }
+
+    /**
+     * AJAX endpoint to search active members for autocomplete dropdown
+     */
+    public function search_autocomplete()
+    {
+        $query = $this->input->get('query', TRUE);
+        if (empty($query)) {
+            return $this->output
+                ->set_content_type('application/json')
+                ->set_output(json_encode(['status' => false, 'results' => []]));
+        }
+
+        $this->db->select('id, name, email, referral_code');
+        $this->db->from('users');
+        $this->db->where('role', 0); // only members
+        $this->db->group_start();
+        $this->db->like('name', $query);
+        $this->db->or_like('email', $query);
+        $this->db->or_like('referral_code', $query);
+        $this->db->group_end();
+        $this->db->limit(10);
+        $results = $this->db->get()->result();
+
+        return $this->output
+            ->set_content_type('application/json')
+            ->set_output(json_encode([
+                'status' => true,
+                'results' => $results
+            ]));
+    }
+
+    public function transactions($member_id)
+    {
+        if (empty($member_id) || !is_numeric($member_id)) {
+            return $this->output
+                ->set_status_header(400)
+                ->set_content_type('application/json')
+                ->set_output(json_encode(['error' => 'Invalid member ID']));
+        }
+
+        $page     = (int) ($this->input->get('page') ?: 1);
+        $per_page = (int) ($this->input->get('per_page') ?: 5);
+        $page     = $page < 1 ? 1 : $page;
+        $offset   = ($page - 1) * $per_page;
+
+        $this->db->where('user_id', (int) $member_id);
+        $this->db->from('wallet_transactions');
+        $total = $this->db->count_all_results();
+
+        $rows = $this->db->where('user_id', (int) $member_id)
+            ->order_by('id', 'DESC')
+            ->limit($per_page, $offset)
+            ->get('wallet_transactions')
+            ->result();
+
+        $out = [];
+        foreach ($rows as $i => $t) {
+            $out[] = [
+                'row_no'     => $offset + $i + 1,
+                'type'       => $t->type,
+                'amount'     => $t->amount,
+                'source'     => $t->source,
+                'remark'     => $t->remark,
+                'created_at' => $t->created_at,
+            ];
+        }
+
+        return $this->output
+            ->set_content_type('application/json')
+            ->set_output(json_encode([
+                'transactions' => $out,
+                'current_page' => $page,
+                'total_pages'  => max(1, (int) ceil($total / $per_page)),
+                'total'        => $total,
+            ]));
     }
 }

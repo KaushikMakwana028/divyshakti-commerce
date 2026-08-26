@@ -100,16 +100,20 @@
             }
             
             // Close sidebar when clicking outside on mobile
-            document.addEventListener('click', function(e) {
-                if (window.innerWidth < 992) {
-                    if (sidebar.classList.contains('show') && !sidebar.contains(e.target) && e.target !== toggleBtn) {
-                        sidebar.classList.remove('show');
-                        if (backdrop) {
-                            backdrop.classList.remove('show');
-                        }
-                    }
-                }
-            });
+document.addEventListener('click', function(e) {
+    if (window.innerWidth < 992) {
+        if (
+            sidebar.classList.contains('show') &&
+            !sidebar.contains(e.target) &&
+            !toggleBtn.contains(e.target)   // <-- was: e.target !== toggleBtn
+        ) {
+            sidebar.classList.remove('show');
+            if (backdrop) {
+                backdrop.classList.remove('show');
+            }
+        }
+    }
+});
         });
     </script>
 </body>

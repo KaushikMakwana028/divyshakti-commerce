@@ -40,11 +40,11 @@ class Dashboard extends CI_Controller
             $data['total_orders'] = $this->db->count_all_results('orders');
             
             $data['pending_orders'] = $this->db->where('status', 'pending')->count_all_results('orders');
-            $data['completed_orders'] = $this->db->where('status', 'completed')->count_all_results('orders');
+            $data['completed_orders'] = $this->db->where_in('status', ['confirmed', 'packed', 'out_for_delivery', 'delivered'])->count_all_results('orders');
             $data['cancelled_orders'] = $this->db->where('status', 'cancelled')->count_all_results('orders');
             
             // Sum metrics
-            $sales_sum = $this->db->select_sum('amount')->where('status', 'completed')->get('orders')->row();
+            $sales_sum = $this->db->select_sum('amount')->where_in('status', ['confirmed', 'packed', 'out_for_delivery', 'delivered'])->get('orders')->row();
             $data['total_sales'] = (float)($sales_sum->amount ?? 0.00);
 
             $admin_comm_sum = $this->db->select_sum('amount')->where('source', 'admin_commission')->get('wallet_transactions')->row();

@@ -21,7 +21,10 @@
                         <select name="status" id="statusFilter" class="form-select">
                             <option value="">All Statuses</option>
                             <option value="pending" <?php echo ($status === 'pending') ? 'selected' : ''; ?>>Pending</option>
-                            <option value="completed" <?php echo ($status === 'completed') ? 'selected' : ''; ?>>Completed</option>
+                            <option value="confirmed" <?php echo ($status === 'confirmed') ? 'selected' : ''; ?>>Confirmed</option>
+                            <option value="packed" <?php echo ($status === 'packed') ? 'selected' : ''; ?>>Packed</option>
+                            <option value="out_for_delivery" <?php echo ($status === 'out_for_delivery') ? 'selected' : ''; ?>>Out for Delivery</option>
+                            <option value="delivered" <?php echo ($status === 'delivered') ? 'selected' : ''; ?>>Delivered</option>
                             <option value="cancelled" <?php echo ($status === 'cancelled') ? 'selected' : ''; ?>>Cancelled</option>
                         </select>
                     </div>
@@ -45,7 +48,7 @@
                     <table class="table table-hover align-middle mb-0">
                         <thead class="text-white" style="background-color: var(--dark-sidebar); border-bottom: 3px solid var(--primary-gold);">
                             <tr>
-                                <th class="ps-4" style="width: 100px;">Index</th>
+                                <th class="ps-4" style="width: 100px;">#</th>
                                 <th>Buyer</th>
                                 <th>Product</th>
                                 <th>Quantity</th>
@@ -69,7 +72,7 @@
                                 foreach ($orders as $order): 
                                 ?>
                                     <tr>
-                                        <td class="ps-4 fw-semibold text-muted">#<?php echo $index_num++; ?></td>
+                                        <td class="ps-4 fw-semibold text-muted"><?php echo $index_num++; ?></td>
                                         <td>
                                             <div class="fw-semibold text-dark"><?php echo htmlspecialchars($order->buyer_name); ?></div>
                                             <span class="text-muted small"><?php echo htmlspecialchars($order->buyer_email); ?></span>
@@ -80,9 +83,21 @@
                                             <span class="fw-bold text-dark">₹<?php echo number_format($order->amount, 2); ?></span>
                                         </td>
                                         <td>
-                                            <?php if ($order->status === 'completed'): ?>
+                                            <?php if ($order->status === 'confirmed'): ?>
                                                 <span class="badge bg-success-subtle text-success px-2.5 py-1 border border-success-subtle" style="border-radius: 4px; font-size: 0.75rem;">
-                                                    <i class="fa-solid fa-check me-1"></i> Completed
+                                                    <i class="fa-solid fa-circle-check me-1"></i> Confirmed
+                                                </span>
+                                            <?php elseif ($order->status === 'packed'): ?>
+                                                <span class="badge bg-primary-subtle text-primary px-2.5 py-1 border border-primary-subtle" style="border-radius: 4px; font-size: 0.75rem;">
+                                                    <i class="fa-solid fa-box me-1"></i> Packed
+                                                </span>
+                                            <?php elseif ($order->status === 'out_for_delivery'): ?>
+                                                <span class="badge bg-info-subtle text-info px-2.5 py-1 border border-info-subtle" style="border-radius: 4px; font-size: 0.75rem;">
+                                                    <i class="fa-solid fa-truck me-1"></i> Out for Delivery
+                                                </span>
+                                            <?php elseif ($order->status === 'delivered' || $order->status === 'completed'): ?>
+                                                <span class="badge bg-success text-white px-2.5 py-1" style="border-radius: 4px; font-size: 0.75rem;">
+                                                    <i class="fa-solid fa-circle-check me-1"></i> <?php echo ($order->status === 'completed') ? 'Completed' : 'Delivered'; ?>
                                                 </span>
                                             <?php elseif ($order->status === 'pending'): ?>
                                                 <span class="badge bg-warning-subtle text-warning px-2.5 py-1 border border-warning-subtle" style="border-radius: 4px; font-size: 0.75rem;">

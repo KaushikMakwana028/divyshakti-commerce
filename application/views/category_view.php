@@ -49,7 +49,7 @@
                     <table class="table align-middle mb-0" style="min-width: 800px;">
                         <thead class="table-dark" style="background-color: var(--dark-sidebar); border-bottom: 3px solid var(--primary-gold);">
                             <tr>
-                                <th class="py-3 ps-4" style="width: 100px;">Index</th>
+                                <th class="py-3 ps-4" style="width: 100px;">#</th>
                                 <th class="py-3" style="width: 100px;">Image</th>
                                 <th class="py-3">Category Name</th>
                                 <th class="py-3">Slug</th>
@@ -72,7 +72,7 @@
                                 foreach ($categories as $cat): 
                                 ?>
                                     <tr class="border-bottom">
-                                        <td class="ps-4 fw-semibold text-muted">#<?php echo $index_num++; ?></td>
+                                        <td class="ps-4 fw-semibold text-muted"><?php echo $index_num++; ?></td>
                                         <td>
                                             <img src="<?php echo $cat->image ? base_url($cat->image) : 'https://placehold.co/80x80/1f2937/d4af37?text=' . urlencode(substr($cat->name, 0, 1)); ?>" 
                                                  alt="<?php echo htmlspecialchars($cat->name); ?>" 

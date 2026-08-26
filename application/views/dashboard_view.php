@@ -98,7 +98,7 @@
                     <table class="table table-hover align-middle mb-0" style="font-size: 0.85rem;">
                         <thead class="table-light">
                             <tr>
-                                <th class="ps-3">Order ID</th>
+                                <th class="ps-3">#</th>
                                 <th>Buyer</th>
                                 <th>Product</th>
                                 <th>Amount</th>
@@ -112,15 +112,24 @@
                                     <td colspan="6" class="text-center py-4 text-muted">No orders placed yet.</td>
                                 </tr>
                             <?php else: ?>
-                                <?php foreach ($recent_orders as $ord): ?>
+                                <?php 
+                                $ord_idx = 1;
+                                foreach ($recent_orders as $ord): 
+                                ?>
                                     <tr>
-                                        <td class="ps-3 fw-bold">#<?php echo $ord->id; ?></td>
+                                        <td class="ps-3 fw-bold"><?php echo $ord_idx++; ?></td>
                                         <td class="fw-semibold text-dark"><?php echo htmlspecialchars($ord->buyer_name); ?></td>
                                         <td class="text-truncate" style="max-width: 140px;"><?php echo htmlspecialchars($ord->product_name); ?></td>
                                         <td class="fw-semibold">₹<?php echo number_format($ord->amount, 2); ?></td>
                                         <td>
-                                            <?php if ($ord->status === 'completed'): ?>
-                                                <span class="badge bg-success-subtle text-success px-2 py-1 border border-success-subtle" style="font-size: 0.7rem;">Completed</span>
+                                            <?php if ($ord->status === 'confirmed'): ?>
+                                                <span class="badge bg-success-subtle text-success px-2 py-1 border border-success-subtle" style="font-size: 0.7rem;">Confirmed</span>
+                                            <?php elseif ($ord->status === 'packed'): ?>
+                                                <span class="badge bg-primary-subtle text-primary px-2 py-1 border border-primary-subtle" style="font-size: 0.7rem;">Packed</span>
+                                            <?php elseif ($ord->status === 'out_for_delivery'): ?>
+                                                <span class="badge bg-info-subtle text-info px-2 py-1 border border-info-subtle" style="font-size: 0.7rem;">Out for Delivery</span>
+                                            <?php elseif ($ord->status === 'delivered' || $ord->status === 'completed'): ?>
+                                                <span class="badge bg-success text-white px-2 py-1" style="font-size: 0.7rem;"><?php echo ($ord->status === 'completed') ? 'Completed' : 'Delivered'; ?></span>
                                             <?php elseif ($ord->status === 'pending'): ?>
                                                 <span class="badge bg-warning-subtle text-warning px-2 py-1 border border-warning-subtle" style="font-size: 0.7rem;">Pending</span>
                                             <?php else: ?>
@@ -285,7 +294,7 @@
                     <table class="table table-hover align-middle mb-0" style="font-size: 0.85rem;">
                         <thead class="table-light">
                             <tr>
-                                <th class="ps-3">Order ID</th>
+                                <th class="ps-3">#</th>
                                 <th>Product</th>
                                 <th>Amount</th>
                                 <th>Status</th>
@@ -298,14 +307,23 @@
                                     <td colspan="5" class="text-center py-4 text-muted">You haven't placed any orders yet.</td>
                                 </tr>
                             <?php else: ?>
-                                <?php foreach ($my_recent_orders as $ord): ?>
+                                <?php 
+                                $ord_idx = 1;
+                                foreach ($my_recent_orders as $ord): 
+                                ?>
                                     <tr>
-                                        <td class="ps-3 fw-bold">#<?php echo $ord->id; ?></td>
+                                        <td class="ps-3 fw-bold"><?php echo $ord_idx++; ?></td>
                                         <td class="fw-semibold text-dark"><?php echo htmlspecialchars($ord->product_name); ?></td>
                                         <td class="fw-semibold">₹<?php echo number_format($ord->amount, 2); ?></td>
                                         <td>
-                                            <?php if ($ord->status === 'completed'): ?>
-                                                <span class="badge bg-success-subtle text-success px-2 py-0.5 border border-success-subtle">Completed</span>
+                                            <?php if ($ord->status === 'confirmed'): ?>
+                                                <span class="badge bg-success-subtle text-success px-2 py-0.5 border border-success-subtle">Confirmed</span>
+                                            <?php elseif ($ord->status === 'packed'): ?>
+                                                <span class="badge bg-primary-subtle text-primary px-2 py-0.5 border border-primary-subtle">Packed</span>
+                                            <?php elseif ($ord->status === 'out_for_delivery'): ?>
+                                                <span class="badge bg-info-subtle text-info px-2 py-0.5 border border-info-subtle">Out for Delivery</span>
+                                            <?php elseif ($ord->status === 'delivered' || $ord->status === 'completed'): ?>
+                                                <span class="badge bg-success text-white px-2 py-0.5"><?php echo ($ord->status === 'completed') ? 'Completed' : 'Delivered'; ?></span>
                                             <?php elseif ($ord->status === 'pending'): ?>
                                                 <span class="badge bg-warning-subtle text-warning px-2 py-0.5 border border-warning-subtle">Pending</span>
                                             <?php else: ?>
@@ -332,7 +350,7 @@
                     <table class="table table-hover align-middle mb-0" style="font-size: 0.85rem;">
                         <thead class="table-light">
                             <tr>
-                                <th class="ps-3">Txn ID</th>
+                                <th class="ps-3">#</th>
                                 <th>Type</th>
                                 <th>Amount</th>
                                 <th>Source</th>
@@ -345,9 +363,12 @@
                                     <td colspan="5" class="text-center py-4 text-muted">No transactions logged yet.</td>
                                 </tr>
                             <?php else: ?>
-                                <?php foreach ($my_recent_txns as $t): ?>
+                                <?php 
+                                $txn_idx = 1;
+                                foreach ($my_recent_txns as $t): 
+                                ?>
                                     <tr>
-                                        <td class="ps-3 fw-bold">#<?php echo $t->id; ?></td>
+                                        <td class="ps-3 fw-bold"><?php echo $txn_idx++; ?></td>
                                         <td>
                                             <?php if ($t->type === 'credit'): ?>
                                                 <span class="badge bg-success-subtle text-success px-2 py-0.5">Credit</span>
