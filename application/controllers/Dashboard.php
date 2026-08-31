@@ -40,15 +40,54 @@ class Dashboard extends CI_Controller
             $data['total_orders'] = $this->db->count_all_results('orders');
             
             $data['pending_orders'] = $this->db->where('status', 'pending')->count_all_results('orders');
-            $data['completed_orders'] = $this->db->where_in('status', ['confirmed', 'packed', 'out_for_delivery', 'delivered'])->count_all_results('orders');
+            $data['completed_orders'] = $this->db->where_in('status', ['confirmed', 'packed', 'out_for_delivery', 'delivered', 'completed'])->count_all_results('orders');
             $data['cancelled_orders'] = $this->db->where('status', 'cancelled')->count_all_results('orders');
             
             // Sum metrics
-            $sales_sum = $this->db->select_sum('amount')->where_in('status', ['confirmed', 'packed', 'out_for_delivery', 'delivered'])->get('orders')->row();
+            $sales_sum = $this->db->select_sum('amount')->where_in('status', ['confirmed', 'packed', 'out_for_delivery', 'delivered', 'completed'])->get('orders')->row();
             $data['total_sales'] = (float)($sales_sum->amount ?? 0.00);
 
             $admin_comm_sum = $this->db->select_sum('amount')->where('source', 'admin_commission')->get('wallet_transactions')->row();
             $data['total_admin_comm'] = (float)($admin_comm_sum->amount ?? 0.00);
+
+            $ref_comm_sum = $this->db->select_sum('amount')->where('source', 'referral_commission')->get('wallet_transactions')->row();
+            $data['total_ref_comm'] = (float)($ref_comm_sum->amount ?? 0.00);
+
+            // Pending deposit requests
+            $pending_deposits = $this->db->select('COUNT(*) as count, SUM(amount) as total')->where('status', 'pending')->get('wallet_deposit_requests')->row();
+            $data['pending_deposits_count'] = (int)($pending_deposits->count ?? 0);
+            $data['pending_deposits_amount'] = (float)($pending_deposits->total ?? 0.00);
+
+            // Charts: 1. Monthly Sales Trend (Last 6 Months)
+            $data['sales_chart'] = $this->db->select("DATE_FORMAT(created_at, '%Y-%m') as month_val, DATE_FORMAT(created_at, '%b %Y') as month_label, SUM(amount) as amount")
+                ->where_in('status', ['confirmed', 'packed', 'out_for_delivery', 'delivered', 'completed'])
+                ->group_by(["DATE_FORMAT(created_at, '%Y-%m')", "DATE_FORMAT(created_at, '%b %Y')"])
+                ->order_by("month_val", "ASC")
+                ->limit(6)
+                ->get('orders')->result_array();
+
+            // Charts: 2. Order Status distribution
+            $data['status_chart'] = $this->db->select("status, COUNT(*) as count")
+                ->group_by("status")
+                ->get('orders')->result_array();
+
+            // Charts: 3. Top Selling Products
+            $data['top_products_chart'] = $this->db->select("products.name as product_name, SUM(orders.quantity) as qty, SUM(orders.amount) as amount")
+                ->from('orders')
+                ->join('products', 'products.id = orders.product_id', 'inner')
+                ->where_in('orders.status', ['confirmed', 'packed', 'out_for_delivery', 'delivered', 'completed'])
+                ->group_by(["orders.product_id", "products.name"])
+                ->order_by("amount", "DESC")
+                ->limit(5)
+                ->get()->result_array();
+
+            // Charts: 4. User registration trend
+            $data['reg_chart'] = $this->db->select("DATE_FORMAT(created_at, '%Y-%m') as month_val, DATE_FORMAT(created_at, '%b %Y') as month_label, COUNT(*) as count")
+                ->where('role', 0)
+                ->group_by(["DATE_FORMAT(created_at, '%Y-%m')", "DATE_FORMAT(created_at, '%b %Y')"])
+                ->order_by("month_val", "ASC")
+                ->limit(6)
+                ->get('users')->result_array();
 
             // Recent 5 Orders
             $this->db->select('orders.*, users.name as buyer_name, products.name as product_name');
@@ -71,7 +110,42 @@ class Dashboard extends CI_Controller
             
             // Total orders bought by this user
             $data['my_total_orders'] = $this->db->where('user_id', $user_id)->count_all_results('orders');
+            $data['my_completed_orders'] = $this->db->where('user_id', $user_id)->where_in('status', ['confirmed', 'packed', 'out_for_delivery', 'delivered', 'completed'])->count_all_results('orders');
+            $data['my_pending_orders'] = $this->db->where('user_id', $user_id)->where('status', 'pending')->count_all_results('orders');
+
+            // Total spent on purchases and total referral earnings
+            $purchase_sum = $this->db->select_sum('amount')->where(['user_id' => $user_id, 'type' => 'debit', 'source' => 'purchase'])->get('wallet_transactions')->row();
+            $data['my_total_spent'] = (float)($purchase_sum->amount ?? 0.00);
+
+            $ref_earned = $this->db->select_sum('amount')->where(['user_id' => $user_id, 'type' => 'credit', 'source' => 'referral_commission'])->get('wallet_transactions')->row();
+            $data['my_total_referral_earnings'] = (float)($ref_earned->amount ?? 0.00);
+
+            // My pending deposit requests
+            $my_pending_deposits = $this->db->select('COUNT(*) as count, SUM(amount) as total')->where(['user_id' => $user_id, 'status' => 'pending'])->get('wallet_deposit_requests')->row();
+            $data['my_pending_deposits_count'] = (int)($my_pending_deposits->count ?? 0);
+            $data['my_pending_deposits_amount'] = (float)($my_pending_deposits->total ?? 0.00);
+
+            // Charts: Spent vs Referral Earnings vs Other Credits
+            $my_spent = $this->db->select_sum('amount')->where(['user_id' => $user_id, 'type' => 'debit'])->get('wallet_transactions')->row()->amount ?? 0.00;
+            $my_ref_earn = $this->db->select_sum('amount')->where(['user_id' => $user_id, 'type' => 'credit', 'source' => 'referral_commission'])->get('wallet_transactions')->row()->amount ?? 0.00;
+            $my_other_credit = $this->db->select_sum('amount')->where(['user_id' => $user_id, 'type' => 'credit'])->where_in('source', ['admin_credit'])->get('wallet_transactions')->row()->amount ?? 0.00;
             
+            $data['my_pie_chart'] = [
+                'spent' => (float)$my_spent,
+                'referral_earnings' => (float)$my_ref_earn,
+                'other_credits' => (float)$my_other_credit
+            ];
+
+            // Charts: Monthly wallet activity trend
+            $data['my_monthly_activity_chart'] = $this->db->select("DATE_FORMAT(created_at, '%Y-%m') as month_val, DATE_FORMAT(created_at, '%b %Y') as month_label,
+                SUM(CASE WHEN type = 'credit' THEN amount ELSE 0 END) as credit,
+                SUM(CASE WHEN type = 'debit' THEN amount ELSE 0 END) as debit")
+                ->where('user_id', $user_id)
+                ->group_by(["DATE_FORMAT(created_at, '%Y-%m')", "DATE_FORMAT(created_at, '%b %Y')"])
+                ->order_by("month_val", "ASC")
+                ->limit(6)
+                ->get('wallet_transactions')->result_array();
+
             // Recent 5 orders bought by this user
             $this->db->select('orders.*, products.name as product_name');
             $this->db->from('orders');

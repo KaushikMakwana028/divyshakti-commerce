@@ -56,6 +56,14 @@
             <p>No members found for this view.</p>
         </div>
 
+        <!-- Loading overlay shown while a tree fetch is in-flight -->
+        <div class="rtx-loading-overlay" id="rtnChartLoading" style="display:none;">
+            <div class="rtx-loading-spinner"></div>
+        </div>
+
+        <!-- Toast for non-blocking errors -->
+        <div class="rtx-toast" id="rtnToast" role="status" aria-live="polite"></div>
+
         <!-- Zoom controls -->
         <div class="rtx-zoom-island">
             <button id="zoomInBtn" class="rtx-zoom-btn" title="Zoom In" aria-label="Zoom in">
@@ -476,6 +484,64 @@
         font-size: 0.9rem;
     }
 
+    /* ---------- Loading overlay ---------- */
+    .rtx-loading-overlay {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(255, 248, 245, 0.55);
+        backdrop-filter: blur(1px);
+        z-index: 40;
+        pointer-events: none;
+    }
+
+    .rtx-loading-spinner {
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        border: 3px solid #f0e0d8;
+        border-top-color: var(--text-pink);
+        animation: rtxSpin 0.7s linear infinite;
+    }
+
+    @keyframes rtxSpin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    /* ---------- Toast ---------- */
+    .rtx-toast {
+        position: absolute;
+        left: 50%;
+        top: 16px;
+        transform: translate(-50%, -12px);
+        background: #2B2B2B;
+        color: #fff;
+        font-size: 0.82rem;
+        font-weight: 600;
+        padding: 0.6rem 1rem;
+        border-radius: 10px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+        z-index: 120;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.25s ease, transform 0.25s ease;
+        max-width: 90%;
+        text-align: center;
+    }
+
+    .rtx-toast.rtx-toast-show {
+        opacity: 1;
+        transform: translate(-50%, 0);
+    }
+
+    .rtx-toast.rtx-toast-error {
+        background: #b3261e;
+    }
+
     /* Zoom island */
     .rtx-zoom-island {
         position: absolute;
@@ -538,6 +604,39 @@
         stroke: var(--text-pink) !important;
         stroke-width: 3px !important;
         cursor: pointer;
+    }
+
+    /* Parent-expand button: smooth hover + disabled/loading feedback */
+    .parent-expand-btn circle {
+        transition: stroke 0.15s ease, fill 0.15s ease;
+    }
+
+    .parent-expand-btn:hover circle {
+        stroke: var(--text-pink);
+    }
+
+    .parent-expand-btn[data-loading="true"] {
+        opacity: 0.4;
+        pointer-events: none;
+    }
+
+    /* Newly-added ancestor node gets a brief highlight pulse so it's obvious where it landed */
+    @keyframes rtxNodePulse {
+        0% {
+            filter: drop-shadow(0 0 0 rgba(233, 30, 140, 0.55));
+        }
+
+        70% {
+            filter: drop-shadow(0 0 14px rgba(233, 30, 140, 0));
+        }
+
+        100% {
+            filter: drop-shadow(0 0 0 rgba(233, 30, 140, 0));
+        }
+    }
+
+    .rtx-node-highlight rect {
+        animation: rtxNodePulse 1.1s ease-out;
     }
 
     /* ---------- Modal polish ---------- */
@@ -654,10 +753,43 @@
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const initialUserId = <?php echo json_encode($initial_user_id); ?>;
-        let chart = null;
-        let loadedNodesMap = {}; // Tracks parent nodes that have loaded their children
+
+        // ---- State ----
+        let chart = null; // current live OrgChart instance (nulled out between tree switches)
+        let loadedNodesMap = {}; // tracks nodes whose children have already been fetched
+        const pendingChildLoads = new Set(); // node ids currently mid-fetch for children (guards double-click)
+        const pendingParentLoads = new Set(); // node ids currently mid-fetch for their parent
 
         const chartEmptyEl = document.getElementById('rtnChartEmpty');
+        const chartLoadingEl = document.getElementById('rtnChartLoading');
+        const toastEl = document.getElementById('rtnToast');
+
+        let toastTimer = null;
+
+        function showToast(message, isError) {
+            clearTimeout(toastTimer);
+            toastEl.textContent = message;
+            toastEl.classList.toggle('rtx-toast-error', !!isError);
+            toastEl.classList.add('rtx-toast-show');
+            toastTimer = setTimeout(() => {
+                toastEl.classList.remove('rtx-toast-show');
+            }, 3200);
+        }
+
+        function setChartLoading(isLoading) {
+            chartLoadingEl.style.display = isLoading ? 'flex' : 'none';
+        }
+
+        // Wrapper around fetch() that rejects on non-OK responses so failures
+        // surface instead of silently doing nothing.
+        function fetchJSON(url, options) {
+            return fetch(url, options).then(res => {
+                if (!res.ok) {
+                    throw new Error('Request failed (' + res.status + ')');
+                }
+                return res.json();
+            });
+        }
 
         // Define circular clipping and premium theme card SVG for nodes
         // Node height is 124 (was 110): the extra 14px at the top is reserved
@@ -671,11 +803,13 @@
             '<rect x="0" y="14" height="110" width="240" fill="#ffffff" stroke="#D4AF37" stroke-width="2" rx="15" ry="15"></rect>' +
             '<line x1="15" y1="94" x2="225" y2="94" stroke="#F4A6C6" stroke-width="1.5"></line>';
 
-        // Define parent expand button directly as a template element with dynamic display binding {val}
+        // Define parent expand button directly as a template element with dynamic display binding {val}.
+        // Click handling is done via chart.on('click', ...) delegation (see below) rather than an
+        // inline onclick attribute, since inline handlers on library-templated SVG are unreliable.
         OrgChart.templates.divyShakti.parent_btn =
-            '<g class="parent-expand-btn" style="cursor:pointer; display: {val};" onclick="expandParentNode(event)">' +
+            '<g class="parent-expand-btn" data-action="expand-parent" style="cursor:pointer; display: {val};">' +
             '<circle cx="120" cy="12" r="12" fill="#ffffff" stroke="#D4AF37" stroke-width="1.5"></circle>' +
-            '<text x="120" y="16" text-anchor="middle" style="font-size: 12px; font-weight: bold; fill: #E91E8C; font-family:\'Poppins\',sans-serif;">▲</text>' +
+            '<text x="120" y="16" text-anchor="middle" style="font-size: 12px; font-weight: bold; fill: #E91E8C; font-family:\'Poppins\',sans-serif; pointer-events: none;">▲</text>' +
             '</g>';
 
         // Circular clipping container for profile images using unique randId (shifted down 14px with the card)
@@ -693,7 +827,10 @@
         OrgChart.templates.divyShakti.field_2 =
             '<text width="140" style="font-size: 11px; font-weight: 600; font-family:\'Poppins\',sans-serif;" fill="#B8860B" x="85" y="82">Bal: ₹{val}</text>'; // Wallet Balance
 
-        // Function to build and format node objects for OrgChart.js
+        // Function to build and format node objects for OrgChart.js.
+        // IMPORTANT: `chart` must be null (not a stale/destroyed instance) whenever this
+        // is used to build a brand-new root node set, otherwise parent_btn visibility
+        // can be computed against leftover data from a previously-viewed tree.
         function formatNode(userObj, parentId) {
             let photoUrl = userObj.profile_image;
             if (!photoUrl) {
@@ -731,13 +868,15 @@
 
         // Initialize Tree chart
         function initChart(nodesArray) {
-            if (chart) {
-                chart.destroy();
-            }
             loadedNodesMap = {};
+            pendingChildLoads.clear();
+            pendingParentLoads.clear();
 
             chartEmptyEl.style.display = nodesArray.length === 0 ? 'flex' : 'none';
-            if (nodesArray.length === 0) return;
+            if (nodesArray.length === 0) {
+                chart = null;
+                return;
+            }
 
             chart = new OrgChart(document.getElementById("tree"), {
                 template: "divyShakti",
@@ -759,11 +898,11 @@
             chart.onDemand(function(args) {
                 const parentId = args.id;
 
-                // If already loaded children for this node, skip
-                if (loadedNodesMap[parentId]) return;
+                // Already loaded, or a fetch for this node is already in flight — skip.
+                if (loadedNodesMap[parentId] || pendingChildLoads.has(parentId)) return;
+                pendingChildLoads.add(parentId);
 
-                fetch(`<?php echo base_url('admin/members/getReferralTree/'); ?>${parentId}`)
-                    .then(res => res.json())
+                fetchJSON(`<?php echo base_url('admin/members/getReferralTree/'); ?>${parentId}`)
                     .then(res => {
                         if (res.status && res.children) {
                             const newNodes = res.children
@@ -775,25 +914,50 @@
 
                             chart.addNodes(parentId, newNodes, function() {
                                 loadedNodesMap[parentId] = true;
+                                pendingChildLoads.delete(parentId);
+
+                                // Clear the lazy-load placeholder on the parent now that real
+                                // children exist, so future clicks on the +/- button toggle
+                                // (collapse/expand) locally instead of re-triggering onDemand
+                                // (which would otherwise silently no-op once already loaded).
+                                const parentNode = chart.get(parentId);
+                                if (parentNode && parentNode.cids) {
+                                    delete parentNode.cids;
+                                    chart.updateNode(parentNode);
+                                }
+
                                 if (newNodes.length > 0) {
                                     chart.moveNodesToVisibleAreaAfterExpand(parentId, filteredCids.concat(newNodes.map(n => n.id)));
                                 }
                             });
+                        } else {
+                            pendingChildLoads.delete(parentId);
                         }
                     })
-                    .catch(err => console.error("Error lazy loading referral tree node: ", err));
+                    .catch(err => {
+                        pendingChildLoads.delete(parentId);
+                        console.error("Error lazy loading referral tree node: ", err);
+                        showToast("Couldn't load this member's downline. Please try again.", true);
+                    });
             });
 
             // Bind click event on nodes to fetch and open profile details modal
             chart.on('click', function(sender, args) {
-                const clickedUserId = args.node.id;
-
-                // Exclude clicks on expand buttons
-                if (args.event.target.tagName === 'circle' || args.event.target.tagName === 'text' && args.event.target.closest('g[transform]')) {
+                // Parent-expand (▲) button: detected via its data-action marker, using
+                // OrgChart's own reliably-resolved args.node.id rather than manual DOM traversal.
+                const expandBtn = args.event.target.closest('[data-action="expand-parent"]');
+                if (expandBtn) {
+                    expandParentNodeById(args.node.id, expandBtn);
                     return;
                 }
 
-                showMemberProfileModal(clickedUserId);
+                // Exclude clicks on the built-in +/- children toggle
+                if (args.event.target.tagName === 'circle' ||
+                    (args.event.target.tagName === 'text' && args.event.target.closest('g[transform]'))) {
+                    return;
+                }
+
+                showMemberProfileModal(args.node.id);
             });
         }
 
@@ -818,7 +982,10 @@
                         'X-Requested-With': 'XMLHttpRequest'
                     }
                 })
-                .then(res => res.text())
+                .then(res => {
+                    if (!res.ok) throw new Error('Request failed (' + res.status + ')');
+                    return res.text();
+                })
                 .then(html => {
                     modalBody.innerHTML = html;
                 })
@@ -835,12 +1002,20 @@
 
         // Fetch and load initial tree (No ID = topmost roots)
         function loadInitialTree(specificUserId = null) {
+            // Drop any previous chart *before* building new node data, so formatNode()
+            // never evaluates parent_btn visibility against a stale/destroyed chart.
+            if (chart) {
+                chart.destroy();
+                chart = null;
+            }
+
+            setChartLoading(true);
+
             const url = specificUserId ?
                 `<?php echo base_url('admin/members/getReferralTree/'); ?>${specificUserId}` :
                 `<?php echo base_url('admin/members/getReferralTree'); ?>`;
 
-            fetch(url)
-                .then(res => res.json())
+            fetchJSON(url)
                 .then(res => {
                     if (res.status) {
                         let nodes = [];
@@ -856,21 +1031,26 @@
                         }
 
                         initChart(nodes);
+                    } else {
+                        initChart([]);
+                        showToast(res.message || "Member not found.", true);
                     }
                 })
-                .catch(err => console.error("Error loading initial tree: ", err));
+                .catch(err => {
+                    console.error("Error loading initial tree: ", err);
+                    initChart([]);
+                    showToast("Couldn't load the network. Please check your connection and try again.", true);
+                })
+                .finally(() => setChartLoading(false));
         }
 
         // Expand parent node action
-        window.expandParentNode = function(event) {
-            event.stopPropagation();
-            const gElement = event.currentTarget.closest('.node');
-            if (!gElement) return;
-            const nodeId = gElement.getAttribute('node-id');
-            if (!nodeId) return;
+        function expandParentNodeById(nodeId, buttonEl) {
+            if (pendingParentLoads.has(nodeId)) return; // already fetching, ignore repeat clicks
+            pendingParentLoads.add(nodeId);
+            if (buttonEl) buttonEl.setAttribute('data-loading', 'true');
 
-            fetch(`<?php echo base_url('admin/members/getReferralTree/'); ?>${nodeId}`)
-                .then(res => res.json())
+            fetchJSON(`<?php echo base_url('admin/members/getReferralTree/'); ?>${nodeId}`)
                 .then(res => {
                     if (res.status && res.ancestors && res.ancestors.length > 0) {
                         const parentUser = res.ancestors[0];
@@ -887,11 +1067,37 @@
                         // Add parent node to chart and update current node
                         chart.addNodes(null, [parentNode], function() {
                             chart.updateNode(currentNode);
+
+                            // Smoothly pan/zoom so the newly revealed ancestor is actually
+                            // visible instead of sitting off-screen above the viewport.
+                            try {
+                                chart.center(parentUser.id);
+                            } catch (e) {
+                                /* center() unsupported on this build — safe to ignore */
+                            }
+
+                            // Brief highlight pulse on the new node so it's obvious where it landed.
+                            requestAnimationFrame(() => {
+                                const newNodeEl = document.querySelector('.node[node-id="' + parentUser.id + '"]');
+                                if (newNodeEl) {
+                                    newNodeEl.classList.add('rtx-node-highlight');
+                                    setTimeout(() => newNodeEl.classList.remove('rtx-node-highlight'), 1200);
+                                }
+                            });
                         });
+                    } else if (!res.status) {
+                        showToast(res.message || "Couldn't find this member's referrer.", true);
                     }
                 })
-                .catch(err => console.error("Error expanding parent node: ", err));
-        };
+                .catch(err => {
+                    console.error("Error expanding parent node: ", err);
+                    showToast("Couldn't load the parent member. Please try again.", true);
+                })
+                .finally(() => {
+                    pendingParentLoads.delete(nodeId);
+                    if (buttonEl) buttonEl.removeAttribute('data-loading');
+                });
+        }
 
         // Autocomplete Search
         const searchInput = document.getElementById('networkSearch');
@@ -933,8 +1139,7 @@
             }
 
             debounceTimer = setTimeout(() => {
-                fetch(`<?php echo base_url('admin/members/search?query='); ?>${encodeURIComponent(query)}`)
-                    .then(res => res.json())
+                fetchJSON(`<?php echo base_url('admin/members/search?query='); ?>${encodeURIComponent(query)}`)
                     .then(res => {
                         resultsBox.innerHTML = '';
                         activeAcIndex = -1;
