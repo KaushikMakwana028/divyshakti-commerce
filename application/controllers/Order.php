@@ -311,16 +311,25 @@ class Order extends CI_Controller
                 $this->db->delete('order_commissions', ['order_id' => (int)$id]);
             }
 
-            $this->db->update('orders', [
+            $cancel_data = [
                 'status'     => 'cancelled',
                 'updated_at' => date('Y-m-d H:i:s')
-            ], ['id' => (int)$order->id]);
+            ];
+            try {
+                $cancel_data['commission_distributed'] = 0;
+            } catch (\Throwable $e) {}
+            $this->db->update('orders', $cancel_data, ['id' => (int)$order->id]);
         } else {
             // Forward status transition
             $this->db->update('orders', [
                 'status'     => $new_status,
                 'updated_at' => date('Y-m-d H:i:s')
             ], ['id' => (int)$order->id]);
+
+            // Distribute MLM referral commissions only when order reaches delivered status!
+            if ($new_status === 'delivered') {
+                $this->General_model->distribute_order_commissions((int)$id);
+            }
         }
 
         if ($this->db->trans_status() === FALSE) {

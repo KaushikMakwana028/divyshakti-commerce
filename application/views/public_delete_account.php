@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Delete Account & Data Erasure - Divy Shakti</title>
-    <meta name="description" content="Request permanent account deletion and data erasure from Divy Shakti e-commerce and affiliate platform.">
+    <title>Account Deletion &amp; Data Erasure Guide - Divy Shakti</title>
+    <meta name="description" content="Official step-by-step guide on how to delete your Divy Shakti account, data erasure details, and privacy compliance guidelines.">
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Google Fonts -->
@@ -13,15 +13,15 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <!-- SweetAlert2 -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
 
     <style>
         :root {
             --brand-pink: #ec407a;
             --brand-pink-dark: #d81b60;
             --brand-gold: #d4af37;
+            --brand-gold-dark: #b89428;
             --brand-dark: #161c2d;
+            --brand-navy: #0f172a;
             --brand-bg: #f8fafc;
             --brand-card: #ffffff;
             --text-main: #1e293b;
@@ -29,6 +29,11 @@
             --border-color: #e2e8f0;
             --danger-red: #ef4444;
             --danger-dark: #b91c1c;
+            --success-green: #10b981;
+        }
+
+        * {
+            box-sizing: border-box;
         }
 
         body {
@@ -39,13 +44,15 @@
             min-height: 100vh;
             display: flex;
             flex-direction: column;
+            margin: 0;
+            padding: 0;
         }
 
         /* Top Brand Navbar */
         .public-navbar {
             background-color: #ffffff;
             border-bottom: 1px solid var(--border-color);
-            box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+            box-shadow: 0 2px 12px rgba(0,0,0,0.03);
             padding: 14px 0;
             position: sticky;
             top: 0;
@@ -75,14 +82,22 @@
             margin: 0;
         }
 
+        .nav-btn {
+            border-radius: 8px;
+            font-size: 0.82rem;
+            font-weight: 500;
+            padding: 6px 14px;
+            transition: all 0.2s ease;
+        }
+
         /* Hero Header */
         .legal-hero {
-            background: linear-gradient(135deg, #1e1b2e 0%, #111827 100%);
+            background: linear-gradient(135deg, #111827 0%, #1e1b2e 50%, #1a2234 100%);
             color: #ffffff;
-            padding: 48px 0 40px;
+            padding: 56px 0 48px;
             position: relative;
             overflow: hidden;
-            border-bottom: 4px solid var(--danger-red);
+            border-bottom: 4px solid var(--brand-gold);
         }
 
         .legal-hero::after {
@@ -90,158 +105,418 @@
             position: absolute;
             top: -50%;
             right: -10%;
-            width: 400px;
-            height: 400px;
-            background: radial-gradient(circle, rgba(239, 68, 68, 0.15) 0%, transparent 70%);
+            width: 420px;
+            height: 420px;
+            background: radial-gradient(circle, rgba(236, 64, 122, 0.15) 0%, transparent 70%);
             pointer-events: none;
         }
 
-        .hero-badge-danger {
-            background: rgba(239, 68, 68, 0.18);
-            color: #fca5a5;
-            border: 1px solid rgba(239, 68, 68, 0.35);
+        .legal-hero::before {
+            content: '';
+            position: absolute;
+            bottom: -30%;
+            left: -5%;
+            width: 320px;
+            height: 320px;
+            background: radial-gradient(circle, rgba(212, 175, 55, 0.12) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .hero-badge {
+            background: rgba(212, 175, 55, 0.18);
+            color: #fce79a;
+            border: 1px solid rgba(212, 175, 55, 0.35);
             font-size: 0.78rem;
             font-weight: 600;
-            padding: 5px 14px;
+            padding: 6px 16px;
             border-radius: 50px;
             display: inline-flex;
             align-items: center;
-            gap: 6px;
-            margin-bottom: 12px;
+            gap: 8px;
+            margin-bottom: 14px;
         }
 
         .legal-title {
-            font-size: 2.2rem;
+            font-size: 2.25rem;
             font-weight: 800;
             letter-spacing: -0.5px;
-            margin-bottom: 8px;
+            margin-bottom: 10px;
         }
 
         .legal-subtitle {
-            color: #94a3b8;
-            font-size: 0.95rem;
+            color: #cbd5e1;
+            font-size: 1rem;
             margin-bottom: 0;
+            max-width: 720px;
+            line-height: 1.6;
         }
 
         /* Content Card */
         .legal-card {
             background-color: var(--brand-card);
-            border-radius: 16px;
+            border-radius: 20px;
             border: 1px solid var(--border-color);
-            box-shadow: 0 4px 25px rgba(0,0,0,0.05);
-            padding: 38px;
-            margin-top: -24px;
-            margin-bottom: 50px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.04);
+            padding: 42px 40px;
+            margin-top: -30px;
+            margin-bottom: 60px;
             position: relative;
             z-index: 10;
         }
 
-        /* Step Card Styling */
-        .step-badge {
-            width: 38px;
-            height: 38px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, var(--brand-pink), var(--brand-pink-dark));
-            color: #ffffff;
-            display: inline-flex;
+        /* Overview Highlight Pills */
+        .highlights-strip {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            padding: 16px 20px;
+            margin-bottom: 36px;
+        }
+
+        .highlight-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .highlight-icon-wrap {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
             align-items: center;
             justify-content: center;
-            font-weight: 700;
-            font-size: 1rem;
-            box-shadow: 0 4px 10px rgba(236, 64, 122, 0.25);
             flex-shrink: 0;
         }
 
-        .step-item {
-            background: #ffffff;
-            border: 1px solid #e2e8f0;
-            border-radius: 14px;
-            padding: 20px;
-            height: 100%;
-            transition: all 0.25s ease;
-        }
-
-        .step-item:hover {
-            border-color: #cbd5e1;
-            box-shadow: 0 6px 16px rgba(0,0,0,0.05);
-            transform: translateY(-2px);
-        }
-
-        .step-item h5 {
+        .highlight-text h6 {
+            margin: 0;
+            font-size: 0.88rem;
             font-weight: 700;
-            font-size: 1.05rem;
+            color: var(--brand-dark);
+        }
+
+        .highlight-text p {
+            margin: 0;
+            font-size: 0.78rem;
+            color: var(--text-muted);
+        }
+
+        /* Section Headings */
+        .section-header-wrap {
+            margin-bottom: 24px;
+        }
+
+        .section-eyebrow {
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            color: var(--brand-pink);
+            margin-bottom: 4px;
+            display: block;
+        }
+
+        .section-heading {
+            font-size: 1.45rem;
+            font-weight: 800;
             color: var(--brand-dark);
             margin: 0;
         }
 
-        .step-item p {
-            color: #64748b;
-            font-size: 0.88rem;
-            margin: 0;
-            line-height: 1.5;
+        .section-desc {
+            color: var(--text-muted);
+            font-size: 0.92rem;
+            margin-top: 4px;
         }
 
-        /* Deletion Action Box */
-        .deletion-action-box {
-            background: #fff8f8;
-            border: 2px dashed #fca5a5;
-            border-radius: 16px;
-            padding: 30px;
-            margin: 30px 0;
+        /* Step Card Styling */
+        .steps-container {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 36px;
         }
 
-        .btn-delete-action {
-            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-            border: none;
-            color: #ffffff;
-            font-weight: 700;
-            font-size: 1.05rem;
-            padding: 14px 28px;
-            border-radius: 12px;
-            box-shadow: 0 6px 18px rgba(239, 68, 68, 0.35);
-            transition: all 0.2s ease;
-        }
-
-        .btn-delete-action:hover {
-            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
-            color: #ffffff;
-            box-shadow: 0 8px 24px rgba(239, 68, 68, 0.45);
-            transform: translateY(-1px);
-        }
-
-        /* App Guide Box */
-        .app-guide-box {
-            background: #f1f5f9;
-            border: 1px solid #cbd5e1;
-            border-radius: 14px;
-            padding: 24px;
-        }
-
-        .app-step-pill {
+        .step-card {
             background: #ffffff;
             border: 1px solid #e2e8f0;
-            border-radius: 10px;
-            padding: 12px 16px;
+            border-radius: 16px;
+            padding: 22px 18px;
+            position: relative;
+            transition: all 0.25s ease;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+        }
+
+        .step-card:hover {
+            border-color: #cbd5e1;
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.06);
+        }
+
+        .step-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+
+        .step-number-circle {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--brand-pink), var(--brand-pink-dark));
+            color: #ffffff;
+            font-weight: 800;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 10px rgba(236, 64, 122, 0.25);
+        }
+
+        .step-icon-wrap {
+            width: 34px;
+            height: 34px;
+            border-radius: 8px;
+            background: #fdf2f8;
+            color: var(--brand-pink);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.95rem;
+        }
+
+        .step-title {
+            font-weight: 700;
+            font-size: 1rem;
+            color: var(--brand-dark);
+            margin-bottom: 8px;
+        }
+
+        .step-text {
+            color: #64748b;
+            font-size: 0.85rem;
+            line-height: 1.55;
+            margin: 0;
+            flex-grow: 1;
+        }
+
+        /* Alternative Email Request Card */
+        .alt-request-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-left: 5px solid #3b82f6;
+            border-radius: 14px;
+            padding: 24px;
+            margin-bottom: 36px;
+        }
+
+        .alt-request-badge {
+            background: #eff6ff;
+            color: #2563eb;
+            font-weight: 600;
+            font-size: 0.75rem;
+            padding: 3px 10px;
+            border-radius: 50px;
+            display: inline-block;
+            margin-bottom: 8px;
+        }
+
+        .alt-step-list {
+            margin: 14px 0 0;
+            padding-left: 20px;
+        }
+
+        .alt-step-list li {
+            font-size: 0.88rem;
+            color: #475569;
+            margin-bottom: 8px;
+            line-height: 1.55;
+        }
+
+        /* Data Policy Columns */
+        .data-policy-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 36px;
+        }
+
+        .policy-box {
+            border-radius: 16px;
+            padding: 24px;
+            height: 100%;
+        }
+
+        .policy-box-deleted {
+            background: #fff8f8;
+            border: 1px solid #fecaca;
+        }
+
+        .policy-box-retained {
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+        }
+
+        .policy-box-header {
             display: flex;
             align-items: center;
             gap: 12px;
-            margin-bottom: 10px;
-            font-size: 0.9rem;
-            font-weight: 500;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(0,0,0,0.06);
         }
 
-        .app-step-num {
-            background: var(--brand-dark);
-            color: #ffffff;
-            width: 26px;
-            height: 26px;
-            border-radius: 50%;
-            display: inline-flex;
+        .policy-box-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.75rem;
+            font-size: 1rem;
+        }
+
+        .icon-deleted {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+
+        .icon-retained {
+            background: #dcfce7;
+            color: #15803d;
+        }
+
+        .policy-box-title {
+            font-size: 1.05rem;
             font-weight: 700;
+            margin: 0;
+            color: var(--brand-dark);
+        }
+
+        .policy-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .policy-list li {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            margin-bottom: 10px;
+            font-size: 0.86rem;
+            color: #334155;
+            line-height: 1.5;
+        }
+
+        .policy-list li i {
+            margin-top: 3px;
+            font-size: 0.82rem;
             flex-shrink: 0;
+        }
+
+        /* Warning Callout Box */
+        .consequences-card {
+            background: #fffbeb;
+            border: 1px solid #fef3c7;
+            border-left: 5px solid #f59e0b;
+            border-radius: 14px;
+            padding: 22px 24px;
+            margin-bottom: 36px;
+        }
+
+        .consequences-card h5 {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #92400e;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .consequences-card ul {
+            margin: 0;
+            padding-left: 20px;
+            font-size: 0.86rem;
+            color: #78350f;
+            line-height: 1.65;
+        }
+
+        /* Support Assistance Box */
+        .helpdesk-card {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            border-radius: 16px;
+            color: #ffffff;
+            padding: 28px 30px;
+            margin-bottom: 36px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .helpdesk-card::after {
+            content: '';
+            position: absolute;
+            top: -40%;
+            right: -5%;
+            width: 250px;
+            height: 250px;
+            background: radial-gradient(circle, rgba(236, 64, 122, 0.2) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .help-contact-btn {
+            background: #ffffff;
+            color: var(--brand-dark);
+            font-weight: 600;
+            font-size: 0.86rem;
+            padding: 10px 18px;
+            border-radius: 10px;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .help-contact-btn:hover {
+            background: #f1f5f9;
+            color: var(--brand-pink);
+            transform: translateY(-1px);
+        }
+
+        /* Accordion */
+        .accordion-item {
+            border: 1px solid #e2e8f0;
+            border-radius: 12px !important;
+            margin-bottom: 12px;
+            overflow: hidden;
+        }
+
+        .accordion-button {
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: var(--brand-dark);
+            background-color: #ffffff;
+            padding: 18px 20px;
+            box-shadow: none !important;
+        }
+
+        .accordion-button:not(.collapsed) {
+            background-color: #f8fafc;
+            color: var(--brand-pink);
+        }
+
+        .accordion-body {
+            font-size: 0.88rem;
+            color: #64748b;
+            line-height: 1.65;
+            padding: 16px 20px 20px;
+            background-color: #ffffff;
         }
 
         /* Footer */
@@ -249,7 +524,7 @@
             margin-top: auto;
             background-color: var(--brand-dark);
             color: #94a3b8;
-            padding: 32px 0 24px;
+            padding: 34px 0 24px;
             border-top: 1px solid rgba(255,255,255,0.08);
             font-size: 0.88rem;
         }
@@ -264,16 +539,33 @@
             color: var(--brand-gold);
         }
 
+        /* Responsive */
+        @media (max-width: 992px) {
+            .steps-container {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .data-policy-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
         @media (max-width: 768px) {
             .legal-card {
-                padding: 24px 18px;
-                border-radius: 12px;
+                padding: 26px 18px;
+                border-radius: 16px;
+                margin-top: -20px;
             }
             .legal-title {
-                font-size: 1.75rem;
+                font-size: 1.7rem;
             }
-            .deletion-action-box {
-                padding: 20px 14px;
+            .steps-container {
+                grid-template-columns: 1fr;
+            }
+            .highlights-strip .row > div {
+                margin-bottom: 12px;
+            }
+            .highlights-strip .row > div:last-child {
+                margin-bottom: 0;
             }
         }
     </style>
@@ -288,11 +580,11 @@
                 <span class="brand-title">DIVY SHAKTI</span>
             </a>
             <div class="d-flex align-items-center gap-2">
-                <a href="<?php echo base_url('privacy_policy'); ?>" class="btn btn-sm btn-outline-secondary px-3 py-1.5" style="border-radius: 8px; font-size: 0.82rem;">
-                    <i class="fa-solid fa-shield-halved me-1"></i> Privacy
+                <a href="<?php echo base_url('privacy_policy'); ?>" class="btn btn-outline-secondary nav-btn">
+                    <i class="fa-solid fa-shield-halved me-1"></i> Privacy Policy
                 </a>
-                <a href="<?php echo base_url('terms_conditions'); ?>" class="btn btn-sm btn-outline-secondary px-3 py-1.5" style="border-radius: 8px; font-size: 0.82rem;">
-                    <i class="fa-solid fa-file-contract me-1"></i> Terms
+                <a href="<?php echo base_url('terms_conditions'); ?>" class="btn btn-outline-secondary nav-btn">
+                    <i class="fa-solid fa-file-contract me-1"></i> Terms of Use
                 </a>
             </div>
         </div>
@@ -302,311 +594,320 @@
     <div class="legal-hero">
         <div class="container">
             <div class="row align-items-center">
-                <div class="col-lg-9">
-                    <span class="hero-badge-danger">
-                        <i class="fa-solid fa-triangle-exclamation"></i> Permanent Data Erasure &amp; Account Termination
+                <div class="col-lg-10">
+                    <span class="hero-badge">
+                        <i class="fa-solid fa-shield-check"></i> Google Play &amp; App Store Compliance &bull; Data Erasure Guidelines
                     </span>
-                    <h1 class="legal-title">Delete Divy Shakti Account</h1>
-                    <p class="legal-subtitle">Complete account deletion steps, data handling transparency, and direct confirmation portal.</p>
-                </div>
-                <div class="col-lg-3 text-lg-end mt-3 mt-lg-0">
-                    <span class="badge bg-white text-danger border px-3 py-2" style="font-size: 0.82rem; border-radius: 8px;">
-                        <i class="fa-solid fa-circle-exclamation me-1"></i> Immediate &amp; Irreversible
-                    </span>
+                    <h1 class="legal-title">Account Deletion &amp; Data Erasure Guide</h1>
+                    <p class="legal-subtitle">
+                        Clear, step-by-step instructions on how to permanently delete your Divy Shakti account, understand what data is erased, and review statutory data retention policies.
+                    </p>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Main Content Body -->
+    <!-- Main Content Container -->
     <main class="container">
         <div class="row justify-content-center">
             <div class="col-lg-11">
                 <div class="legal-card">
 
-                    <?php if ($this->session->flashdata('success') || $this->input->get('deleted') == '1'): ?>
-                        <div class="alert alert-success border-0 shadow-sm p-4 text-center mb-4" style="border-radius: 12px; background: #ecfdf5; color: #065f46;">
-                            <i class="fa-solid fa-circle-check fs-1 text-success mb-2 d-block"></i>
-                            <h4 class="fw-bold mb-1">Account Successfully Deleted</h4>
-                            <p class="mb-3 text-muted">Your Divy Shakti account and all associated personal data have been completely purged from active production servers.</p>
-                            <a href="<?php echo base_url(); ?>" class="btn btn-sm btn-success px-4 py-2" style="border-radius: 8px;">
-                                <i class="fa-solid fa-house me-1"></i> Return to Homepage
-                            </a>
+                    <!-- Quick Highlights Strip -->
+                    <div class="highlights-strip">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <div class="highlight-item">
+                                    <div class="highlight-icon-wrap" style="background: #eef2ff; color: #4f46e5;">
+                                        <i class="fa-solid fa-mobile-screen fs-5"></i>
+                                    </div>
+                                    <div class="highlight-text">
+                                        <h6>In-App Deletion Available</h6>
+                                        <p>Delete directly inside the mobile app anytime</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="highlight-item">
+                                    <div class="highlight-icon-wrap" style="background: #fdf2f8; color: #db2777;">
+                                        <i class="fa-solid fa-user-xmark fs-5"></i>
+                                    </div>
+                                    <div class="highlight-text">
+                                        <h6>Complete Profile &amp; KYC Purge</h6>
+                                        <p>Personal data removed from production servers</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="highlight-item">
+                                    <div class="highlight-icon-wrap" style="background: #ecfdf5; color: #059669;">
+                                        <i class="fa-solid fa-bolt fs-5"></i>
+                                    </div>
+                                    <div class="highlight-text">
+                                        <h6>Instant Session Revocation</h6>
+                                        <p>Immediate logout and security token termination</p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                    <?php endif; ?>
-
-                    <?php if ($this->session->flashdata('error')): ?>
-                        <div class="alert alert-danger border-0 shadow-sm p-3 mb-4" style="border-radius: 10px;">
-                            <i class="fa-solid fa-circle-exclamation me-2"></i>
-                            <?php echo $this->session->flashdata('error'); ?>
-                        </div>
-                    <?php endif; ?>
-
-                    <!-- Section Header -->
-                    <div class="text-center mb-4">
-                        <h2 class="fw-bold" style="color: var(--brand-dark); font-size: 1.6rem;">3 Simple Steps to Delete Your Account</h2>
-                        <p class="text-muted" style="max-width: 680px; margin: 0 auto; font-size: 0.94rem;">
-                            In accordance with Google Play, Apple App Store, and Indian Digital Personal Data Protection mandates, you have full authority to permanently erase your account at any time.
-                        </p>
                     </div>
 
-                    <!-- 3 Process Steps Cards -->
-                    <div class="row g-3 mb-4">
+                    <!-- PRIMARY SECTION: Step-by-Step Instructions -->
+                    <div class="section-header-wrap">
+                        <span class="section-eyebrow">Method 1 &bull; Direct &amp; Instant (Recommended)</span>
+                        <h2 class="section-heading">How to Delete Your Account in the Mobile App</h2>
+                        <p class="section-desc">Follow these 4 simple steps directly on your Android or iOS device using the Divy Shakti app.</p>
+                    </div>
+
+                    <!-- 4 Steps Visual Cards Grid -->
+                    <div class="steps-container">
                         <!-- Step 1 -->
-                        <div class="col-md-4">
-                            <div class="step-item">
-                                <div class="d-flex align-items-center gap-3 mb-3">
-                                    <div class="step-badge">1</div>
-                                    <h5>Identify Account</h5>
+                        <div class="step-card">
+                            <div class="step-top">
+                                <div class="step-number-circle">1</div>
+                                <div class="step-icon-wrap">
+                                    <i class="fa-solid fa-right-to-bracket"></i>
                                 </div>
-                                <p>Provide your registered mobile number below or remain signed in so we can locate your unique membership records.</p>
                             </div>
+                            <h4 class="step-title">Open App &amp; Sign In</h4>
+                            <p class="step-text">
+                                Launch the official <strong>Divy Shakti</strong> mobile application on your smartphone and log in to the account you wish to delete.
+                            </p>
                         </div>
 
                         <!-- Step 2 -->
-                        <div class="col-md-4">
-                            <div class="step-item">
-                                <div class="d-flex align-items-center gap-3 mb-3">
-                                    <div class="step-badge" style="background: linear-gradient(135deg, #f59e0b, #d97706);">2</div>
-                                    <h5>Review Impact</h5>
+                        <div class="step-card">
+                            <div class="step-top">
+                                <div class="step-number-circle">2</div>
+                                <div class="step-icon-wrap">
+                                    <i class="fa-solid fa-user"></i>
                                 </div>
-                                <p>Ensure you understand that remaining wallet balance will be forfeited and MLM sponsorship chains decoupled permanently.</p>
                             </div>
+                            <h4 class="step-title">Go to Profile Tab</h4>
+                            <p class="step-text">
+                                Tap the <strong>Profile (Account)</strong> icon located on the far-right corner of the bottom navigation bar to open your dashboard.
+                            </p>
                         </div>
 
                         <!-- Step 3 -->
-                        <div class="col-md-4">
-                            <div class="step-item">
-                                <div class="d-flex align-items-center gap-3 mb-3">
-                                    <div class="step-badge" style="background: linear-gradient(135deg, #ef4444, #dc2626);">3</div>
-                                    <h5>Confirm &amp; Delete</h5>
+                        <div class="step-card">
+                            <div class="step-top">
+                                <div class="step-number-circle">3</div>
+                                <div class="step-icon-wrap">
+                                    <i class="fa-solid fa-gear"></i>
                                 </div>
-                                <p>Click the Delete button. An explicit confirmation pop-up will ask for your consent; once confirmed, deletion occurs immediately.</p>
                             </div>
+                            <h4 class="step-title">Select Delete Account</h4>
+                            <p class="step-text">
+                                Scroll down through the menu list to find <strong>Delete Account</strong> or <strong>Privacy &amp; Security Settings</strong>.
+                            </p>
+                        </div>
+
+                        <!-- Step 4 -->
+                        <div class="step-card">
+                            <div class="step-top">
+                                <div class="step-number-circle">4</div>
+                                <div class="step-icon-wrap">
+                                    <i class="fa-solid fa-circle-check"></i>
+                                </div>
+                            </div>
+                            <h4 class="step-title">Confirm Deletion</h4>
+                            <p class="step-text">
+                                Read the confirmation prompt regarding wallet balance and order history, then tap <strong>Confirm &amp; Delete Account</strong>.
+                            </p>
                         </div>
                     </div>
 
-                    <!-- Consequences Warning Box -->
-                    <div class="alert alert-warning border-0 p-4 mb-4" style="border-radius: 12px; background: #fffbeb; border-left: 4px solid #f59e0b !important;">
-                        <h5 class="fw-bold text-dark mb-2"><i class="fa-solid fa-triangle-exclamation text-warning me-2"></i>What Happens When You Delete Your Account:</h5>
-                        <ul class="mb-0 text-dark small" style="line-height: 1.8;">
-                            <li><strong>Wallet Balance:</strong> Any remaining digital wallet funds or unwithdrawn commission balances are permanently cancelled and non-refundable.</li>
-                            <li><strong>MLM Referral Network:</strong> Your referral code is deactivated. Any direct recruits in your downline will be decoupled from your account.</li>
-                            <li><strong>Order History &amp; Addresses:</strong> Your personal addresses and cart items will be purged immediately. Completed invoice archives are retained strictly as required by statutory taxation law.</li>
-                            <li><strong>KYC Records:</strong> Your PAN card image, Aadhaar scan, and bank account numbers are scrubbed from active storage.</li>
+                    <!-- SECONDARY METHOD: Request via Support -->
+                    <div class="alt-request-card">
+                        <span class="alt-request-badge">
+                            <i class="fa-solid fa-envelope me-1"></i> Method 2 &bull; Alternative Request via Email / Support
+                        </span>
+                        <h4 class="fw-bold text-dark mb-2" style="font-size: 1.15rem;">Unable to Access the Mobile App?</h4>
+                        <p class="text-muted small mb-0">
+                            If you have uninstalled the application, changed your device, or cannot log in to your account, you can request account deletion directly by contacting our data protection support team:
+                        </p>
+                        <ol class="alt-step-list">
+                            <li>
+                                <strong>Send an Email:</strong> Write to our support desk at <a href="mailto:support@divyshakti.com" class="fw-semibold text-primary text-decoration-none">support@divyshakti.com</a> using your registered email address.
+                            </li>
+                            <li>
+                                <strong>Subject Line:</strong> Use the subject: <code>Account Deletion Request - [Your Registered Mobile Number]</code>.
+                            </li>
+                            <li>
+                                <strong>Required Information:</strong> Include your <strong>Full Name</strong>, <strong>Registered Mobile Number</strong>, and <strong>Member ID</strong> (if available).
+                            </li>
+                            <li>
+                                <strong>Processing Time:</strong> Our privacy team will verify your identity and process the deletion within <strong>24 to 48 business hours</strong>. A final confirmation email will be sent upon completion.
+                            </li>
+                        </ol>
+                    </div>
+
+                    <!-- DATA TRANSPARENCY SECTION -->
+                    <div class="section-header-wrap mt-5">
+                        <span class="section-eyebrow">Privacy &amp; Compliance Transparency</span>
+                        <h2 class="section-heading">What Data Is Erased vs. Retained</h2>
+                        <p class="section-desc">In compliance with Google Play, Apple Developer guidelines, and Digital Personal Data Protection laws.</p>
+                    </div>
+
+                    <div class="data-policy-grid">
+                        <!-- Data Deleted Box -->
+                        <div class="policy-box policy-box-deleted">
+                            <div class="policy-box-header">
+                                <div class="policy-box-icon icon-deleted">
+                                    <i class="fa-solid fa-trash-can"></i>
+                                </div>
+                                <div>
+                                    <h4 class="policy-box-title text-danger">Data Permanently Deleted</h4>
+                                    <span class="text-muted" style="font-size: 0.78rem;">Purged immediately from active servers</span>
+                                </div>
+                            </div>
+                            <ul class="policy-list">
+                                <li>
+                                    <i class="fa-solid fa-circle-xmark text-danger"></i>
+                                    <span><strong>Personal Profile:</strong> Full name, phone number, email address, physical addresses, and profile photo.</span>
+                                </li>
+                                <li>
+                                    <i class="fa-solid fa-circle-xmark text-danger"></i>
+                                    <span><strong>KYC Documents:</strong> Aadhaar number &amp; card images, PAN card images, and bank account records.</span>
+                                </li>
+                                <li>
+                                    <i class="fa-solid fa-circle-xmark text-danger"></i>
+                                    <span><strong>Authentication &amp; Device:</strong> Login tokens, passwords, push notification tokens, and device identifiers.</span>
+                                </li>
+                                <li>
+                                    <i class="fa-solid fa-circle-xmark text-danger"></i>
+                                    <span><strong>Network &amp; Affiliation:</strong> Your referral code is deactivated and direct affiliate tree links are permanently severed.</span>
+                                </li>
+                                <li>
+                                    <i class="fa-solid fa-circle-xmark text-danger"></i>
+                                    <span><strong>Digital Wallet:</strong> Wallet account access is revoked and non-withdrawn balances are permanently closed.</span>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <!-- Data Retained Box -->
+                        <div class="policy-box policy-box-retained">
+                            <div class="policy-box-header">
+                                <div class="policy-box-icon icon-retained">
+                                    <i class="fa-solid fa-shield-halved"></i>
+                                </div>
+                                <div>
+                                    <h4 class="policy-box-title text-success">Statutory Data Retained</h4>
+                                    <span class="text-muted" style="font-size: 0.78rem;">Retained strictly for legal &amp; tax compliance</span>
+                                </div>
+                            </div>
+                            <ul class="policy-list">
+                                <li>
+                                    <i class="fa-solid fa-circle-check text-success"></i>
+                                    <span><strong>Commercial Invoices:</strong> Records of completed orders and tax invoices must be retained under applicable Indian GST and taxation statutes.</span>
+                                </li>
+                                <li>
+                                    <i class="fa-solid fa-circle-check text-success"></i>
+                                    <span><strong>Financial Audit Trail:</strong> Historical transaction logs are held in encrypted, read-only archives for statutory financial auditing.</span>
+                                </li>
+                                <li>
+                                    <i class="fa-solid fa-circle-check text-success"></i>
+                                    <span><strong>Security Logs:</strong> Anonymized server logs are retained for a temporary period (30–90 days) for fraud prevention, then permanently overwritten.</span>
+                                </li>
+                                <li>
+                                    <i class="fa-solid fa-circle-check text-success"></i>
+                                    <span><strong>No Marketing Use:</strong> Retained records are strictly locked and never used for advertising, communications, or profiling.</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Important Consequences Warning -->
+                    <div class="consequences-card">
+                        <h5>
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+                            Important Notice Before Deleting Your Account
+                        </h5>
+                        <ul>
+                            <li><strong>Irreversible Action:</strong> Once confirmed, account deletion cannot be undone. You cannot restore your previous rank, network, or data.</li>
+                            <li><strong>Forfeiture of Wallet Balances:</strong> Any remaining digital wallet funds, pending payouts, or unwithdrawn commission balances are non-refundable and will be forfeited.</li>
+                            <li><strong>Orders in Transit:</strong> Orders already placed and dispatched prior to deletion will still be completed and delivered to your specified shipping address.</li>
                         </ul>
                     </div>
 
-                    <?php 
-                        $is_admin_user = !empty($logged_user) && ((int)($logged_user->role ?? 0) !== 0 || (int)$logged_user->id === 1);
-                    ?>
-
-                    <!-- Direct Account Deletion Action Area -->
-                    <div class="deletion-action-box text-center">
-                        <?php if ($is_admin_user): ?>
-                            <!-- Case A1: Current user is an Administrator (Protected) -->
-                            <div class="d-inline-flex align-items-center justify-content-center bg-primary text-white rounded-circle mb-3 shadow" style="width: 60px; height: 60px;">
-                                <i class="fa-solid fa-shield-halved fs-3"></i>
-                            </div>
-
-                            <h3 class="fw-bold text-dark mb-2">Administrator Account Protected</h3>
-                            <p class="text-muted small mb-4" style="max-width: 580px; margin: 0 auto;">
-                                Administrative master accounts cannot be deleted through this public portal in order to protect platform governance, MLM genealogy, and business operations.
-                            </p>
-
-                            <div class="card border border-primary-subtle mx-auto mb-4 text-start shadow-sm" style="max-width: 500px; border-radius: 12px; background: #ffffff; border-top: 3px solid var(--bs-primary) !important;">
-                                <div class="card-body p-3">
-                                    <div class="d-flex align-items-center justify-content-between mb-2 pb-2 border-bottom">
-                                        <span class="text-muted small">Authenticated Profile</span>
-                                        <span class="badge bg-primary px-2.5 py-1" style="font-size: 0.72rem;">
-                                            <i class="fa-solid fa-lock me-1"></i> Administrator Role
-                                        </span>
-                                    </div>
-                                    <div class="d-flex align-items-center gap-3">
-                                        <div class="rounded-circle bg-dark text-white d-flex align-items-center justify-content-center fw-bold fs-5" style="width: 46px; height: 46px;">
-                                            <?php echo strtoupper(substr($logged_user->name ?? 'A', 0, 1)); ?>
-                                        </div>
-                                        <div>
-                                            <h6 class="fw-bold text-dark mb-0"><?php echo htmlspecialchars($logged_user->name); ?></h6>
-                                            <span class="text-muted small"><i class="fa-solid fa-phone me-1"></i><?php echo htmlspecialchars($logged_user->phone); ?></span>
-                                            <?php if (!empty($logged_user->custom_id)): ?>
-                                                <span class="badge bg-light text-dark border ms-1 font-monospace" style="font-size: 0.7rem;">#<?php echo htmlspecialchars($logged_user->custom_id); ?></span>
-                                            <?php endif; ?>
-                                        </div>
-                                    </div>
-                                    <div class="mt-3 pt-2 border-top d-flex justify-content-between align-items-center">
-                                        <span class="text-muted small">Status:</span>
-                                        <strong class="text-success"><i class="fa-solid fa-circle-check me-1"></i> Protected Master Admin (Cannot Be Deleted)</strong>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="d-flex flex-wrap justify-content-center gap-2">
-                                <a href="<?php echo base_url('admin/dashboard'); ?>" class="btn btn-primary px-4 py-2.5 fw-semibold" style="border-radius: 10px;">
-                                    <i class="fa-solid fa-gauge me-1"></i> Return to Admin Dashboard
-                                </a>
-                                <a href="<?php echo base_url('admin/logout'); ?>" class="btn btn-outline-secondary px-3 py-2.5" style="border-radius: 10px;">
-                                    <i class="fa-solid fa-right-from-bracket me-1"></i> Sign Out to Test Regular Member Deletion
-                                </a>
-                            </div>
-
-                        <?php elseif (!empty($logged_user)): ?>
-                            <!-- Case A2: Current user is a Regular Member (Can delete) -->
-                            <div class="d-inline-flex align-items-center justify-content-center bg-danger text-white rounded-circle mb-3 shadow" style="width: 58px; height: 58px;">
-                                <i class="fa-solid fa-trash-can fs-4"></i>
-                            </div>
-
-                            <h3 class="fw-bold text-danger mb-2">Account Deletion Confirmation</h3>
-                            <p class="text-muted small mb-4" style="max-width: 580px; margin: 0 auto;">
-                                Once you click the button below and confirm the warning prompt, your account will be immediately deleted. This action cannot be reversed.
-                            </p>
-
-                            <div class="card border border-danger-subtle mx-auto mb-4 text-start shadow-sm" style="max-width: 500px; border-radius: 12px; background: #ffffff;">
-                                <div class="card-body p-3">
-                                    <div class="d-flex align-items-center justify-content-between mb-2 pb-2 border-bottom">
-                                        <span class="text-muted small">Authenticated Profile</span>
-                                        <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-0.5" style="font-size: 0.72rem;">Currently Logged In</span>
-                                    </div>
-                                    <div class="d-flex align-items-center gap-3">
-                                        <div class="rounded-circle bg-dark text-white d-flex align-items-center justify-content-center fw-bold fs-5" style="width: 46px; height: 46px;">
-                                            <?php echo strtoupper(substr($logged_user->name ?? 'U', 0, 1)); ?>
-                                        </div>
-                                        <div>
-                                            <h6 class="fw-bold text-dark mb-0"><?php echo htmlspecialchars($logged_user->name); ?></h6>
-                                            <span class="text-muted small"><i class="fa-solid fa-phone me-1"></i><?php echo htmlspecialchars($logged_user->phone); ?></span>
-                                            <?php if (!empty($logged_user->custom_id)): ?>
-                                                <span class="badge bg-light text-dark border ms-1 font-monospace" style="font-size: 0.7rem;">#<?php echo htmlspecialchars($logged_user->custom_id); ?></span>
-                                            <?php endif; ?>
-                                        </div>
-                                    </div>
-                                    <div class="mt-3 pt-2 border-top d-flex justify-content-between align-items-center">
-                                        <span class="text-muted small">Current Wallet Balance:</span>
-                                        <strong class="text-danger fs-6">₹<?php echo number_format($logged_user->wallet_balance ?? 0, 2); ?></strong>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <form id="deleteAccountForm" action="<?php echo base_url('process_delete_account'); ?>" method="POST" class="d-inline-block w-100" style="max-width: 440px;">
-                                <input type="hidden" name="action_type" value="session_delete">
-                                <button type="button" class="btn btn-delete-action w-100" id="btnTriggerDelete">
-                                    <i class="fa-solid fa-trash-can me-2"></i> Delete My Account Permanently
-                                </button>
-                            </form>
-
-                        <?php else: ?>
-                            <!-- Case B: Visitor is NOT signed in -->
-                            <div class="d-inline-flex align-items-center justify-content-center bg-danger text-white rounded-circle mb-3 shadow" style="width: 58px; height: 58px;">
-                                <i class="fa-solid fa-trash-can fs-4"></i>
-                            </div>
-
-                            <h3 class="fw-bold text-danger mb-2">Account Deletion Confirmation</h3>
-                            <p class="text-muted small mb-4" style="max-width: 580px; margin: 0 auto;">
-                                Once you click the button below and confirm the warning prompt, your account will be immediately deleted. This action cannot be reversed.
-                            </p>
-                            <form id="deleteAccountForm" action="<?php echo base_url('process_delete_account'); ?>" method="POST" class="mx-auto text-start" style="max-width: 480px;">
-                                <div class="mb-3">
-                                    <label for="phone" class="form-label fw-semibold text-dark small">Registered Mobile Number <span class="text-danger">*</span></label>
-                                    <div class="input-group">
-                                        <span class="input-group-text bg-light text-muted fw-semibold">+91</span>
-                                        <input type="tel" name="phone" id="phone" class="form-control" placeholder="Enter 10-digit mobile number" maxlength="15" required autocomplete="tel">
-                                    </div>
-                                    <div class="form-text text-muted extra-small">The mobile phone number registered with your Divy Shakti account.</div>
-                                </div>
-
-                                <div class="mb-3">
-                                    <label for="password" class="form-label fw-semibold text-dark small">Account Password <span class="text-muted fw-normal">(If set)</span></label>
-                                    <div class="input-group">
-                                        <span class="input-group-text bg-light text-muted"><i class="fa-solid fa-lock"></i></span>
-                                        <input type="password" name="password" id="password" class="form-control" placeholder="Enter password (leave blank if OTP only)">
-                                    </div>
-                                </div>
-
-                                <div class="form-check mb-4">
-                                    <input class="form-check-input" type="checkbox" id="confirmCheckbox" required>
-                                    <label class="form-check-label text-muted small" for="confirmCheckbox">
-                                        I confirm that I want to delete my Divy Shakti account, and I understand this action immediately forfeits my wallet balance and is irreversible.
-                                    </label>
-                                </div>
-
-                                <button type="button" class="btn btn-delete-action w-100" id="btnTriggerDelete">
-                                    <i class="fa-solid fa-trash-can me-2"></i> Delete My Account Permanently
-                                </button>
-                            </form>
-                        <?php endif; ?>
-                    </div>
-
-                    <!-- In-App Mobile Deletion Walkthrough Card -->
-                    <div class="row justify-content-center mt-5">
-                        <div class="col-lg-10">
-                            <div class="app-guide-box">
-                                <div class="d-flex align-items-center gap-2 mb-3">
-                                    <i class="fa-solid fa-mobile-screen-button fs-4 text-primary"></i>
-                                    <h4 class="fw-bold mb-0" style="color: var(--brand-dark); font-size: 1.15rem;">How to Delete Your Account Directly Inside the Divy Shakti Mobile App</h4>
-                                </div>
-                                <p class="text-muted small mb-3">
-                                    If you are using the Divy Shakti Android or iOS Mobile Application, you can also delete your account without using this web page by following these 4 quick steps:
+                    <!-- Support Assistance Card -->
+                    <div class="helpdesk-card">
+                        <div class="row align-items-center">
+                            <div class="col-lg-8 mb-3 mb-lg-0">
+                                <h4 class="fw-bold mb-1" style="font-size: 1.2rem;">Have Questions or Need Help?</h4>
+                                <p class="mb-0 text-white-50 small">
+                                    Our data privacy and member support team is here to assist you Monday to Saturday (9:30 AM – 6:30 PM IST).
                                 </p>
-
-                                <div class="app-step-pill">
-                                    <span class="app-step-num">1</span>
-                                    <span>Open the <strong>Divy Shakti</strong> app on your smartphone and log into your account.</span>
-                                </div>
-                                <div class="app-step-pill">
-                                    <span class="app-step-num">2</span>
-                                    <span>Tap the <strong>Profile (Account)</strong> tab in the bottom navigation bar.</span>
-                                </div>
-                                <div class="app-step-pill">
-                                    <span class="app-step-num">3</span>
-                                    <span>Select <strong>Privacy &amp; Security Settings</strong> &rarr; scroll to <strong>Delete Account</strong>.</span>
-                                </div>
-                                <div class="app-step-pill">
-                                    <span class="app-step-num">4</span>
-                                    <span>Review the consequences on your wallet balance and tap <strong>Confirm &amp; Delete Account</strong>.</span>
+                            </div>
+                            <div class="col-lg-4 text-lg-end">
+                                <div class="d-flex flex-wrap gap-2 justify-content-lg-end">
+                                    <a href="mailto:support@divyshakti.com" class="help-contact-btn">
+                                        <i class="fa-solid fa-envelope text-primary"></i> Email Support
+                                    </a>
+                                    <a href="tel:+918160348894" class="help-contact-btn">
+                                        <i class="fa-solid fa-phone text-success"></i> Call Helpline
+                                    </a>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- FAQs -->
-                    <div class="mt-5 pt-3">
-                        <h4 class="fw-bold mb-3" style="color: var(--brand-dark); font-size: 1.15rem;">Frequently Asked Questions</h4>
-                        <div class="accordion" id="faqAccordion">
-                            <div class="accordion-item border-0 mb-2 shadow-sm" style="border-radius: 10px; overflow: hidden;">
-                                <h2 class="accordion-header" id="faqOne">
-                                    <button class="accordion-button collapsed fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">
-                                        Can I recover my account or wallet balance after deletion?
-                                    </button>
-                                </h2>
-                                <div id="collapseOne" class="accordion-collapse collapse" aria-labelledby="faqOne" data-bs-parent="#faqAccordion">
-                                    <div class="accordion-body text-muted small">
-                                        No. Account deletion is instantaneous and permanent. All wallet balances, referral connections, and rewards are forfeited and cannot be restored.
-                                    </div>
+                    <!-- Frequently Asked Questions -->
+                    <div class="section-header-wrap">
+                        <span class="section-eyebrow">Common Inquiries</span>
+                        <h2 class="section-heading">Frequently Asked Questions</h2>
+                    </div>
+
+                    <div class="accordion" id="faqAccordion">
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="faqOne">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">
+                                    Can I recover my account or wallet balance after deletion?
+                                </button>
+                            </h2>
+                            <div id="collapseOne" class="accordion-collapse collapse" aria-labelledby="faqOne" data-bs-parent="#faqAccordion">
+                                <div class="accordion-body">
+                                    No. Account deletion is permanent and cannot be reversed. Any remaining digital wallet balances, referral bonuses, commission points, and downline affiliations are permanently cancelled and forfeited upon deletion.
                                 </div>
                             </div>
+                        </div>
 
-                            <div class="accordion-item border-0 mb-2 shadow-sm" style="border-radius: 10px; overflow: hidden;">
-                                <h2 class="accordion-header" id="faqTwo">
-                                    <button class="accordion-button collapsed fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
-                                        What happens to orders that are currently being shipped?
-                                    </button>
-                                </h2>
-                                <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="faqTwo" data-bs-parent="#faqAccordion">
-                                    <div class="accordion-body text-muted small">
-                                        Orders that have already been dispatched will continue to be delivered by the courier partner. Your invoice records are retained in compliance with regulatory tax standards.
-                                    </div>
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="faqTwo">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                                    What happens to orders that are currently being shipped?
+                                </button>
+                            </h2>
+                            <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="faqTwo" data-bs-parent="#faqAccordion">
+                                <div class="accordion-body">
+                                    Orders that have already been confirmed or shipped prior to deleting your account will proceed as scheduled. Delivery partners will complete delivery to your shipping address. Invoices for these orders are preserved in read-only archives for statutory taxation compliance.
                                 </div>
                             </div>
+                        </div>
 
-                            <div class="accordion-item border-0 mb-2 shadow-sm" style="border-radius: 10px; overflow: hidden;">
-                                <h2 class="accordion-header" id="faqThree">
-                                    <button class="accordion-button collapsed fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
-                                        Can I re-register with the same phone number in the future?
-                                    </button>
-                                </h2>
-                                <div id="collapseThree" class="accordion-collapse collapse" aria-labelledby="faqThree" data-bs-parent="#faqAccordion">
-                                    <div class="accordion-body text-muted small">
-                                        Yes. Once your account is fully deleted, your mobile number is released and you may register a brand-new account in the future as a new member.
-                                    </div>
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="faqThree">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+                                    Can I register again with the same mobile number in the future?
+                                </button>
+                            </h2>
+                            <div id="collapseThree" class="accordion-collapse collapse" aria-labelledby="faqThree" data-bs-parent="#faqAccordion">
+                                <div class="accordion-body">
+                                    Yes. Once your account data has been completely purged, your mobile number is released. You are welcome to create a brand-new account in the future as a new user.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="faqFour">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFour" aria-expanded="false" aria-controls="collapseFour">
+                                    How long does the complete data erasure process take?
+                                </button>
+                            </h2>
+                            <div id="collapseFour" class="accordion-collapse collapse" aria-labelledby="faqFour" data-bs-parent="#faqAccordion">
+                                <div class="accordion-body">
+                                    When initiated in the mobile app, your account is deactivated immediately and access credentials are terminated instantaneously. Active production data records are purged within 24 to 48 hours, and rotating server backup cycles are fully cleared within 30 days.
                                 </div>
                             </div>
                         </div>
@@ -630,7 +931,7 @@
                         <span>&bull;</span>
                         <a href="<?php echo base_url('terms_conditions'); ?>" class="footer-link">Terms &amp; Conditions</a>
                         <span>&bull;</span>
-                        <a href="<?php echo base_url('delete_account'); ?>" class="footer-link text-danger">Delete Account</a>
+                        <a href="<?php echo base_url('delete_account'); ?>" class="footer-link text-warning">Account Deletion Guide</a>
                         <span>&bull;</span>
                         <a href="<?php echo base_url('admin/login'); ?>" class="footer-link">Admin Portal</a>
                     </div>
@@ -639,82 +940,7 @@
         </div>
     </footer>
 
-    <!-- Bootstrap 5 JS & SweetAlert2 -->
+    <!-- Bootstrap 5 JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
-    <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const deleteBtn = document.getElementById('btnTriggerDelete');
-        const form = document.getElementById('deleteAccountForm');
-        const phoneInput = document.getElementById('phone');
-        const confirmCheckbox = document.getElementById('confirmCheckbox');
-
-        if (deleteBtn && form) {
-            deleteBtn.addEventListener('click', function(e) {
-                e.preventDefault();
-
-                // Basic validation for guest form
-                if (phoneInput && !phoneInput.value.trim()) {
-                    Swal.fire({
-                        title: 'Phone Number Required',
-                        text: 'Please enter the registered mobile number associated with the account you wish to delete.',
-                        icon: 'warning',
-                        confirmButtonColor: '#ec407a'
-                    });
-                    phoneInput.focus();
-                    return;
-                }
-
-                if (confirmCheckbox && !confirmCheckbox.checked) {
-                    Swal.fire({
-                        title: 'Confirmation Check Required',
-                        text: 'Please check the box confirming you understand the permanent consequences of account deletion.',
-                        icon: 'info',
-                        confirmButtonColor: '#ec407a'
-                    });
-                    return;
-                }
-
-                // Perfect Confirmation Dialog
-                Swal.fire({
-                    title: 'Delete Account Permanently?',
-                    html: `
-                        <div class="text-center">
-                            <p class="text-muted mb-2">Are you absolutely sure you want to proceed?</p>
-                            <div class="alert alert-danger p-2 small mb-0 text-start">
-                                <i class="fa-solid fa-triangle-exclamation me-1"></i>
-                                <strong>Warning:</strong> All your personal data, wallet balance, orders, and MLM affiliate links will be <strong>erased immediately</strong>.
-                            </div>
-                        </div>
-                    `,
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonColor: '#ef4444',
-                    cancelButtonColor: '#64748b',
-                    confirmButtonText: 'Yes, Delete My Account Immediately',
-                    cancelButtonText: 'No, Keep Account',
-                    reverseButtons: true,
-                    focusCancel: true
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        Swal.fire({
-                            title: 'Purging Account Data...',
-                            text: 'Please wait while we securely process your deletion request.',
-                            allowOutsideClick: false,
-                            allowEscapeKey: false,
-                            didOpen: () => {
-                                Swal.showLoading();
-                            }
-                        });
-
-                        // Submit form
-                        form.submit();
-                    }
-                });
-            });
-        }
-    });
-    </script>
 </body>
 </html>

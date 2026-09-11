@@ -82,14 +82,26 @@ class Api extends CI_Controller
             $jwt_secret = $this->config->item('jwt_secret') ?: 'DivyShaktiSecretJWTKey2026SuperSecureAndLongKey';
             $decoded = \Firebase\JWT\JWT::decode($token, new \Firebase\JWT\Key($jwt_secret, 'HS256'));
 
-            if (isset($decoded->exp) && $decoded->exp < time()) {
-                $this->response(false, 'Token has expired', null, 401);
-            }
-
             return [
                 'decoded' => $decoded,
                 'token' => $token
             ];
+        } catch (\Firebase\JWT\ExpiredException $e) {
+            // Permanent token policy: Older tokens may have an exp timestamp.
+            // Do not reject expired tokens; decode payload directly so existing user tokens never expire.
+            try {
+                $parts = explode('.', $token);
+                if (count($parts) === 3) {
+                    $payload = json_decode(\Firebase\JWT\JWT::urlsafeB64Decode($parts[1]));
+                    if ($payload && isset($payload->user_id)) {
+                        return [
+                            'decoded' => $payload,
+                            'token'   => $token
+                        ];
+                    }
+                }
+            } catch (\Exception $ex) {}
+            $this->response(false, 'Unauthorized: ' . $e->getMessage(), null, 401);
         } catch (\Exception $e) {
             $this->response(false, 'Unauthorized: ' . $e->getMessage(), null, 401);
         }
@@ -184,15 +196,14 @@ class Api extends CI_Controller
      */
     private function generate_token($user)
     {
-        $issued_at       = time();
-        $expiration_time = $issued_at + (24 * 60 * 60);
-        $jwt_secret      = $this->config->item('jwt_secret') ?: 'DivyShaktiSecretJWTKey2026SuperSecureAndLongKey';
+        $issued_at  = time();
+        $jwt_secret = $this->config->item('jwt_secret') ?: 'DivyShaktiSecretJWTKey2026SuperSecureAndLongKey';
 
+        // Permanent token: No expiration claim so the token never expires until explicit user logout
         $payload = [
             'iss'     => base_url(),
             'aud'     => base_url(),
             'iat'     => $issued_at,
-            'exp'     => $expiration_time,
             'user_id' => (int)$user->id,
             'phone'   => $user->phone ?? '',
             'email'   => $user->email ?? '',
@@ -835,7 +846,7 @@ class Api extends CI_Controller
         $blacklist_data = [
             'token'      => $token,
             'user_id'    => $decoded->user_id,
-            'expires_at' => date('Y-m-d H:i:s', $decoded->exp),
+            'expires_at' => isset($decoded->exp) ? date('Y-m-d H:i:s', $decoded->exp) : date('Y-m-d H:i:s', time() + (100 * 365 * 24 * 60 * 60)),
             'created_at' => date('Y-m-d H:i:s')
         ];
 
@@ -1143,10 +1154,10 @@ class Api extends CI_Controller
 
         if (isset($_POST['gender'])) {
             $gender = strtolower(trim((string)$this->input->post('gender', TRUE)));
-            if ($gender === '' || in_array($gender, ['male', 'female', 'other'])) {
+            if ($gender === '' || in_array($gender, ['male', 'female'])) {
                 $update_data['gender'] = ($gender !== '') ? $gender : null;
             } else {
-                $this->response(false, 'Gender must be either male, female, or other.', null, 400);
+                $this->response(false, 'Gender must be either male or female.', null, 400);
             }
         }
 
@@ -2341,19 +2352,6 @@ class Api extends CI_Controller
         $buyer_new_balance = round($current_wallet_balance - $total_payable, 2);
         $this->db->update('users', ['wallet_balance' => $buyer_new_balance], ['id' => $user_id]);
 
-        // 2. Fetch commission settings (Fixed money amount ₹)
-        $levels_amount = [];
-        $settings = $this->db->order_by('level', 'ASC')->get('commission_settings')->result();
-        foreach ($settings as $setting) {
-            $levels_amount[(int)$setting->level] = (float)($setting->amount ?? $setting->percentage ?? 0);
-        }
-
-        // 3. Find lowest-ID admin for remainder cut
-        $this->db->where('role', 1);
-        $this->db->order_by('id', 'ASC');
-        $this->db->limit(1);
-        $admin = $this->db->get('users')->row();
-
         $order_ids = [];
         $created_orders = [];
         $line_items = [];
@@ -2395,74 +2393,7 @@ class Api extends CI_Controller
             $new_stock = max(0, (int)($current_prod->stock ?? $prod->stock) - $qty);
             $this->db->update('products', ['stock' => $new_stock], ['id' => (int)$prod->id]);
 
-            // Walk MLM referral commission chain (up to 12 levels)
-            $total_allocated_commission_sum = 0.00;
-            $ancestor_id = ((int)$buyer->role !== 1) ? $buyer->parent_id : null;
-
-            if (!empty($ancestor_id)) {
-                for ($level = 1; $level <= 12; $level++) {
-                    if (empty($ancestor_id)) {
-                        break;
-                    }
-                    $fixed_amount = isset($levels_amount[$level]) ? $levels_amount[$level] : 0.00;
-                    $ancestor = $this->General_model->getOne('users', ['id' => (int)$ancestor_id]);
-                    if (!$ancestor) {
-                        break;
-                    }
-
-                    if ((int)$ancestor->status === 0 || (int)$ancestor->role === 1) {
-                        $ancestor_id = $ancestor->parent_id;
-                        continue;
-                    }
-
-                    $level_comm = round($fixed_amount * $qty, 2);
-
-                    $this->db->set('wallet_balance', 'wallet_balance + ' . $level_comm, FALSE);
-                    $this->db->where('id', (int)$ancestor->id);
-                    $this->db->update('users');
-
-                    $this->db->insert('wallet_transactions', [
-                        'user_id'      => (int)$ancestor->id,
-                        'type'         => 'credit',
-                        'amount'       => $level_comm,
-                        'source'       => 'referral_commission',
-                        'reference_id' => (int)$order_id,
-                        'remark'       => "Referral commission (₹" . number_format($fixed_amount, 2) . ($qty > 1 ? " x {$qty}" : "") . ") from level {$level} purchase (Order ID: #{$order_id})",
-                        'created_at'   => date('Y-m-d H:i:s')
-                    ]);
-
-                    $this->db->insert('order_commissions', [
-                        'order_id'    => (int)$order_id,
-                        'buyer_id'    => $user_id,
-                        'receiver_id' => (int)$ancestor->id,
-                        'level'       => $level,
-                        'amount'      => $level_comm,
-                        'created_at'  => date('Y-m-d H:i:s')
-                    ]);
-
-                    $total_allocated_commission_sum += $level_comm;
-                    $ancestor_id = $ancestor->parent_id;
-                }
-            }
-
-            // Admin remainder cut: balance revenue after referral commission payouts
-            $admin_commission = max(0, round($line_total - $total_allocated_commission_sum, 2));
-
-            if ($admin && $admin_commission > 0) {
-                $this->db->set('wallet_balance', 'wallet_balance + ' . $admin_commission, FALSE);
-                $this->db->where('id', (int)$admin->id);
-                $this->db->update('users');
-
-                $this->db->insert('wallet_transactions', [
-                    'user_id'      => (int)$admin->id,
-                    'type'         => 'credit',
-                    'amount'       => $admin_commission,
-                    'source'       => 'admin_commission',
-                    'reference_id' => (int)$order_id,
-                    'remark'       => "Admin commission remainder cut for Order ID: #{$order_id}",
-                    'created_at'   => date('Y-m-d H:i:s')
-                ]);
-            }
+            // Note: MLM referral commissions are distributed exclusively upon order delivery!
 
             // Clear purchased item from cart
             $this->db->delete('cart', [
@@ -2735,20 +2666,7 @@ class Api extends CI_Controller
         $buyer_new_balance = round($current_wallet_balance - $total_batch_amount, 2);
         $this->db->update('users', ['wallet_balance' => $buyer_new_balance], ['id' => $user_id]);
 
-        // 2. Fetch commission settings (Fixed money amount ₹)
-        $levels_amount = [];
-        $settings = $this->db->order_by('level', 'ASC')->get('commission_settings')->result();
-        foreach ($settings as $setting) {
-            $levels_amount[(int)$setting->level] = (float)($setting->amount ?? $setting->percentage ?? 0);
-        }
-
-        // 3. Find lowest-ID admin for remainder cut
-        $this->db->where('role', 1);
-        $this->db->order_by('id', 'ASC');
-        $this->db->limit(1);
-        $admin = $this->db->get('users')->row();
-
-        // 4. Process each order in batch
+        // 2. Process each order in batch
         foreach ($orders as $ord) {
             $order_id = (int)$ord->id;
             $order_amount = (float)$ord->amount;
@@ -2777,85 +2695,7 @@ class Api extends CI_Controller
                 'updated_at' => date('Y-m-d H:i:s')
             ], ['id' => $order_id]);
 
-            // Walk MLM chain up to 12 levels
-            $total_allocated_commission_sum = 0.00;
-            $ancestor_id = ((int)$buyer->role !== 1) ? $buyer->parent_id : null;
-
-            if (!empty($ancestor_id)) {
-                for ($level = 1; $level <= 12; $level++) {
-                    if (empty($ancestor_id)) {
-                        break;
-                    }
-                    $fixed_amount = isset($levels_amount[$level]) ? $levels_amount[$level] : 0.00;
-                    $ancestor = $this->General_model->getOne('users', ['id' => (int)$ancestor_id]);
-                    if (!$ancestor) {
-                        break;
-                    }
-
-                    // Skip blocked ancestor (status == 0) - percentage rolls up to admin
-                    if ((int)$ancestor->status === 0) {
-                        $ancestor_id = $ancestor->parent_id;
-                        continue;
-                    }
-
-                    // Skip admin ancestor (role == 1) - percentage rolls up to admin
-                    if ((int)$ancestor->role === 1) {
-                        $ancestor_id = $ancestor->parent_id;
-                        continue;
-                    }
-
-                    // Active non-admin member: calculate commission
-                    $level_comm = round($fixed_amount * $qty, 2);
-
-                    // Credit ancestor wallet
-                    $this->db->set('wallet_balance', 'wallet_balance + ' . $level_comm, FALSE);
-                    $this->db->where('id', (int)$ancestor->id);
-                    $this->db->update('users');
-
-                    // Wallet transaction log
-                    $this->db->insert('wallet_transactions', [
-                        'user_id'      => (int)$ancestor->id,
-                        'type'         => 'credit',
-                        'amount'       => $level_comm,
-                        'source'       => 'referral_commission',
-                        'reference_id' => $order_id,
-                        'remark'       => "Referral commission (₹" . number_format($fixed_amount, 2) . ($qty > 1 ? " x {$qty}" : "") . ") from level {$level} purchase (Order ID: #{$order_id})",
-                        'created_at'   => date('Y-m-d H:i:s')
-                    ]);
-
-                    // Order commissions row
-                    $this->db->insert('order_commissions', [
-                        'order_id'    => $order_id,
-                        'buyer_id'    => $user_id,
-                        'receiver_id' => (int)$ancestor->id,
-                        'level'       => $level,
-                        'amount'      => $level_comm,
-                        'created_at'  => date('Y-m-d H:i:s')
-                    ]);
-
-                    $total_allocated_commission_sum += $level_comm;
-                    $ancestor_id = $ancestor->parent_id;
-                }
-            }
-
-            // Admin remainder cut: balance revenue after referral commission payouts
-            $admin_commission = max(0, round($order_amount - $total_allocated_commission_sum, 2));
-
-            if ($admin && $admin_commission > 0) {
-                $this->db->set('wallet_balance', 'wallet_balance + ' . $admin_commission, FALSE);
-                $this->db->where('id', (int)$admin->id);
-                $this->db->update('users');
-
-                $this->db->insert('wallet_transactions', [
-                    'user_id'      => (int)$admin->id,
-                    'type'         => 'credit',
-                    'amount'       => $admin_commission,
-                    'source'       => 'admin_commission',
-                    'reference_id' => $order_id,
-                    'remark'       => "Admin commission remainder cut for Order ID: #{$order_id}",
-                    'created_at'   => date('Y-m-d H:i:s')
-                ]);
-            }
+            // Note: MLM referral commissions are distributed exclusively upon order delivery!
 
             // Clear purchased item from cart
             $this->db->delete('cart', [
@@ -3310,10 +3150,14 @@ class Api extends CI_Controller
         }
 
         // Update status to cancelled
-        $this->db->update('orders', [
+        $cancel_data = [
             'status'     => 'cancelled',
             'updated_at' => date('Y-m-d H:i:s')
-        ], ['id' => (int)$order->id]);
+        ];
+        try {
+            $cancel_data['commission_distributed'] = 0;
+        } catch (\Throwable $e) {}
+        $this->db->update('orders', $cancel_data, ['id' => (int)$order->id]);
 
         if ($this->db->trans_status() === FALSE) {
             $this->db->trans_rollback();
@@ -3501,16 +3345,25 @@ class Api extends CI_Controller
                 $this->db->delete('order_commissions', ['order_id' => (int)$id]);
             }
 
-            $this->db->update('orders', [
+            $cancel_data = [
                 'status'     => 'cancelled',
                 'updated_at' => date('Y-m-d H:i:s')
-            ], ['id' => (int)$order->id]);
+            ];
+            try {
+                $cancel_data['commission_distributed'] = 0;
+            } catch (\Throwable $e) {}
+            $this->db->update('orders', $cancel_data, ['id' => (int)$order->id]);
         } else {
             // Forward transition
             $this->db->update('orders', [
                 'status'     => $new_status,
                 'updated_at' => date('Y-m-d H:i:s')
             ], ['id' => (int)$order->id]);
+
+            // Distribute MLM referral commissions only when order reaches delivered status!
+            if ($new_status === 'delivered') {
+                $this->General_model->distribute_order_commissions((int)$id);
+            }
         }
 
         if ($this->db->trans_status() === FALSE) {
@@ -4388,7 +4241,7 @@ class Api extends CI_Controller
         try {
             $check_gender = $this->db->query("SHOW COLUMNS FROM `users` LIKE 'gender'")->row();
             if (!$check_gender) {
-                $this->db->query("ALTER TABLE `users` ADD COLUMN `gender` ENUM('male', 'female', 'other') NULL DEFAULT NULL AFTER `email`");
+                $this->db->query("ALTER TABLE `users` ADD COLUMN `gender` ENUM('male', 'female') NULL DEFAULT NULL AFTER `email`");
                 $results['gender_column'] = "Added 'gender' column to users table.";
             } else {
                 $results['gender_column'] = "'gender' column already exists in users table.";
@@ -4489,5 +4342,31 @@ class Api extends CI_Controller
         }
 
         $this->response(true, 'Database indexing completed successfully.', $results, 200);
+    }
+
+    /**
+     * GET/POST api/migrate_order_commission_status
+     * Ensures `commission_distributed` column exists on `orders` table and flags already-distributed orders.
+     */
+    public function migrate_order_commission_status()
+    {
+        $results = [];
+        try {
+            $check_col = $this->db->query("SHOW COLUMNS FROM `orders` LIKE 'commission_distributed'")->row();
+            if (!$check_col) {
+                $this->db->query("ALTER TABLE `orders` ADD COLUMN `commission_distributed` TINYINT(1) NOT NULL DEFAULT 0 AFTER `status`");
+                $results['column'] = "Added 'commission_distributed' column to orders table.";
+            } else {
+                $results['column'] = "'commission_distributed' column already exists in orders table.";
+            }
+
+            // Sync existing distributed orders
+            $this->db->query("UPDATE `orders` SET `commission_distributed` = 1 WHERE `id` IN (SELECT DISTINCT `order_id` FROM `order_commissions`)");
+            $results['sync'] = "Updated commission_distributed flag on existing orders with commissions.";
+        } catch (\Throwable $e) {
+            $results['error'] = $e->getMessage();
+        }
+
+        $this->response(true, 'Commission migration executed successfully.', $results, 200);
     }
 }

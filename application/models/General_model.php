@@ -165,5 +165,159 @@ class General_model extends CI_Model
             'missing_fields'  => $missing_fields
         ];
     }
+
+    /**
+     * Distributes referral and admin commissions for a delivered order.
+     * Guaranteed idempotent - runs once per order upon reaching 'delivered' status.
+     * Decided fixed commission amount is credited per level (NOT multiplied by quantity).
+     *
+     * @param int $order_id
+     * @return bool
+     */
+    public function distribute_order_commissions($order_id)
+    {
+        $order_id = (int)$order_id;
+        $order = $this->getOne('orders', ['id' => $order_id]);
+        if (!$order) {
+            return false;
+        }
+
+        // Must be in delivered or completed status
+        if (!in_array($order->status, ['delivered', 'completed'])) {
+            return false;
+        }
+
+        // Idempotency check 1: Check commission_distributed flag if column exists
+        if (isset($order->commission_distributed) && (int)$order->commission_distributed === 1) {
+            return false;
+        }
+
+        // Idempotency check 2: Check existing order_commissions or admin_commission transactions
+        $has_commissions = $this->db->where('order_id', $order_id)->count_all_results('order_commissions') > 0;
+        $has_admin_txn = $this->db->where([
+            'reference_id' => $order_id,
+            'source'       => 'admin_commission'
+        ])->count_all_results('wallet_transactions') > 0;
+
+        if ($has_commissions || $has_admin_txn) {
+            // Ensure flag is updated if table has column
+            try {
+                $this->db->update('orders', ['commission_distributed' => 1], ['id' => $order_id]);
+            } catch (\Throwable $e) {}
+            return false;
+        }
+
+        $buyer = $this->getOne('users', ['id' => (int)$order->user_id]);
+        if (!$buyer) {
+            return false;
+        }
+
+        $order_amount = (float)$order->amount;
+
+        // Fetch fixed amount settings per level from commission_settings
+        $settings = $this->db->order_by('level', 'ASC')->get('commission_settings')->result();
+        $levels_amount = [];
+        foreach ($settings as $setting) {
+            $levels_amount[(int)$setting->level] = (float)($setting->amount ?? $setting->percentage ?? 0.00);
+        }
+
+        // Find lowest-ID active admin for remainder cut
+        $this->db->where('role', 1);
+        $this->db->order_by('id', 'ASC');
+        $this->db->limit(1);
+        $admin = $this->db->get('users')->row();
+
+        $total_allocated_commission_sum = 0.00;
+        $ancestor_id = ((int)$buyer->role !== 1) ? $buyer->parent_id : null;
+
+        if (!empty($ancestor_id)) {
+            for ($level = 1; $level <= 12; $level++) {
+                if (empty($ancestor_id)) {
+                    break;
+                }
+
+                $fixed_amount = isset($levels_amount[$level]) ? $levels_amount[$level] : 0.00;
+                $ancestor = $this->getOne('users', ['id' => (int)$ancestor_id]);
+                if (!$ancestor) {
+                    break;
+                }
+
+                // Skip blocked ancestor (status == 0)
+                if ((int)$ancestor->status === 0) {
+                    $ancestor_id = $ancestor->parent_id;
+                    continue;
+                }
+
+                // Skip admin ancestor (role == 1)
+                if ((int)$ancestor->role === 1) {
+                    $ancestor_id = $ancestor->parent_id;
+                    continue;
+                }
+
+                // Decided commission amount ONLY - never multiply by quantity
+                $level_comm = round($fixed_amount, 2);
+
+                if ($level_comm > 0) {
+                    // Credit ancestor wallet balance
+                    $this->db->set('wallet_balance', 'wallet_balance + ' . $level_comm, FALSE);
+                    $this->db->where('id', (int)$ancestor->id);
+                    $this->db->update('users');
+
+                    // Wallet transaction log
+                    $this->db->insert('wallet_transactions', [
+                        'user_id'      => (int)$ancestor->id,
+                        'type'         => 'credit',
+                        'amount'       => $level_comm,
+                        'source'       => 'referral_commission',
+                        'reference_id' => $order_id,
+                        'remark'       => "Referral commission (₹" . number_format($fixed_amount, 2) . ") from level {$level} purchase (Order ID: #{$order_id})",
+                        'created_at'   => date('Y-m-d H:i:s')
+                    ]);
+
+                    // Order commissions row
+                    $this->db->insert('order_commissions', [
+                        'order_id'    => $order_id,
+                        'buyer_id'    => (int)$order->user_id,
+                        'receiver_id' => (int)$ancestor->id,
+                        'level'       => $level,
+                        'amount'      => $level_comm,
+                        'created_at'  => date('Y-m-d H:i:s')
+                    ]);
+
+                    $total_allocated_commission_sum += $level_comm;
+                }
+
+                $ancestor_id = $ancestor->parent_id;
+            }
+        }
+
+        // Admin remainder cut: order total minus total allocated referral commissions
+        $admin_commission = max(0, round($order_amount - $total_allocated_commission_sum, 2));
+
+        if ($admin && $admin_commission > 0) {
+            $this->db->set('wallet_balance', 'wallet_balance + ' . $admin_commission, FALSE);
+            $this->db->where('id', (int)$admin->id);
+            $this->db->update('users');
+
+            $this->db->insert('wallet_transactions', [
+                'user_id'      => (int)$admin->id,
+                'type'         => 'credit',
+                'amount'       => $admin_commission,
+                'source'       => 'admin_commission',
+                'reference_id' => $order_id,
+                'remark'       => "Admin commission remainder cut for Order ID: #{$order_id}",
+                'created_at'   => date('Y-m-d H:i:s')
+            ]);
+        }
+
+        // Mark commission_distributed = 1
+        try {
+            $this->db->update('orders', ['commission_distributed' => 1], ['id' => $order_id]);
+        } catch (\Throwable $e) {
+            // In case column does not exist yet on DB
+        }
+
+        return true;
+    }
 }
 

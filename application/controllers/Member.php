@@ -484,7 +484,7 @@ class Member extends CI_Controller
             $this->form_validation->set_rules('name', 'Full Name', 'required|trim');
             $this->form_validation->set_rules('phone', 'Phone Number', 'required|trim|regex_match[/^[0-9]{10,15}$/]');
             $this->form_validation->set_rules('email', 'Email Address', 'trim|valid_email');
-            $this->form_validation->set_rules('gender', 'Gender', 'trim|in_list[male,female,other]');
+            $this->form_validation->set_rules('gender', 'Gender', 'trim|in_list[male,female]');
             $this->form_validation->set_rules('custom_id', 'Custom Member ID', 'trim');
             $this->form_validation->set_rules('referral_code', 'Referral Code', 'required|trim');
             $this->form_validation->set_rules('parent_sponsor', 'Sponsor / Parent Referral Code', 'trim');
@@ -520,44 +520,60 @@ class Member extends CI_Controller
                 }
             }
 
-            // Check referral_code uniqueness excluding current user
-            $referral_code = strtoupper(trim($this->input->post('referral_code', TRUE)));
-            $ref_check = $this->General_model->getOne('users', ['referral_code' => $referral_code, 'id !=' => $member->id]);
-            if ($ref_check) {
-                $this->session->set_flashdata('error', 'The referral code is already taken by another user.');
-                redirect('admin/members/edit/' . $member->id);
+            // Referral code policy:
+            // If member already has an assigned referral_code, admin CANNOT edit/change it.
+            // If member does not have one (empty/null), admin CAN assign one.
+            if (!empty($member->referral_code)) {
+                $referral_code = $member->referral_code;
+            } else {
+                $referral_code = strtoupper(trim((string)$this->input->post('referral_code', TRUE)));
+                if (!empty($referral_code)) {
+                    $ref_check = $this->General_model->getOne('users', ['referral_code' => $referral_code, 'id !=' => $member->id]);
+                    if ($ref_check) {
+                        $this->session->set_flashdata('error', 'The referral code is already taken by another user.');
+                        redirect('admin/members/edit/' . $member->id);
+                    }
+                } else {
+                    $referral_code = null;
+                }
             }
 
-            // Validate parent sponsor (ADD / EDIT Referral Sponsor)
-            $parent_sponsor_input = trim($this->input->post('parent_sponsor', TRUE));
-            $new_parent_id = null;
-            if (!empty($parent_sponsor_input)) {
-                $sponsor = $this->db->group_start()
-                    ->where('referral_code', $parent_sponsor_input)
-                    ->or_where('custom_id', $parent_sponsor_input)
-                    ->or_where('phone', $parent_sponsor_input)
-                    ->or_where('id', $parent_sponsor_input)
-                    ->group_end()
-                    ->where('role', 0)
-                    ->get('users')
-                    ->row();
+            // Parent sponsor policy:
+            // If member already has an assigned parent_id sponsor, admin CANNOT change it.
+            // If member does not have one (empty/null), admin CAN assign a sponsor.
+            if (!empty($member->parent_id)) {
+                $new_parent_id = $member->parent_id;
+            } else {
+                $parent_sponsor_input = trim((string)$this->input->post('parent_sponsor', TRUE));
+                $new_parent_id = null;
+                if (!empty($parent_sponsor_input)) {
+                    $sponsor = $this->db->group_start()
+                        ->where('referral_code', $parent_sponsor_input)
+                        ->or_where('custom_id', $parent_sponsor_input)
+                        ->or_where('phone', $parent_sponsor_input)
+                        ->or_where('id', $parent_sponsor_input)
+                        ->group_end()
+                        ->where('role', 0)
+                        ->get('users')
+                        ->row();
 
-                if (!$sponsor) {
-                    $this->session->set_flashdata('error', 'Parent Sponsor not found with code/phone/ID: ' . htmlspecialchars($parent_sponsor_input));
-                    redirect('admin/members/edit/' . $member->id);
+                    if (!$sponsor) {
+                        $this->session->set_flashdata('error', 'Parent Sponsor not found with code/phone/ID: ' . htmlspecialchars($parent_sponsor_input));
+                        redirect('admin/members/edit/' . $member->id);
+                    }
+
+                    if ($sponsor->id == $member->id) {
+                        $this->session->set_flashdata('error', 'A member cannot be their own sponsor.');
+                        redirect('admin/members/edit/' . $member->id);
+                    }
+
+                    if ($this->is_descendant($sponsor->id, $member->id)) {
+                        $this->session->set_flashdata('error', 'Cannot assign member #' . $sponsor->id . ' (' . htmlspecialchars($sponsor->name) . ') as sponsor because they are in this member\'s downline network (circular loop).');
+                        redirect('admin/members/edit/' . $member->id);
+                    }
+
+                    $new_parent_id = $sponsor->id;
                 }
-
-                if ($sponsor->id == $member->id) {
-                    $this->session->set_flashdata('error', 'A member cannot be their own sponsor.');
-                    redirect('admin/members/edit/' . $member->id);
-                }
-
-                if ($this->is_descendant($sponsor->id, $member->id)) {
-                    $this->session->set_flashdata('error', 'Cannot assign member #' . $sponsor->id . ' (' . htmlspecialchars($sponsor->name) . ') as sponsor because they are in this member\'s downline network (circular loop).');
-                    redirect('admin/members/edit/' . $member->id);
-                }
-
-                $new_parent_id = $sponsor->id;
             }
 
             if ($this->form_validation->run() === FALSE) {

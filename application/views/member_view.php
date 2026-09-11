@@ -1,245 +1,310 @@
-<div class="sm-view">
+<!-- ============================================================== -->
+<!-- Members / Member Directory View — Redesigned                  -->
+<!-- ============================================================== -->
 
-    <div class="sm-header">
-        <span class="sm-eyebrow"><i class="fa-solid fa-users"></i> Member Directory</span>
-        <h1 class="sm-title">System Members</h1>
-        <p class="sm-subtitle">Manage member registration accounts and wallets.</p>
+<div class="mm-view">
+
+    <!-- ============================================================== -->
+    <!-- 1. Header -->
+    <!-- ============================================================== -->
+    <div class="mm-page-head">
+        <div>
+            <div class="mm-eyebrow"><i class="fa-solid fa-users"></i> Member Directory</div>
+            <h3 class="mm-title">System Members</h3>
+            <p class="mm-subtitle">Manage member registration accounts and wallets.</p>
+        </div>
     </div>
 
-    <!-- Search and Filter Form -->
-    <div class="sm-card sm-filter-card">
-        <form id="filterForm" class="sm-filter-form">
-            <div class="sm-filter-search">
+    <!-- ============================================================== -->
+    <!-- 2. Search & Filter Bar -->
+    <!-- ============================================================== -->
+    <div class="mm-toolbar">
+        <form id="filterForm" class="mm-filter-form" onsubmit="return false;">
+            <div class="mm-search-field">
                 <i class="fa-solid fa-magnifying-glass"></i>
-                <input type="text" name="search" id="searchInput" placeholder="Search by User ID, name, email, or phone…" value="<?php echo htmlspecialchars($search ?? ''); ?>">
+                <input type="text" name="search" id="searchInput" placeholder="Search by User ID, name, or phone…" value="<?php echo htmlspecialchars($search ?? ''); ?>" autocomplete="off">
             </div>
-            <select name="status" id="statusFilter" class="sm-filter-select">
+            <select name="status" id="statusFilter" class="mm-select">
                 <option value="">All Statuses</option>
                 <option value="1" <?php echo ($status === '1') ? 'selected' : ''; ?>>Active (Verified)</option>
                 <option value="incomplete" <?php echo ($status === 'incomplete') ? 'selected' : ''; ?>>Incomplete / Pending</option>
                 <option value="0" <?php echo ($status === '0') ? 'selected' : ''; ?>>Blocked</option>
             </select>
-            <button type="button" id="resetBtn" class="sm-reset-btn">
+            <button type="button" id="resetBtn" class="mm-reset-btn">
                 <i class="fa-solid fa-arrow-rotate-left"></i> Reset
             </button>
         </form>
     </div>
 
-    <!-- Member List Table -->
-    <div class="sm-card sm-table-card">
-        <div id="table-container">
-            <div class="sm-table-wrap">
-                <table class="sm-table">
-                    <thead>
+    <!-- ============================================================== -->
+    <!-- 3. Member List (Desktop Table + Mobile Cards) -->
+    <!-- ============================================================== -->
+    <div class="mm-table-wrapper" id="table-container">
+
+        <!-- Desktop Table View -->
+        <div class="d-none d-md-block mm-table-scroll">
+            <table class="mm-table">
+                <thead>
+                    <tr>
+                        <th style="width:50px;">#</th>
+                        <th style="width:120px;">User ID</th>
+                        <th>Name</th>
+                        <th style="width:150px;">Phone</th>
+                        <th style="width:130px;">Wallet</th>
+                        <th style="width:190px;">Status</th>
+                        <th style="width:120px;">Registered</th>
+                        <th class="text-end" style="width:150px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if (empty($members)): ?>
                         <tr>
-                            <th class="sm-th-idx">#</th>
-                            <th>User ID</th>
-                            <th>Name</th>
-                            <th>Email</th>
-                            <th>Phone</th>
-                            <th>Wallet Balance</th>
-                            <th>Status</th>
-                            <th>Registered At</th>
-                            <th class="sm-th-actions">Actions</th>
+                            <td colspan="8">
+                                <div class="mm-empty">
+                                    <div class="mm-empty-icon"><i class="fa-solid fa-users-slash"></i></div>
+                                    <p>No members found.</p>
+                                </div>
+                            </td>
                         </tr>
-                    </thead>
-                    <tbody>
-                        <?php if (empty($members)): ?>
+                    <?php else: ?>
+                        <?php
+                        $index_num = ($current_page - 1) * 10 + 1;
+                        foreach ($members as $member):
+                            $pct = (int)($member->profile_completion_percentage ?? 0);
+                            $is_completed = !empty($member->is_profile_completed);
+                            $is_active = !empty($member->is_profile_active);
+                        ?>
                             <tr>
-                                <td colspan="9">
-                                    <div class="sm-empty">
-                                        <i class="fa-solid fa-users-slash"></i>
-                                        <p>No members found.</p>
+                                <td class="mm-muted fw-semibold"><?php echo $index_num++; ?></td>
+                                <td>
+                                    <span class="mm-uid-badge">
+                                        <i class="fa-solid fa-id-badge"></i><?php echo htmlspecialchars($member->custom_id ?? '-'); ?>
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="mm-name"><?php echo htmlspecialchars($member->name ?? 'Unknown'); ?></span>
+                                </td>
+                                <td class="mm-muted">
+                                    <?php if (!empty($member->phone)): ?>
+                                        <span class="mm-phone"><i class="fa-solid fa-phone"></i><?php echo htmlspecialchars($member->phone); ?></span>
+                                    <?php else: ?>
+                                        <span class="mm-phone mm-phone-none"><i class="fa-solid fa-phone-slash"></i>-</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td>
+                                    <span class="mm-balance">₹<?php echo number_format($member->wallet_balance, 2); ?></span>
+                                </td>
+                                <td>
+                                    <?php
+                                    if ((int)$member->status === 0) {
+                                        echo '<span class="mm-status-pill mm-status-blocked"><i class="fa-solid fa-ban"></i> Blocked</span>';
+                                    } elseif ($is_active && $is_completed) {
+                                        echo '<span class="mm-status-pill mm-status-active"><i class="fa-solid fa-circle-check"></i> Active</span>';
+                                    } elseif ($is_completed) {
+                                        echo '<span class="mm-status-pill mm-status-review"><i class="fa-solid fa-clock"></i> Under Review</span>';
+                                    } else {
+                                        echo '<span class="mm-status-pill mm-status-incomplete"><i class="fa-solid fa-triangle-exclamation"></i> Incomplete</span>';
+                                    }
+                                    ?>
+                                    <div class="mm-progress-row">
+                                        <div class="mm-progress-track">
+                                            <div class="mm-progress-bar <?php
+                                                                        if ($pct >= 100) echo 'mm-progress-100';
+                                                                        elseif ($pct >= 50) echo 'mm-progress-mid';
+                                                                        elseif ($pct > 0) echo 'mm-progress-low';
+                                                                        else echo 'mm-progress-zero';
+                                                                        ?>" style="width: <?php echo max(6, $pct); ?>%;"></div>
+                                        </div>
+                                        <span class="mm-progress-pct"><?php echo $pct; ?>%</span>
+                                    </div>
+                                    <span class="mm-kyc-note <?php echo $is_active ? 'mm-kyc-verified' : 'mm-kyc-pending'; ?>">
+                                        <i class="fa-solid <?php echo $is_active ? 'fa-shield-check' : 'fa-shield-halved'; ?>"></i>
+                                        <?php echo $is_active ? 'KYC Verified' : 'KYC Pending'; ?>
+                                    </span>
+                                </td>
+                                <td class="mm-muted"><?php echo date('M d, Y', strtotime($member->created_at)); ?></td>
+                                <td class="text-end">
+                                    <div class="mm-actions">
+                                        <?php if ($is_active): ?>
+                                            <a href="<?php echo base_url('admin/members/activate_profile/' . $member->id); ?>"
+                                                class="mm-icon-btn mm-icon-deactivate"
+                                                title="Deactivate Profile"
+                                                data-confirm="Are you sure you want to deactivate <?php echo htmlspecialchars($member->name ?? 'this member'); ?>'s profile?"
+                                                data-confirm-title="Deactivate Profile?"
+                                                data-confirm-btn="Yes, Deactivate"
+                                                data-confirm-danger="true">
+                                                <i class="fa-solid fa-ban"></i>
+                                            </a>
+                                        <?php else: ?>
+                                            <?php if ($pct < 100): ?>
+                                                <a href="<?php echo base_url('admin/members/activate_profile/' . $member->id); ?>"
+                                                    class="mm-icon-btn mm-icon-activate"
+                                                    title="Activate Profile (only <?php echo $pct; ?>% complete)"
+                                                    data-confirm="<?php echo htmlspecialchars($member->name ?? 'This member'); ?> has only completed <?php echo $pct; ?>% of their profile. Are you sure you want to activate anyway?"
+                                                    data-confirm-title="Activate Incomplete Profile?"
+                                                    data-confirm-btn="Yes, Activate Anyway"
+                                                    data-confirm-icon="warning">
+                                                    <i class="fa-solid fa-check-double"></i>
+                                                </a>
+                                            <?php else: ?>
+                                                <a href="<?php echo base_url('admin/members/activate_profile/' . $member->id); ?>"
+                                                    class="mm-icon-btn mm-icon-activate"
+                                                    title="Activate & Approve Profile"
+                                                    data-confirm="Are you sure you want to activate & approve <?php echo htmlspecialchars($member->name ?? 'this member'); ?>'s 100% complete profile?"
+                                                    data-confirm-title="Activate Profile?"
+                                                    data-confirm-btn="Yes, Activate & Approve"
+                                                    data-confirm-icon="question">
+                                                    <i class="fa-solid fa-check-double"></i>
+                                                </a>
+                                            <?php endif; ?>
+                                        <?php endif; ?>
+                                        <button type="button"
+                                            class="mm-icon-btn mm-icon-wallet load-wallet-btn"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#loadWalletModal"
+                                            data-id="<?php echo $member->id; ?>"
+                                            data-name="<?php echo htmlspecialchars($member->name ?? ''); ?>"
+                                            data-balance="₹<?php echo number_format($member->wallet_balance, 2); ?>"
+                                            title="Load Wallet Funds">
+                                            <i class="fa-solid fa-wallet"></i>
+                                        </button>
+                                        <a href="<?php echo base_url('admin/members/edit/' . $member->id); ?>" class="mm-icon-btn mm-icon-edit" title="Edit Member Details">
+                                            <i class="fa-solid fa-pen-to-square"></i>
+                                        </a>
+                                        <a href="<?php echo base_url('admin/members/view/' . $member->id); ?>" class="mm-icon-btn mm-icon-view" title="Inspect Detail View">
+                                            <i class="fa-solid fa-eye"></i>
+                                        </a>
                                     </div>
                                 </td>
                             </tr>
-                        <?php else: ?>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Mobile Cards View -->
+        <div class="d-md-none mm-mobile-list">
+            <?php if (empty($members)): ?>
+                <div class="mm-empty mm-empty-card">
+                    <div class="mm-empty-icon"><i class="fa-solid fa-users-slash"></i></div>
+                    <p>No members found.</p>
+                </div>
+            <?php else: ?>
+                <?php
+                $index_num_m = ($current_page - 1) * 10 + 1;
+                foreach ($members as $member):
+                    $pct = (int)($member->profile_completion_percentage ?? 0);
+                    $is_completed = !empty($member->is_profile_completed);
+                    $is_active = !empty($member->is_profile_active);
+                ?>
+                    <div class="mm-mobile-card">
+                        <div class="mm-mobile-top">
+                            <div>
+                                <span class="mm-uid-badge">
+                                    <i class="fa-solid fa-id-badge"></i><?php echo htmlspecialchars($member->custom_id ?? '-'); ?>
+                                </span>
+                                <div class="mm-name mt-1"><?php echo htmlspecialchars($member->name ?? 'Unknown'); ?></div>
+                            </div>
+                            <span class="mm-balance"><?php echo '₹' . number_format($member->wallet_balance, 2); ?></span>
+                        </div>
+
+                        <div class="mm-mobile-meta">
+                            <?php if (!empty($member->phone)): ?>
+                                <span class="mm-phone"><i class="fa-solid fa-phone"></i><?php echo htmlspecialchars($member->phone); ?></span>
+                            <?php else: ?>
+                                <span class="mm-phone mm-phone-none"><i class="fa-solid fa-phone-slash"></i>-</span>
+                            <?php endif; ?>
+                            <span><i class="fa-regular fa-calendar"></i> <?php echo date('M d, Y', strtotime($member->created_at)); ?></span>
+                        </div>
+
+                        <div class="mm-mobile-status">
                             <?php
-                            $index_num = ($current_page - 1) * 10 + 1;
-                            foreach ($members as $member):
+                            if ((int)$member->status === 0) {
+                                echo '<span class="mm-status-pill mm-status-blocked"><i class="fa-solid fa-ban"></i> Blocked</span>';
+                            } elseif ($is_active && $is_completed) {
+                                echo '<span class="mm-status-pill mm-status-active"><i class="fa-solid fa-circle-check"></i> Active</span>';
+                            } elseif ($is_completed) {
+                                echo '<span class="mm-status-pill mm-status-review"><i class="fa-solid fa-clock"></i> Under Review</span>';
+                            } else {
+                                echo '<span class="mm-status-pill mm-status-incomplete"><i class="fa-solid fa-triangle-exclamation"></i> Incomplete</span>';
+                            }
                             ?>
-                                <tr>
-                                    <td data-label="#" class="sm-td-idx"><?php echo $index_num++; ?></td>
-                                    <td data-label="User ID">
-                                        <span class="badge bg-dark-subtle text-dark border font-monospace fw-bold px-2 py-1" style="font-size: 0.8rem; letter-spacing: 0.5px;">
-                                            <i class="fa-solid fa-id-badge text-primary me-1"></i><?php echo htmlspecialchars($member->custom_id ?? '-'); ?>
-                                        </span>
-                                    </td>
-                                    <td data-label="Name">
-                                        <div class="sm-name-cell">
-                                            <?php if (!empty($member->profile_image) && file_exists(FCPATH . ltrim($member->profile_image, '/'))): ?>
-                                                <img src="<?php echo base_url(ltrim($member->profile_image, '/')); ?>" class="sm-avatar" alt="<?php echo htmlspecialchars($member->name ?? 'Member'); ?>">
-                                            <?php else: ?>
-                                                <div class="sm-avatar sm-avatar-fallback"><?php echo strtoupper(substr($member->name ?? 'M', 0, 1)); ?></div>
-                                            <?php endif; ?>
-                                            <span class="sm-name-text"><?php echo htmlspecialchars($member->name ?? 'Unknown'); ?></span>
-                                        </div>
-                                    </td>
-                                    <td data-label="Email" class="sm-td-muted">
-                                        <?php if (!empty($member->email)): ?>
-                                            <span class="text-dark d-inline-flex align-items-center gap-1" title="<?php echo htmlspecialchars($member->email); ?>">
-                                                <i class="fa-regular fa-envelope text-muted me-1"></i><?php echo htmlspecialchars($member->email); ?>
-                                            </span>
-                                        <?php else: ?>
-                                            <span class="badge bg-light text-muted border px-2 py-1" style="font-size: 0.72rem; font-weight: 500;">
-                                                <i class="fa-regular fa-envelope-open me-1 opacity-50"></i>Not provided
-                                            </span>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td data-label="Phone" class="sm-td-muted">
-                                        <?php if (!empty($member->phone)): ?>
-                                            <span class="text-dark fw-medium d-inline-flex align-items-center gap-1">
-                                                <i class="fa-solid fa-phone text-muted me-1" style="font-size: 0.72rem;"></i><?php echo htmlspecialchars($member->phone); ?>
-                                            </span>
-                                        <?php else: ?>
-                                            <span class="badge bg-light text-muted border px-2 py-1" style="font-size: 0.72rem; font-weight: 500;">
-                                                <i class="fa-solid fa-phone-slash me-1 opacity-50"></i>-
-                                            </span>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td data-label="Wallet Balance">
-                                        <span class="sm-balance">₹<?php echo number_format($member->wallet_balance, 2); ?></span>
-                                    </td>
-                                    <td data-label="Status" class="sm-td-status">
-                                        <div class="sm-status-group">
-                                            <?php 
-                                                $pct = (int)($member->profile_completion_percentage ?? 0);
-                                                $is_completed = !empty($member->is_profile_completed);
-                                                $is_active = !empty($member->is_profile_active);
-                                            ?>
-                                            <!-- Top Status Pill -->
-                                            <?php if ((int)$member->status === 0): ?>
-                                                <span class="sm-status sm-status-blocked" title="Account is Blocked">
-                                                    <i class="fa-solid fa-ban"></i> Blocked
-                                                </span>
-                                            <?php elseif ($is_active && $is_completed): ?>
-                                                <span class="sm-status sm-status-active" title="Account is Active & Verified">
-                                                    <i class="fa-solid fa-circle-check"></i> Active
-                                                </span>
-                                            <?php elseif ($is_completed): ?>
-                                                <span class="sm-status sm-status-review" title="Profile 100% Complete - Awaiting Admin Review">
-                                                    <i class="fa-solid fa-clock"></i> Under Review
-                                                </span>
-                                            <?php else: ?>
-                                                <span class="sm-status sm-status-incomplete" title="Profile is Incomplete (<?php echo $pct; ?>%)">
-                                                    <i class="fa-solid fa-triangle-exclamation"></i> Incomplete
-                                                </span>
-                                            <?php endif; ?>
+                            <div class="mm-progress-row">
+                                <div class="mm-progress-track">
+                                    <div class="mm-progress-bar <?php
+                                                                if ($pct >= 100) echo 'mm-progress-100';
+                                                                elseif ($pct >= 50) echo 'mm-progress-mid';
+                                                                elseif ($pct > 0) echo 'mm-progress-low';
+                                                                else echo 'mm-progress-zero';
+                                                                ?>" style="width: <?php echo max(6, $pct); ?>%;"></div>
+                                </div>
+                                <span class="mm-progress-pct"><?php echo $pct; ?>%</span>
+                            </div>
+                            <span class="mm-kyc-note <?php echo $is_active ? 'mm-kyc-verified' : 'mm-kyc-pending'; ?>">
+                                <i class="fa-solid <?php echo $is_active ? 'fa-shield-check' : 'fa-shield-halved'; ?>"></i>
+                                <?php echo $is_active ? 'KYC Verified' : 'KYC Pending'; ?>
+                            </span>
+                        </div>
 
-                                            <!-- Profile Completion Details -->
-                                            <div class="sm-profile-meta">
-                                                <div class="sm-profile-progress-wrap" title="Profile completion: <?php echo $pct; ?>%">
-                                                    <div class="sm-profile-progress-track">
-                                                        <div class="sm-profile-progress-bar <?php 
-                                                            if ($pct >= 100) echo 'sm-progress-100';
-                                                            elseif ($pct >= 50) echo 'sm-progress-mid';
-                                                            elseif ($pct > 0) echo 'sm-progress-low';
-                                                            else echo 'sm-progress-zero';
-                                                        ?>" style="width: <?php echo max(6, $pct); ?>%;"></div>
-                                                    </div>
-                                                </div>
-
-                                                <div class="sm-badges-inline">
-                                                    <?php if ($pct >= 100): ?>
-                                                        <span class="sm-pbadge sm-pbadge-100" title="Profile 100% Complete">
-                                                            <i class="fa-solid fa-circle-check"></i> 100% Profile
-                                                        </span>
-                                                    <?php elseif ($pct > 0): ?>
-                                                        <span class="sm-pbadge sm-pbadge-mid" title="Profile <?php echo $pct; ?>% Complete">
-                                                            <i class="fa-solid fa-chart-pie"></i> <?php echo $pct; ?>% Profile
-                                                        </span>
-                                                    <?php else: ?>
-                                                        <span class="sm-pbadge sm-pbadge-zero" title="Profile 0% Complete (KYC Not Submitted)">
-                                                            <i class="fa-solid fa-circle-xmark"></i> 0% Profile
-                                                        </span>
-                                                    <?php endif; ?>
-
-                                                    <?php if ($is_active): ?>
-                                                        <span class="sm-kyc-tag sm-kyc-tag-verified" title="KYC Approved by Admin">
-                                                            <i class="fa-solid fa-shield-check"></i> Verified
-                                                        </span>
-                                                    <?php else: ?>
-                                                        <span class="sm-kyc-tag sm-kyc-tag-pending" title="KYC Pending Admin Approval">
-                                                            <i class="fa-solid fa-shield-halved"></i> Pending
-                                                        </span>
-                                                    <?php endif; ?>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td data-label="Registered" class="sm-td-muted"><?php echo date('M d, Y', strtotime($member->created_at)); ?></td>
-                                    <td data-label="Actions" class="sm-td-actions">
-                                        <div class="sm-actions">
-                                            <?php if (!empty($member->is_profile_active)): ?>
-                                                <a href="<?php echo base_url('admin/members/activate_profile/' . $member->id); ?>"
-                                                    class="sm-icon-btn sm-icon-btn-deactivate"
-                                                    title="Deactivate Profile"
-                                                    data-confirm="Are you sure you want to deactivate <?php echo htmlspecialchars($member->name ?? 'this member'); ?>'s profile?"
-                                                    data-confirm-title="Deactivate Profile?"
-                                                    data-confirm-btn="Yes, Deactivate"
-                                                    data-confirm-danger="true">
-                                                    <i class="fa-solid fa-ban"></i>
-                                                </a>
-                                            <?php else: ?>
-                                                <?php if ($pct < 100): ?>
-                                                    <a href="<?php echo base_url('admin/members/activate_profile/' . $member->id); ?>"
-                                                        class="sm-icon-btn sm-icon-btn-activate"
-                                                        title="Activate Profile (Warning: Profile is only <?php echo $pct; ?>% complete)"
-                                                        data-confirm="<?php echo htmlspecialchars($member->name ?? 'This member'); ?> has only completed <?php echo $pct; ?>% of their profile. Are you sure you want to activate anyway?"
-                                                        data-confirm-title="Activate Incomplete Profile?"
-                                                        data-confirm-btn="Yes, Activate Anyway"
-                                                        data-confirm-icon="warning">
-                                                        <i class="fa-solid fa-check-double"></i>
-                                                    </a>
-                                                <?php else: ?>
-                                                    <a href="<?php echo base_url('admin/members/activate_profile/' . $member->id); ?>"
-                                                        class="sm-icon-btn sm-icon-btn-activate"
-                                                        title="Activate & Approve Profile"
-                                                        data-confirm="Are you sure you want to activate & approve <?php echo htmlspecialchars($member->name ?? 'this member'); ?>'s 100% complete profile?"
-                                                        data-confirm-title="Activate Profile?"
-                                                        data-confirm-btn="Yes, Activate & Approve"
-                                                        data-confirm-icon="question">
-                                                        <i class="fa-solid fa-check-double"></i>
-                                                    </a>
-                                                <?php endif; ?>
-                                            <?php endif; ?>
-                                            <button type="button"
-                                                class="sm-icon-btn sm-icon-btn-wallet load-wallet-btn"
-                                                data-bs-toggle="modal"
-                                                data-bs-target="#loadWalletModal"
-                                                data-id="<?php echo $member->id; ?>"
-                                                data-name="<?php echo htmlspecialchars($member->name ?? ''); ?>"
-                                                data-balance="₹<?php echo number_format($member->wallet_balance, 2); ?>"
-                                                title="Load Wallet Funds">
-                                                <i class="fa-solid fa-wallet"></i>
-                                            </button>
-                                            <a href="<?php echo base_url('admin/members/edit/' . $member->id); ?>" class="sm-icon-btn sm-icon-btn-edit" title="Edit Member Details">
-                                                <i class="fa-solid fa-pen-to-square"></i>
-                                            </a>
-                                            <a href="<?php echo base_url('admin/members/view/' . $member->id); ?>" class="sm-icon-btn sm-icon-btn-view" title="Inspect Detail View">
-                                                <i class="fa-solid fa-eye"></i>
-                                            </a>
-                                        </div>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- Pagination footer inside container -->
-            <?php if (!empty($total_rows) && $total_rows > 0): 
-                $start_record = ($current_page - 1) * 10 + 1;
-                $end_record = min($current_page * 10, $total_rows);
-            ?>
-                <div class="sm-pagination-footer d-flex flex-column flex-sm-row justify-content-between align-items-center gap-2">
-                    <div class="text-muted small">
-                        Showing <strong><?php echo $start_record; ?></strong> to <strong><?php echo $end_record; ?></strong> of <strong><?php echo number_format($total_rows); ?></strong> available members
+                        <div class="mm-mobile-actions">
+                            <?php if ($is_active): ?>
+                                <a href="<?php echo base_url('admin/members/activate_profile/' . $member->id); ?>"
+                                    class="mm-icon-btn mm-icon-deactivate"
+                                    title="Deactivate Profile"
+                                    data-confirm="Are you sure you want to deactivate <?php echo htmlspecialchars($member->name ?? 'this member'); ?>'s profile?"
+                                    data-confirm-title="Deactivate Profile?"
+                                    data-confirm-btn="Yes, Deactivate"
+                                    data-confirm-danger="true">
+                                    <i class="fa-solid fa-ban"></i>
+                                </a>
+                            <?php else: ?>
+                                <a href="<?php echo base_url('admin/members/activate_profile/' . $member->id); ?>"
+                                    class="mm-icon-btn mm-icon-activate"
+                                    title="Activate Profile"
+                                    data-confirm="<?php echo $pct < 100
+                                                        ? htmlspecialchars($member->name ?? 'This member') . ' has only completed ' . $pct . '% of their profile. Are you sure you want to activate anyway?'
+                                                        : 'Are you sure you want to activate & approve ' . htmlspecialchars($member->name ?? 'this member') . '\'s 100% complete profile?'; ?>"
+                                    data-confirm-title="<?php echo $pct < 100 ? 'Activate Incomplete Profile?' : 'Activate Profile?'; ?>"
+                                    data-confirm-btn="<?php echo $pct < 100 ? 'Yes, Activate Anyway' : 'Yes, Activate & Approve'; ?>"
+                                    data-confirm-icon="<?php echo $pct < 100 ? 'warning' : 'question'; ?>">
+                                    <i class="fa-solid fa-check-double"></i>
+                                </a>
+                            <?php endif; ?>
+                            <button type="button"
+                                class="mm-icon-btn mm-icon-wallet load-wallet-btn flex-grow-1"
+                                data-bs-toggle="modal"
+                                data-bs-target="#loadWalletModal"
+                                data-id="<?php echo $member->id; ?>"
+                                data-name="<?php echo htmlspecialchars($member->name ?? ''); ?>"
+                                data-balance="₹<?php echo number_format($member->wallet_balance, 2); ?>"
+                                title="Load Wallet Funds">
+                                <i class="fa-solid fa-wallet"></i> Wallet
+                            </button>
+                            <a href="<?php echo base_url('admin/members/edit/' . $member->id); ?>" class="mm-icon-btn mm-icon-edit" title="Edit">
+                                <i class="fa-solid fa-pen-to-square"></i>
+                            </a>
+                            <a href="<?php echo base_url('admin/members/view/' . $member->id); ?>" class="mm-icon-btn mm-icon-view" title="View">
+                                <i class="fa-solid fa-eye"></i>
+                            </a>
+                        </div>
                     </div>
-                    <?php if ($total_pages > 1): ?>
+                <?php endforeach; ?>
+            <?php endif; ?>
+        </div>
+
+        <!-- Pagination Footer -->
+        <?php if (!empty($total_rows) && $total_rows > 0):
+            $start_record = ($current_page - 1) * 10 + 1;
+            $end_record = min($current_page * 10, $total_rows);
+        ?>
+            <div class="mm-footer">
+                <div class="mm-footer-info">
+                    Showing <strong><?php echo $start_record; ?></strong> to <strong><?php echo $end_record; ?></strong> of <strong><?php echo number_format($total_rows); ?></strong> available members
+                </div>
+                <?php if ($total_pages > 1): ?>
                     <nav aria-label="Member Page Navigation">
-                        <ul class="pagination justify-content-center mb-0">
+                        <ul class="mm-pagination pagination-sm">
                             <li class="page-item <?php echo ($current_page <= 1) ? 'disabled' : ''; ?>">
                                 <a class="page-link" href="#" data-page="<?php echo $current_page - 1; ?>">&laquo; Prev</a>
                             </li>
@@ -253,53 +318,60 @@
                             </li>
                         </ul>
                     </nav>
-                    <?php endif; ?>
-                </div>
-            <?php endif; ?>
-        </div>
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
     </div>
 </div>
 
-<!-- Load Wallet Modal -->
-<div class="modal fade" id="loadWalletModal" tabindex="-1" aria-labelledby="loadWalletModalLabel" aria-hidden="true">
+<!-- ============================================================== -->
+<!-- 4. LOAD WALLET MODAL -->
+<!-- ============================================================== -->
+<div class="modal fade mm-modal" id="loadWalletModal" tabindex="-1" aria-labelledby="loadWalletModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow sm-modal-content">
-            <div class="modal-header text-white p-4 sm-modal-header">
-                <h5 class="modal-title fw-bold" id="loadWalletModalLabel">
-                    <i class="fa-solid fa-coins me-2 text-warning"></i> Load Wallet Funds
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        <div class="modal-content">
+            <div class="mm-modal-header d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center">
+                    <span class="mm-modal-icon-badge"><i class="fa-solid fa-coins"></i></span>
+                    <div>
+                        <h5 class="mm-modal-title" id="loadWalletModalLabel">Load Wallet Funds</h5>
+                        <div class="mm-modal-subtitle">Credit balance to a member account</div>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
+
             <form id="loadWalletForm" method="POST" action="">
-                <div class="modal-body p-4">
-                    <div class="sm-modal-summary">
-                        <div class="sm-modal-summary-row">
-                            <span class="sm-modal-summary-label"><i class="fa-solid fa-user"></i> Member Account</span>
-                            <input type="text" id="walletMemberName" class="sm-modal-summary-value" readonly>
+                <div class="mm-modal-body">
+                    <div class="mm-summary-card">
+                        <div class="mm-summary-row">
+                            <span class="mm-summary-label"><i class="fa-solid fa-user"></i> Member</span>
+                            <input type="text" id="walletMemberName" class="mm-summary-value" readonly>
                         </div>
-                        <div class="sm-modal-summary-divider"></div>
-                        <div class="sm-modal-summary-row">
-                            <span class="sm-modal-summary-label"><i class="fa-solid fa-wallet"></i> Current Balance</span>
-                            <input type="text" id="walletCurrentBalance" class="sm-modal-summary-value sm-modal-summary-balance" readonly>
+                        <div class="mm-summary-divider"></div>
+                        <div class="mm-summary-row">
+                            <span class="mm-summary-label"><i class="fa-solid fa-wallet"></i> Current Balance</span>
+                            <input type="text" id="walletCurrentBalance" class="mm-summary-value mm-summary-balance" readonly>
                         </div>
                     </div>
 
                     <div class="mb-3">
-                        <label for="amount" class="form-label fw-semibold text-dark">Amount to Add (₹)</label>
+                        <label for="amount" class="mm-field-label">Amount to Add (₹)</label>
                         <div class="input-group">
                             <span class="input-group-text"><i class="fa-solid fa-indian-rupee-sign"></i></span>
                             <input type="number" step="0.01" name="amount" id="amount" class="form-control" placeholder="0.00" min="0.01" required>
                         </div>
                     </div>
                     <div class="mb-0">
-                        <label for="remark" class="form-label fw-semibold text-dark">Transaction Remark</label>
+                        <label for="remark" class="mm-field-label">Transaction Remark</label>
                         <input type="text" name="remark" id="remark" class="form-control" placeholder="e.g. Approved loading bonus" required>
                     </div>
                 </div>
-                <div class="modal-footer bg-light p-3 border-0 justify-content-end gap-2">
-                    <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn fw-semibold text-white px-4 sm-modal-submit">
-                        Credit Wallet
+
+                <div class="mm-modal-footer">
+                    <button type="button" class="mm-btn-cancel" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="mm-btn-submit">
+                        <i class="fa-solid fa-check"></i> Credit Wallet
                     </button>
                 </div>
             </form>
@@ -308,693 +380,807 @@
 </div>
 
 <style>
-    .sm-view {
-        --sm-pink: var(--primary-pink, #E91E8C);
-        --sm-gold: var(--primary-gold, #D4AF37);
-        --sm-dark: var(--dark-sidebar, #1f2937);
-        --sm-slate: #64748B;
-        font-family: 'Poppins', sans-serif;
+    /* ================= Design Tokens ================= */
+    /* Replace the top of your <style> block */
+    :root {
+        --mm-gold: #d4af37;
+        --mm-gold-dark: #b8942a;
+        --mm-gold-light: #f3e2ab;
+        --mm-pink: #ec407a;
+        --mm-ink: #14181f;
+        --mm-ink-soft: #2a3040;
+        --mm-muted: #6b7280;
+        --mm-border: #e8e9ee;
+        --mm-surface: #ffffff;
+        --mm-bg: #f7f7fb;
+        --mm-success: #10b981;
+        --mm-danger: #ef4444;
+        --mm-radius-lg: 18px;
+        --mm-radius-md: 14px;
+        --mm-shadow-sm: 0 1px 2px rgba(20, 24, 31, 0.04), 0 1px 1px rgba(20, 24, 31, 0.03);
+        --mm-shadow-md: 0 8px 24px -8px rgba(20, 24, 31, 0.12);
+        --mm-shadow-lg: 0 24px 48px -12px rgba(20, 24, 31, 0.22);
+    }
+
+    .mm-view {
         display: flex;
         flex-direction: column;
-        gap: 1.25rem;
+        gap: 18px;
     }
 
     /* ---------- Header ---------- */
-    .sm-eyebrow {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.4rem;
-        width: fit-content;
-        font-size: 0.72rem;
-        font-weight: 700;
-        letter-spacing: 0.08em;
+    .mm-eyebrow {
         text-transform: uppercase;
-        color: var(--sm-pink);
-        background: rgba(233, 30, 140, 0.1);
-        border-radius: 999px;
-        padding: 0.3rem 0.75rem 0.3rem 0.6rem;
-    }
-
-    .sm-title {
-        margin: 0.55rem 0 0.2rem;
+        letter-spacing: 1.2px;
+        font-size: 0.7rem;
         font-weight: 700;
-        color: var(--sm-dark);
-        font-size: clamp(1.35rem, 4.5vw, 1.9rem);
+        color: var(--mm-gold-dark);
+        margin-bottom: 6px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
     }
 
-    .sm-title::after {
-        content: '';
-        display: block;
-        width: 46px;
-        height: 3px;
-        margin-top: 0.55rem;
-        border-radius: 3px;
-        background: linear-gradient(90deg, var(--sm-gold), var(--sm-pink));
+    .mm-eyebrow::before {
+        content: "";
+        width: 18px;
+        height: 2px;
+        background: var(--mm-gold);
+        display: inline-block;
+        border-radius: 2px;
     }
 
-    .sm-subtitle {
+    .mm-title {
+        font-family: 'Playfair Display', serif;
+        font-weight: 700;
+        color: var(--mm-ink);
+        letter-spacing: -0.5px;
+        font-size: 1.9rem;
         margin: 0;
-        color: #7a7a7a;
+    }
+
+    .mm-subtitle {
+        color: var(--mm-muted);
+        font-size: 0.92rem;
+        margin-top: 6px;
+    }
+
+    /* ---------- Toolbar ---------- */
+    .mm-toolbar {
+        border-radius: var(--mm-radius-md);
+        border: 1px solid var(--mm-border);
+        background: var(--mm-surface);
+        padding: 12px 14px;
+        box-shadow: var(--mm-shadow-sm);
+    }
+
+    .mm-filter-form {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .mm-search-field {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        border: 1px solid var(--mm-border);
+        border-radius: 11px;
+        background: #fbfbfd;
+        padding: 0 14px;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .mm-search-field:focus-within {
+        border-color: var(--mm-gold);
+        box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.14);
+        background: #fff;
+    }
+
+    .mm-search-field i {
+        color: var(--mm-muted);
         font-size: 0.9rem;
     }
 
-    /* ---------- Cards ---------- */
-    .sm-card {
-        background: #fff;
-        border-radius: 14px;
-        box-shadow: 0 2px 14px rgba(43, 43, 43, 0.06);
-    }
-
-    /* ---------- Filter form ---------- */
-    .sm-filter-card {
-        padding: 1rem;
-    }
-
-    .sm-filter-form {
-        display: flex;
-        flex-direction: column;
-        gap: 0.7rem;
-    }
-
-    .sm-filter-search {
-        display: flex;
-        align-items: center;
-        gap: 0.7rem;
-        border: 1.5px solid #e9e2df;
-        border-radius: 11px;
-        background: #FBFAF9;
-        padding: 0.1rem 0.9rem;
-        transition: border-color 0.2s ease, box-shadow 0.2s ease;
-    }
-
-    .sm-filter-search:focus-within {
-        border-color: var(--sm-pink);
-        box-shadow: 0 0 0 3px rgba(233, 30, 140, 0.12);
-    }
-
-    .sm-filter-search i {
-        color: #9c9c9c;
-    }
-
-    .sm-filter-search input {
+    .mm-search-field input {
         flex: 1;
         min-width: 0;
         border: none;
         outline: none;
         background: transparent;
-        padding: 0.72rem 0;
+        padding: 11px 0;
         font-size: 0.9rem;
-        font-family: inherit;
     }
 
-    .sm-filter-select {
-        border: 1.5px solid #e9e2df;
+    .mm-select {
+        border: 1px solid var(--mm-border);
         border-radius: 11px;
-        background: #FBFAF9;
-        padding: 0.72rem 0.9rem;
+        background: #fbfbfd;
+        padding: 11px 12px;
         font-size: 0.9rem;
-        font-family: inherit;
-        color: var(--text-black, #2B2B2B);
+        color: var(--mm-ink-soft);
         outline: none;
     }
 
-    .sm-filter-select:focus {
-        border-color: var(--sm-pink);
+    .mm-select:focus {
+        border-color: var(--mm-gold);
     }
 
-    .sm-reset-btn {
+    .mm-reset-btn {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        gap: 0.5rem;
-        border: none;
-        background: var(--sm-dark);
-        color: #fff;
+        gap: 8px;
+        border: 1px solid var(--mm-border);
+        background: #fff;
+        color: var(--mm-ink-soft);
         font-weight: 600;
-        font-size: 0.88rem;
-        padding: 0.72rem 1rem;
+        font-size: 0.86rem;
+        padding: 11px 14px;
         border-radius: 11px;
         cursor: pointer;
-        transition: box-shadow 0.15s ease, transform 0.15s ease;
+        transition: all 0.15s ease;
     }
 
-    .sm-reset-btn:hover {
-        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.16);
+    .mm-reset-btn:hover {
+        background: #f4f4f7;
+        border-color: #d8d9e0;
     }
 
-    .sm-reset-btn:active {
-        transform: translateY(1px);
+    @media (min-width: 768px) {
+        .mm-filter-form {
+            flex-direction: row;
+            align-items: center;
+        }
+
+        .mm-search-field {
+            flex: 1 1 320px;
+        }
+
+        .mm-select {
+            flex: 0 0 200px;
+        }
+
+        .mm-reset-btn {
+            flex: 0 0 auto;
+        }
     }
 
     /* ---------- Table ---------- */
-    .sm-table-card {
+    .mm-table-wrapper {
+        border-radius: var(--mm-radius-lg);
+        border: 1px solid var(--mm-border);
+        background: var(--mm-surface);
         overflow: hidden;
+        box-shadow: var(--mm-shadow-sm);
     }
 
-    .sm-table-wrap {
+    .mm-table-scroll {
         overflow-x: auto;
     }
 
-    .sm-table {
+    .mm-table {
         width: 100%;
         border-collapse: collapse;
-        font-size: 0.9rem;
+        font-size: 0.88rem;
     }
 
-    .sm-table thead th {
-        background: var(--sm-dark);
-        border-bottom: 3px solid var(--sm-gold);
+    .mm-table thead th {
+        background: var(--mm-ink);
         color: #fff;
-        font-weight: 600;
-        font-size: 0.82rem;
-        text-align: left;
-        padding: 1rem 1.1rem;
-        white-space: nowrap;
-    }
-
-    .sm-th-idx {
-        width: 70px;
-    }
-
-    .sm-th-actions {
-        text-align: right;
-        width: 120px;
-    }
-
-    .sm-table tbody td {
-        padding: 0.9rem 1.1rem;
-        border-top: 1px solid #F2EEEB;
-        vertical-align: middle;
-        color: var(--text-black, #2B2B2B);
-    }
-
-    .sm-table tbody tr:hover {
-        background: #FDFBFA;
-    }
-
-    .sm-td-idx {
-        color: #b0b0b0;
-        font-weight: 600;
-    }
-
-    .sm-td-muted {
-        color: #6b6b6b;
-    }
-
-    .sm-td-actions {
-        text-align: right;
-    }
-
-    .sm-name-cell {
-        display: flex;
-        align-items: center;
-        gap: 0.65rem;
-    }
-
-    .sm-avatar {
-        flex: none;
-        width: 34px;
-        height: 34px;
-        border-radius: 50%;
-        object-fit: cover;
-        border: 2px solid var(--sm-gold);
-    }
-
-    .sm-avatar-fallback {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 0.85rem;
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.6px;
         font-weight: 700;
-        color: #fff;
-        background: var(--sm-pink);
+        text-align: left;
+        padding: 13px 14px;
+        white-space: nowrap;
+        box-shadow: inset 0 -3px 0 var(--mm-gold);
         border: none;
     }
 
-    .sm-name-text {
-        font-weight: 600;
-        color: var(--text-black, #2B2B2B);
+    .mm-table tbody tr {
+        border-bottom: 1px solid var(--mm-border);
+        transition: background 0.15s ease;
     }
 
-    .sm-balance {
+    .mm-table tbody tr:last-child {
+        border-bottom: none;
+    }
+
+    .mm-table tbody tr:hover {
+        background: #fbfaf6;
+    }
+
+    .mm-table td {
+        padding: 13px 14px;
+        vertical-align: middle;
+    }
+
+    .mm-muted {
+        color: var(--mm-muted);
+    }
+
+    .mm-uid-badge {
+        font-family: 'SFMono-Regular', Consolas, monospace;
+        font-size: 0.76rem;
         font-weight: 700;
-        color: #16A34A;
-    }
-
-    .sm-td-status {
-        min-width: 170px;
-    }
-
-    .sm-status-group {
-        display: flex;
-        flex-direction: column;
-        gap: 0.4rem;
-    }
-
-    .sm-status {
+        background: #f1f2f6;
+        color: var(--mm-ink-soft);
+        padding: 4px 10px;
+        border-radius: 20px;
         display: inline-flex;
         align-items: center;
-        gap: 0.35rem;
+        gap: 6px;
+        letter-spacing: 0.3px;
+    }
+
+    .mm-uid-badge i {
+        color: var(--mm-gold-dark);
+    }
+
+    .mm-name {
+        font-weight: 700;
+        color: var(--mm-ink);
+        font-size: 0.92rem;
+    }
+
+    .mm-phone {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--mm-ink-soft);
+        font-weight: 500;
+        font-size: 0.86rem;
+    }
+
+    .mm-phone i {
+        font-size: 0.72rem;
+        color: var(--mm-muted);
+    }
+
+    .mm-phone-none {
+        color: var(--mm-muted);
+    }
+
+    .mm-balance {
+        font-weight: 700;
+        color: #16a34a;
+        font-size: 0.92rem;
+    }
+
+    /* Status cell */
+    .mm-status-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
         font-size: 0.74rem;
         font-weight: 700;
-        letter-spacing: 0.02em;
-        padding: 0.28rem 0.7rem;
-        border-radius: 999px;
+        padding: 5px 11px;
+        border-radius: 30px;
         width: fit-content;
         line-height: 1.2;
+        border: 1px solid transparent;
     }
 
-    .sm-status-active {
-        background: #ECFDF5;
+    .mm-status-active {
+        background: #ecfdf5;
         color: #047857;
-        border: 1px solid #A7F3D0;
+        border-color: #a7f3d0;
     }
 
-    .sm-status-review {
-        background: #FFFBEB;
-        color: #B45309;
-        border: 1px solid #FDE68A;
+    .mm-status-review {
+        background: #fffbeb;
+        color: #b45309;
+        border-color: #fde68a;
     }
 
-    .sm-status-incomplete {
-        background: #FFF7ED;
-        color: #C2410C;
-        border: 1px solid #FFEDD5;
+    .mm-status-incomplete {
+        background: #fff7ed;
+        color: #c2410c;
+        border-color: #ffedd5;
     }
 
-    .sm-status-blocked {
-        background: #FEF2F2;
-        color: #B91C1C;
-        border: 1px solid #FECACA;
+    .mm-status-blocked {
+        background: #fef2f2;
+        color: #b91c1c;
+        border-color: #fecaca;
     }
 
-    /* Profile Progress and Badges */
-    .sm-profile-meta {
+    .mm-progress-row {
         display: flex;
-        flex-direction: column;
-        gap: 0.35rem;
+        align-items: center;
+        gap: 8px;
+        margin-top: 7px;
     }
 
-    .sm-profile-progress-wrap {
-        width: 100%;
-        max-width: 130px;
-    }
-
-    .sm-profile-progress-track {
+    .mm-progress-track {
+        flex: 1;
+        max-width: 110px;
         height: 5px;
-        background: #E2E8F0;
+        background: #e5e7eb;
         border-radius: 999px;
         overflow: hidden;
     }
 
-    .sm-profile-progress-bar {
+    .mm-progress-bar {
         height: 100%;
         border-radius: 999px;
         transition: width 0.3s ease;
     }
 
-    .sm-progress-100 {
-        background: linear-gradient(90deg, #10B981, #059669);
+    .mm-progress-100 {
+        background: linear-gradient(90deg, #10b981, #059669);
     }
 
-    .sm-progress-mid {
-        background: linear-gradient(90deg, #3B82F6, #2563EB);
+    .mm-progress-mid {
+        background: linear-gradient(90deg, #3b82f6, #2563eb);
     }
 
-    .sm-progress-low {
-        background: linear-gradient(90deg, #F59E0B, #D97706);
+    .mm-progress-low {
+        background: linear-gradient(90deg, #f59e0b, #d97706);
     }
 
-    .sm-progress-zero {
-        background: #CBD5E1;
+    .mm-progress-zero {
+        background: #cbd5e1;
     }
 
-    .sm-badges-inline {
+    .mm-progress-pct {
+        font-size: 0.72rem;
+        font-weight: 700;
+        color: var(--mm-muted);
+        min-width: 30px;
+    }
+
+    .mm-kyc-note {
         display: flex;
         align-items: center;
-        flex-wrap: wrap;
-        gap: 0.35rem;
-    }
-
-    /* Profile Completion Badges - Sharp, High-Contrast & Beautiful */
-    .sm-pbadge {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.3rem;
+        gap: 5px;
         font-size: 0.72rem;
-        font-weight: 700;
-        padding: 0.22rem 0.55rem;
-        border-radius: 6px;
-        line-height: 1.25;
-        white-space: nowrap;
-    }
-
-    .sm-pbadge-100 {
-        background: #DCFCE7;
-        color: #15803D;
-        border: 1px solid #86EFAC;
-    }
-
-    .sm-pbadge-mid {
-        background: #EFF6FF;
-        color: #1D4ED8;
-        border: 1px solid #BFDBFE;
-    }
-
-    /* 0% Profile Badge - Ultra High Contrast & Clearly Visible */
-    .sm-pbadge-zero {
-        background: #F1F5F9;
-        color: #1E293B;
-        border: 1.5px solid #94A3B8;
-        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-        font-weight: 700;
-    }
-
-    .sm-pbadge-zero i {
-        color: #EF4444;
-        font-size: 0.72rem;
-    }
-
-    /* KYC Verification Tag */
-    .sm-kyc-tag {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.28rem;
-        font-size: 0.70rem;
         font-weight: 600;
-        padding: 0.2rem 0.5rem;
-        border-radius: 6px;
-        line-height: 1.25;
-        white-space: nowrap;
+        margin-top: 4px;
     }
 
-    .sm-kyc-tag-verified {
-        background: #EEF2FF;
-        color: #4338CA;
-        border: 1px solid #C7D2FE;
+    .mm-kyc-verified {
+        color: #4338ca;
     }
 
-    .sm-kyc-tag-pending {
-        background: #FEF3C7;
-        color: #92400E;
-        border: 1px solid #FCD34D;
+    .mm-kyc-pending {
+        color: #b45309;
     }
 
-    .sm-actions {
-        display: inline-flex;
-        gap: 0.5rem;
+    .mm-kyc-note i {
+        font-size: 0.7rem;
     }
 
-    .sm-icon-btn {
+    /* Actions */
+    .mm-actions {
+        display: flex;
+        gap: 6px;
+        justify-content: flex-end;
+    }
+
+    .mm-icon-btn {
         width: 34px;
         height: 34px;
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        border-radius: 9px;
-        border: 1.5px solid transparent;
+        border-radius: 10px;
+        border: 1px solid transparent;
         text-decoration: none;
         cursor: pointer;
-        transition: transform 0.15s ease, box-shadow 0.15s ease;
+        transition: all 0.15s ease;
+        flex-shrink: 0;
     }
 
-    .sm-icon-btn:active {
+    .mm-icon-btn:active {
         transform: translateY(1px);
     }
 
-    .sm-icon-btn-wallet {
-        background: #ECFDF5;
-        border-color: #A7F3D0;
-        color: #16A34A;
+    .mm-icon-wallet {
+        background: #ecfdf5;
+        border-color: #a7f3d0;
+        color: #16a34a;
     }
 
-    .sm-icon-btn-wallet:hover {
-        background: #16A34A;
-        border-color: #16A34A;
+    .mm-icon-wallet:hover {
+        background: #16a34a;
+        border-color: #16a34a;
         color: #fff;
     }
 
-    .sm-icon-btn-edit {
-        background: #FFFBEB;
-        border-color: #FDE68A;
-        color: #D97706;
+    .mm-icon-edit {
+        background: #fffbeb;
+        border-color: #fde68a;
+        color: #d97706;
     }
 
-    .sm-icon-btn-edit:hover {
-        background: #D97706;
-        border-color: #D97706;
+    .mm-icon-edit:hover {
+        background: #d97706;
+        border-color: #d97706;
         color: #fff;
     }
 
-    .sm-icon-btn-view {
-        background: #EFF6FF;
-        border-color: #BFDBFE;
-        color: #2563EB;
+    .mm-icon-view {
+        background: #eff6ff;
+        border-color: #bfdbfe;
+        color: #2563eb;
     }
 
-    .sm-icon-btn-view:hover {
-        background: #2563EB;
-        border-color: #2563EB;
+    .mm-icon-view:hover {
+        background: #2563eb;
+        border-color: #2563eb;
         color: #fff;
     }
 
-    .sm-icon-btn-activate {
-        background: #ECFDF5;
-        border-color: #A7F3D0;
-        color: #16A34A;
+    .mm-icon-activate {
+        background: #ecfdf5;
+        border-color: #a7f3d0;
+        color: #16a34a;
     }
 
-    .sm-icon-btn-activate:hover {
-        background: #16A34A;
-        border-color: #16A34A;
+    .mm-icon-activate:hover {
+        background: #16a34a;
+        border-color: #16a34a;
         color: #fff;
     }
 
-    .sm-icon-btn-deactivate {
-        background: #FEF2F2;
-        border-color: #FECACA;
-        color: #DC2626;
+    .mm-icon-deactivate {
+        background: #fef2f2;
+        border-color: #fecaca;
+        color: #dc2626;
     }
 
-    .sm-icon-btn-deactivate:hover {
-        background: #DC2626;
-        border-color: #DC2626;
+    .mm-icon-deactivate:hover {
+        background: #dc2626;
+        border-color: #dc2626;
         color: #fff;
     }
 
-    .sm-empty {
+    /* Empty state */
+    .mm-empty {
         text-align: center;
-        color: #b5aca8;
-        padding: 3.5rem 1rem;
+        padding: 56px 20px;
+        color: var(--mm-muted);
     }
 
-    .sm-empty i {
-        font-size: 1.9rem;
-        margin-bottom: 0.7rem;
-        display: block;
-        color: #d8d2ce;
+    .mm-empty-card {
+        background: #fff;
+        border-radius: var(--mm-radius-md);
+        border: 1px solid var(--mm-border);
     }
 
-    .sm-empty p {
+    .mm-empty-icon {
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
+        background: #f4f4f8;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 14px auto;
+        font-size: 1.5rem;
+        color: var(--mm-muted);
+    }
+
+    .mm-empty p {
         margin: 0;
-        font-size: 0.92rem;
+        font-size: 0.9rem;
     }
 
-    /* ---------- Pagination ---------- */
-    .sm-pagination-footer {
-        padding: 1rem;
-        border-top: 1px solid #F2EEEB;
+    /* ---------- Mobile Cards ---------- */
+    .mm-mobile-list {
+        padding: 12px;
+        background: var(--mm-bg);
     }
 
-    .sm-view .pagination {
-        gap: 0.35rem;
+    .mm-mobile-card {
+        border-radius: var(--mm-radius-md);
+        border: 1px solid var(--mm-border);
+        background: var(--mm-surface);
+        padding: 14px;
+        margin-bottom: 12px;
+        box-shadow: var(--mm-shadow-sm);
     }
 
-    .sm-view .page-link {
-        border: 1.5px solid #e9e2df;
-        border-radius: 9px !important;
-        color: var(--text-black, #2B2B2B);
-        font-weight: 600;
-        font-size: 0.85rem;
-        padding: 0.5rem 0.85rem;
-    }
-
-    .sm-view .page-item.active .page-link {
-        background: var(--sm-pink);
-        border-color: var(--sm-pink);
-        color: #fff;
-    }
-
-    .sm-view .page-item.disabled .page-link {
-        color: #c7c7c7;
-        background: #fafafa;
-    }
-
-    .sm-view .page-link:hover:not(.sm-view .page-item.active .page-link) {
-        border-color: var(--sm-pink);
-    }
-
-    /* ---------- Wallet modal ----------
-       !important + a fuller selector path here because this modal is appended
-       near <body> by Bootstrap and can end up after the page's own stylesheet
-       in the cascade, letting global .modal-header / .btn defaults win. */
-    .sm-modal-content {
-        border-radius: 14px;
-        overflow: hidden;
-    }
-
-    #loadWalletModal .modal-header.sm-modal-header {
-        background: linear-gradient(135deg, var(--dark-sidebar, #1f2937) 0%, #1f2937 100%) !important;
-        border-bottom: 3px solid var(--primary-gold, #D4AF37) !important;
+    .mm-mobile-top {
+        display: flex;
+        align-items: flex-start;
         justify-content: space-between;
+        gap: 10px;
     }
 
-    #loadWalletModal .modal-header.sm-modal-header,
-    #loadWalletModal .modal-header.sm-modal-header .modal-title {
-        color: #fff !important;
-    }
-
-    #loadWalletModal .modal-header.sm-modal-header .btn-close {
-        filter: brightness(0) invert(1);
-        opacity: 0.85;
-    }
-
-    #loadWalletModal button.sm-modal-submit {
-        background: linear-gradient(45deg, var(--primary-pink, #E91E8C), var(--primary-gold, #D4AF37)) !important;
-        border: none !important;
-        border-radius: 6px;
-        color: #fff !important;
-        opacity: 1 !important;
-        box-shadow: 0 4px 10px rgba(233, 30, 140, 0.18);
-    }
-
-    .sm-modal-summary {
-        background: #FBFAF9;
-        border: 1px solid #F0EAE5;
-        border-radius: 12px;
-        padding: 1rem 1.1rem;
-        margin-bottom: 1.25rem;
-    }
-
-    .sm-modal-summary-row {
+    .mm-mobile-meta {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 0.75rem;
+        gap: 10px;
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px dashed var(--mm-border);
+        font-size: 0.82rem;
+        color: var(--mm-muted);
     }
 
-    .sm-modal-summary-label {
+    .mm-mobile-status {
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px dashed var(--mm-border);
+    }
+
+    .mm-mobile-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 1px solid var(--mm-border);
+    }
+
+    .mm-mobile-actions .mm-icon-btn.flex-grow-1 {
+        width: auto;
+        flex: 1;
+        gap: 6px;
+        font-size: 0.82rem;
+        font-weight: 700;
+    }
+
+    /* ---------- Pagination Footer ---------- */
+    .mm-footer {
+        background: var(--mm-surface);
+        border-top: 1px solid var(--mm-border);
+        padding: 14px 18px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .mm-footer-info {
+        color: var(--mm-muted);
+        font-size: 0.84rem;
+    }
+
+    .mm-pagination {
+        display: flex;
+        gap: 4px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    .mm-pagination .page-link {
+        border: 1px solid var(--mm-border);
+        border-radius: 8px;
+        color: var(--mm-ink-soft);
+        font-weight: 600;
+        font-size: 0.83rem;
+        padding: 6px 11px;
+        transition: all 0.15s ease;
+    }
+
+    .mm-pagination .page-item.active .page-link {
+        background: linear-gradient(135deg, var(--mm-pink) 0%, var(--mm-gold) 100%);
+        border-color: transparent;
+        color: #fff;
+    }
+
+    .mm-pagination .page-item.disabled .page-link {
+        opacity: 0.45;
+    }
+
+    .mm-pagination .page-link:hover:not(.disabled) {
+        border-color: var(--mm-gold);
+        background: #fffaf0;
+    }
+
+    /* ---------- Wallet Modal (matches compact style) ---------- */
+    .mm-modal .modal-dialog {
+        max-width: 440px;
+    }
+
+    .mm-modal .modal-content {
+        border: none;
+        border-radius: 18px;
+        overflow: hidden;
+        box-shadow: var(--mm-shadow-lg);
+    }
+
+    .mm-modal-header {
+        background: linear-gradient(135deg, var(--mm-ink) 0%, var(--mm-ink-soft) 100%);
+        position: relative;
+        color: #fff;
+        padding: 16px 20px;
+    }
+
+    .mm-modal-header::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 3px;
+        background: linear-gradient(90deg, var(--mm-pink), var(--mm-gold));
+    }
+
+    .mm-modal-icon-badge {
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.12);
         display: inline-flex;
         align-items: center;
-        gap: 0.5rem;
-        color: #8a8a8a;
-        font-size: 0.82rem;
+        justify-content: center;
+        color: var(--mm-gold-light);
+        font-size: 0.92rem;
+        margin-right: 10px;
+        flex-shrink: 0;
+    }
+
+    .mm-modal-title {
+        font-weight: 700;
+        font-size: 1rem;
+        margin: 0;
+        color: #fff;
+    }
+
+    .mm-modal-subtitle {
+        font-size: 0.74rem;
+        color: rgba(255, 255, 255, 0.6);
+        margin-top: 1px;
+    }
+
+    .mm-modal .btn-close {
+        filter: invert(1) grayscale(100%) brightness(200%);
+        opacity: 0.7;
+        font-size: 0.78rem;
+    }
+
+    .mm-modal .btn-close:hover {
+        opacity: 1;
+    }
+
+    .mm-modal-body {
+        padding: 20px;
+        background: #fdfdfd;
+    }
+
+    .mm-summary-card {
+        background: #fbfaf9;
+        border: 1px solid #f0eae5;
+        border-radius: 12px;
+        padding: 12px 14px;
+        margin-bottom: 16px;
+    }
+
+    .mm-summary-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+    }
+
+    .mm-summary-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--mm-muted);
+        font-size: 0.8rem;
         font-weight: 600;
     }
 
-    .sm-modal-summary-value {
+    .mm-summary-value {
         border: none;
         background: transparent;
         text-align: right;
         font-weight: 700;
-        color: var(--text-black, #2B2B2B);
-        font-size: 0.92rem;
+        color: var(--mm-ink);
+        font-size: 0.88rem;
         outline: none;
         max-width: 55%;
     }
 
-    .sm-modal-summary-balance {
-        color: #16A34A;
-        font-size: 1rem;
+    .mm-summary-balance {
+        color: #16a34a;
     }
 
-    .sm-modal-summary-divider {
+    .mm-summary-divider {
         height: 1px;
-        background: #F0EAE5;
-        margin: 0.7rem 0;
+        background: #f0eae5;
+        margin: 8px 0;
     }
 
-    /* ---------- Tablet and up ---------- */
-    @media (min-width: 768px) {
-        .sm-filter-form {
-            flex-direction: row;
-            align-items: center;
-        }
-
-        .sm-filter-search {
-            flex: 1 1 320px;
-        }
-
-        .sm-filter-select {
-            flex: 0 0 200px;
-        }
-
-        .sm-reset-btn {
-            flex: 0 0 auto;
-        }
+    .mm-field-label {
+        font-weight: 700;
+        color: var(--mm-ink);
+        font-size: 0.82rem;
+        margin-bottom: 7px;
+        display: block;
     }
 
-    /* ---------- Mobile: table becomes cards ---------- */
-    @media (max-width: 767.98px) {
-        .sm-table thead {
-            display: none;
+    .mm-modal-body .input-group-text {
+        background: #fff;
+        border-color: var(--mm-border);
+        color: var(--mm-gold-dark);
+    }
+
+    .mm-modal-body .form-control {
+        border-color: var(--mm-border);
+        padding: 9px 12px;
+        font-size: 0.9rem;
+    }
+
+    .mm-modal-body .form-control:focus {
+        border-color: var(--mm-gold);
+        box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15);
+    }
+
+    .mm-modal-footer {
+        background: #fdfdfd;
+        border-top: 1px solid var(--mm-border);
+        padding: 14px 20px;
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+    }
+
+    .mm-btn-cancel {
+        border: 1px solid var(--mm-border);
+        background: #fff;
+        color: var(--mm-ink-soft);
+        border-radius: 10px;
+        font-weight: 600;
+        padding: 9px 16px;
+        font-size: 0.86rem;
+    }
+
+    .mm-btn-cancel:hover {
+        background: #f4f4f7;
+    }
+
+    .mm-btn-submit {
+        background: linear-gradient(135deg, var(--mm-pink) 0%, var(--mm-gold) 100%);
+        color: #fff;
+        border: none;
+        border-radius: 10px;
+        font-weight: 600;
+        padding: 9px 18px;
+        font-size: 0.86rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        box-shadow: 0 8px 18px -6px rgba(236, 64, 122, 0.45);
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .mm-btn-submit:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 10px 22px -6px rgba(236, 64, 122, 0.5);
+    }
+
+    @media (max-width: 575px) {
+        .mm-title {
+            font-size: 1.5rem;
         }
 
-        .sm-table,
-        .sm-table tbody,
-        .sm-table tr,
-        .sm-table td {
-            display: block;
-            width: 100%;
+        .mm-modal-body {
+            padding: 16px;
         }
 
-        .sm-table tr {
-            border-top: 1px solid #F2EEEB;
-            padding: 0.9rem 1.1rem;
+        .mm-modal-header {
+            padding: 14px 16px;
         }
 
-        .sm-table tr:first-child {
-            border-top: none;
-        }
-
-        .sm-table td {
-            border: none;
-            padding: 0.3rem 0;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 0.75rem;
-        }
-
-        .sm-table td::before {
-            content: attr(data-label);
-            color: #9a9a9a;
-            font-size: 0.72rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.03em;
-            flex: none;
-        }
-
-        .sm-td-idx {
-            order: -1;
-        }
-
-        .sm-td-idx::before {
-            content: 'Member #';
-        }
-
-        .sm-td-actions {
-            justify-content: flex-end;
-        }
-
-        .sm-td-actions::before {
-            content: none;
+        .mm-modal-footer {
+            padding: 12px 16px;
         }
     }
 </style>
 
-<!-- AJAX Swapper and Modal Bind Scripts -->
+<!-- ============================================================== -->
+<!-- 5. JavaScript (unchanged behaviour) -->
+<!-- ============================================================== -->
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const searchInput = document.getElementById('searchInput');
@@ -1049,7 +1235,7 @@
 
         document.addEventListener('click', function(e) {
             // Handle pagination link clicks
-            const pageLink = e.target.closest('#table-container .pagination .page-link');
+            const pageLink = e.target.closest('#table-container .pagination .page-link, #table-container .mm-pagination .page-link');
             if (pageLink) {
                 e.preventDefault();
                 const page = pageLink.getAttribute('data-page');

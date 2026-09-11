@@ -1,122 +1,453 @@
-<div class="row mb-4 align-items-center">
-    <div class="col-12">
-        <h3 class="fw-bold" style="color: var(--dark-sidebar);">MLM Level Commission Settings</h3>
-        <p class="text-muted">Configure the referral payout distribution rules for levels 1 to 12.</p>
+<style>
+    /* =======================================================
+   Commission Settings Page — scoped styles (.cms- prefix)
+   ======================================================= */
+    .cms-wrap {
+        --cms-gold: #c89738;
+        --cms-gold-dark: #a97c26;
+        --cms-pink: #ec407a;
+        --cms-dark: #111827;
+        --cms-dark-2: #1f2937;
+        --cms-border: #e5e7eb;
+        --cms-muted: #6b7280;
+        --cms-text: #111827;
+        --cms-radius: 18px;
+        --cms-radius-sm: 12px;
+        --cms-shadow: 0 2px 8px rgba(17, 24, 39, .05);
+        --cms-shadow-hover: 0 10px 24px -6px rgba(17, 24, 39, .10);
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: var(--cms-text);
+    }
+
+    .cms-wrap * {
+        box-sizing: border-box;
+    }
+
+    /* ---------- Header ---------- */
+    .cms-header {
+        margin-bottom: 22px;
+    }
+
+    .cms-header h3 {
+        font-size: clamp(1.35rem, 2vw, 1.75rem);
+        font-weight: 800;
+        color: var(--cms-dark);
+        margin: 0 0 6px 0;
+        letter-spacing: -.02em;
+    }
+
+    .cms-header p {
+        color: var(--cms-muted);
+        font-size: .9rem;
+        margin: 0;
+    }
+
+    /* ---------- Card shell ---------- */
+    .cms-card {
+        background: #fff;
+        border-radius: var(--cms-radius);
+        box-shadow: var(--cms-shadow);
+        overflow: hidden;
+        border: 1px solid var(--cms-border);
+    }
+
+    /* ---------- Banner ---------- */
+    .cms-banner {
+        position: relative;
+        padding: 26px 28px;
+        background: linear-gradient(120deg, var(--cms-dark) 0%, var(--cms-dark-2) 60%, #2c3646 100%);
+        color: #fff;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 18px;
+        align-items: center;
+        justify-content: space-between;
+        overflow: hidden;
+    }
+
+    .cms-banner::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, var(--cms-gold), var(--cms-pink));
+    }
+
+    .cms-banner-glow {
+        position: absolute;
+        width: 260px;
+        height: 260px;
+        background: radial-gradient(circle, rgba(200, 151, 56, .18) 0%, transparent 70%);
+        top: -110px;
+        right: -60px;
+        pointer-events: none;
+    }
+
+    .cms-eyebrow {
+        display: inline-block;
+        background: var(--cms-pink);
+        color: #fff;
+        font-size: .7rem;
+        font-weight: 700;
+        letter-spacing: .6px;
+        text-transform: uppercase;
+        padding: 5px 12px;
+        border-radius: 999px;
+        margin-bottom: 10px;
+    }
+
+    .cms-banner h5 {
+        font-size: 1.2rem;
+        font-weight: 800;
+        margin: 0;
+        position: relative;
+        z-index: 1;
+    }
+
+    .cms-payout-panel {
+        background: rgba(255, 255, 255, .08);
+        border: 1px solid rgba(255, 255, 255, .18);
+        border-radius: var(--cms-radius-sm);
+        padding: 14px 20px;
+        text-align: right;
+        position: relative;
+        z-index: 1;
+        backdrop-filter: blur(2px);
+    }
+
+    .cms-payout-label {
+        display: block;
+        font-size: .78rem;
+        color: rgba(255, 255, 255, .72);
+        margin-bottom: 4px;
+    }
+
+    .cms-payout-value {
+        font-size: 1.5rem;
+        font-weight: 800;
+        margin: 0;
+        color: #fbbf24;
+    }
+
+    /* ---------- Body / form ---------- */
+    .cms-body {
+        padding: 26px;
+    }
+
+    .cms-level-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px;
+        margin-bottom: 24px;
+    }
+
+    @media (max-width:991px) {
+        .cms-level-grid {
+            grid-template-columns: repeat(3, 1fr);
+        }
+    }
+
+    @media (max-width:767px) {
+        .cms-level-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    @media (max-width:420px) {
+        .cms-level-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .cms-level-card {
+        background: #f8f9fc;
+        border: 1.5px solid var(--cms-border);
+        border-radius: var(--cms-radius-sm);
+        padding: 16px;
+        transition: all .2s ease;
+    }
+
+    .cms-level-card:hover {
+        border-color: var(--cms-gold);
+        box-shadow: var(--cms-shadow-hover);
+        transform: translateY(-2px);
+        background: #fff;
+    }
+
+    .cms-level-label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 700;
+        font-size: .92rem;
+        color: var(--cms-dark);
+        margin-bottom: 10px;
+    }
+
+    .cms-level-label i {
+        color: var(--cms-gold-dark);
+        font-size: .85rem;
+    }
+
+    .cms-input-group {
+        display: flex;
+        align-items: stretch;
+        border: 1.5px solid var(--cms-border);
+        border-radius: 10px;
+        overflow: hidden;
+        background: #fff;
+        transition: border-color .18s ease, box-shadow .18s ease;
+    }
+
+    .cms-input-group:focus-within {
+        border-color: var(--cms-gold);
+        box-shadow: 0 0 0 4px rgba(200, 151, 56, .14);
+    }
+
+    .cms-input-currency {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 38px;
+        flex-shrink: 0;
+        background: #f0fdf4;
+        color: #059669;
+        font-weight: 700;
+        font-size: .95rem;
+        border-right: 1.5px solid var(--cms-border);
+    }
+
+    .cms-input-group input {
+        border: none;
+        outline: none;
+        width: 100%;
+        padding: 10px 12px;
+        font-size: .95rem;
+        font-weight: 600;
+        font-family: inherit;
+        color: var(--cms-dark);
+    }
+
+    .cms-input-group input::-webkit-outer-spin-button,
+    .cms-input-group input::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+
+    .cms-input-group input[type=number] {
+        -moz-appearance: textfield;
+    }
+
+    /* ---------- Info alert ---------- */
+    .cms-info-alert {
+        display: flex;
+        align-items: flex-start;
+        gap: 14px;
+        background: #ecfeff;
+        border: 1px solid #a5f3fc;
+        border-left: 4px solid #06b6d4;
+        border-radius: var(--cms-radius-sm);
+        padding: 16px 18px;
+        margin-bottom: 24px;
+    }
+
+    .cms-info-icon {
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        flex-shrink: 0;
+        background: #06b6d4;
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1rem;
+    }
+
+    .cms-info-title {
+        font-weight: 700;
+        color: var(--cms-dark);
+        font-size: .95rem;
+        display: block;
+        margin-bottom: 3px;
+    }
+
+    .cms-info-title span {
+        color: #0e7490;
+        font-weight: 800;
+    }
+
+    .cms-info-sub {
+        color: var(--cms-muted);
+        font-size: .83rem;
+        line-height: 1.5;
+    }
+
+    /* ---------- Save button ---------- */
+    .cms-actions {
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    .cms-save-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 13px 32px;
+        border: none;
+        border-radius: 12px;
+        background: linear-gradient(45deg, var(--cms-pink), var(--cms-gold));
+        color: #fff;
+        font-weight: 700;
+        font-size: .92rem;
+        cursor: pointer;
+        box-shadow: 0 6px 16px rgba(236, 64, 122, .25);
+        transition: all .2s ease;
+    }
+
+    .cms-save-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 22px rgba(236, 64, 122, .35);
+    }
+
+    @media (max-width:575px) {
+        .cms-banner {
+            padding: 20px;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .cms-payout-panel {
+            width: 100%;
+            text-align: left;
+        }
+
+        .cms-body {
+            padding: 18px;
+        }
+
+        .cms-actions {
+            width: 100%;
+        }
+
+        .cms-save-btn {
+            width: 100%;
+            justify-content: center;
+        }
+    }
+</style>
+
+<div class="cms-wrap">
+
+    <div class="cms-header">
+        <h3>MLM Level Commission Settings</h3>
+        <p>Configure the referral payout distribution rules for levels 1 to 12.</p>
     </div>
-</div>
 
-<div class="row">
-    <div class="col-12">
-        <div class="card border-0 shadow-sm" style="border-radius: 12px; overflow: hidden;">
-            <div class="p-4 text-white d-flex align-items-center justify-content-between" style="background: linear-gradient(135deg, var(--dark-sidebar) 0%, #1f2937 100%); border-bottom: 3px solid var(--primary-gold);">
-                <div>
-                    <span class="badge mb-2 text-uppercase" style="background-color: var(--primary-pink); font-size: 0.75rem; font-weight: 600; padding: 5px 10px;">
-                        System Settings
-                    </span>
-                    <h5 class="fw-bold mb-0">Commission Settings</h5>
-                </div>
-                
-                <!-- Real-time calculator panel -->
-                <div class="bg-dark bg-opacity-25 px-3 py-2 rounded text-end shadow-inner" style="border: 1px solid rgba(255,255,255,0.15);">
-                    <span class="d-block small text-light text-opacity-75">Total MLM Payout per Product</span>
-                    <h4 class="fw-bold m-0 text-warning" id="totalPayoutIndicator">₹0.00</h4>
-                </div>
+    <div class="cms-card">
+        <div class="cms-banner">
+            <div class="cms-banner-glow"></div>
+            <div style="position:relative;z-index:1;">
+                <span class="cms-eyebrow">System Settings</span>
+                <h5>Commission Settings</h5>
             </div>
-            
-            <div class="card-body p-4">
-                <form action="<?php echo base_url('admin/commissions/update'); ?>" method="POST" id="commissionForm">
-                    <div class="row g-4">
-                        <?php foreach ($settings as $setting): ?>
-                            <div class="col-md-3 col-sm-6">
-                                <div class="p-3 border rounded shadow-sm bg-light">
-                                    <label for="amt_<?php echo $setting->level; ?>" class="form-label fw-bold text-dark mb-2">
-                                        <i class="fa-solid fa-layer-group text-muted me-1"></i> Level <?php echo $setting->level; ?>
-                                    </label>
-                                    <div class="input-group">
-                                        <span class="input-group-text fw-bold text-success">&#8377;</span>
-                                        <input type="number" 
-                                               step="0.01" 
-                                               name="amounts[<?php echo $setting->level; ?>]" 
-                                               id="amt_<?php echo $setting->level; ?>" 
-                                               class="form-control amt-input fw-semibold" 
-                                               placeholder="0.00" 
-                                               min="0" 
-                                               value="<?php echo htmlspecialchars($setting->amount ?? '0.00'); ?>" 
-                                               required>
-                                    </div>
-                                </div>
-                            </div>
-                        <?php endforeach; ?>
-                    </div>
 
-                    <!-- Dynamic Sum Bar info -->
-                    <div class="alert alert-info border-0 shadow-sm mt-4 d-flex align-items-center justify-content-between p-3" style="border-left: 4px solid #0dcaf0 !important;">
-                        <div class="d-flex align-items-center">
-                            <i class="fa-solid fa-circle-info fs-4 me-3 text-info"></i>
-                            <div>
-                                <span class="d-block text-dark fw-semibold">Fixed Money Referral Commission: <span id="allocatedSum">₹0.00</span></span>
-                                <span class="text-muted small">When a customer purchases a product, these fixed money amounts (₹) will be directly credited to each active ancestor's wallet.</span>
+            <div class="cms-payout-panel">
+                <span class="cms-payout-label">Total MLM Payout per Product</span>
+                <h4 class="cms-payout-value" id="totalPayoutIndicator">₹0.00</h4>
+            </div>
+        </div>
+
+        <div class="cms-body">
+            <form action="<?php echo base_url('admin/commissions/update'); ?>" method="POST" id="commissionForm">
+                <div class="cms-level-grid">
+                    <?php foreach ($settings as $setting): ?>
+                        <div class="cms-level-card">
+                            <label for="amt_<?php echo $setting->level; ?>" class="cms-level-label">
+                                <i class="fa-solid fa-layer-group"></i> Level <?php echo $setting->level; ?>
+                            </label>
+                            <div class="cms-input-group">
+                                <span class="cms-input-currency">&#8377;</span>
+                                <input type="number"
+                                    step="0.01"
+                                    name="amounts[<?php echo $setting->level; ?>]"
+                                    id="amt_<?php echo $setting->level; ?>"
+                                    class="amt-input"
+                                    placeholder="0.00"
+                                    min="0"
+                                    value="<?php echo htmlspecialchars($setting->amount ?? '0.00'); ?>"
+                                    required>
                             </div>
                         </div>
-                    </div>
+                    <?php endforeach; ?>
+                </div>
 
-                    <div class="d-flex align-items-center justify-content-end gap-2 mt-4">
-                        <button type="submit" class="btn px-5 py-2.5 fw-semibold text-white" style="background: linear-gradient(45deg, var(--primary-pink), var(--primary-gold)); border: none; border-radius: 8px; box-shadow: 0 4px 10px rgba(236, 64, 122, 0.15);">
-                            <i class="fa-solid fa-floppy-disk me-2"></i> Save Commission Amounts
-                        </button>
+                <div class="cms-info-alert">
+                    <div class="cms-info-icon"><i class="fa-solid fa-circle-info"></i></div>
+                    <div>
+                        <span class="cms-info-title">Fixed Money Referral Commission: <span id="allocatedSum">₹0.00</span></span>
+                        <div class="cms-info-sub">When a customer purchases a product, these fixed money amounts (₹) will be directly credited to each active ancestor's wallet.</div>
                     </div>
-                </form>
-            </div>
+                </div>
+
+                <div class="cms-actions">
+                    <button type="submit" class="cms-save-btn">
+                        <i class="fa-solid fa-floppy-disk"></i> Save Commission Amounts
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const amtInputs = document.querySelectorAll('.amt-input');
-    const allocatedSum = document.getElementById('allocatedSum');
-    const totalPayoutIndicator = document.getElementById('totalPayoutIndicator');
-    const form = document.getElementById('commissionForm');
+    document.addEventListener('DOMContentLoaded', function() {
+        const amtInputs = document.querySelectorAll('.amt-input');
+        const allocatedSum = document.getElementById('allocatedSum');
+        const totalPayoutIndicator = document.getElementById('totalPayoutIndicator');
+        const form = document.getElementById('commissionForm');
 
-    function calculateSums() {
-        let totalAllocated = 0.00;
-        amtInputs.forEach(input => {
-            const val = parseFloat(input.value) || 0.00;
-            totalAllocated += val;
-        });
-
-        allocatedSum.textContent = "₹" + totalAllocated.toFixed(2);
-        totalPayoutIndicator.textContent = "₹" + totalAllocated.toFixed(2);
-    }
-
-    // Bind real-time update
-    amtInputs.forEach(input => {
-        input.addEventListener('input', calculateSums);
-    });
-
-    // Form submit check: ensures no negative values
-    if (form) {
-        form.addEventListener('submit', function(e) {
-            let hasNegative = false;
+        function calculateSums() {
+            let totalAllocated = 0.00;
             amtInputs.forEach(input => {
-                const val = parseFloat(input.value);
-                if (isNaN(val) || val < 0) {
-                    hasNegative = true;
-                }
+                const val = parseFloat(input.value) || 0.00;
+                totalAllocated += val;
             });
 
-            if (hasNegative) {
-                e.preventDefault();
-                dsAlert({
-                    icon: 'error',
-                    title: 'Invalid Commission Amount',
-                    text: 'All level commission amounts must be non-negative numbers.'
-                });
-            }
-        });
-    }
+            allocatedSum.textContent = "₹" + totalAllocated.toFixed(2);
+            totalPayoutIndicator.textContent = "₹" + totalAllocated.toFixed(2);
+        }
 
-    // Initial load
-    calculateSums();
-});
+        // Bind real-time update
+        amtInputs.forEach(input => {
+            input.addEventListener('input', calculateSums);
+        });
+
+        // Form submit check: ensures no negative values
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                let hasNegative = false;
+                amtInputs.forEach(input => {
+                    const val = parseFloat(input.value);
+                    if (isNaN(val) || val < 0) {
+                        hasNegative = true;
+                    }
+                });
+
+                if (hasNegative) {
+                    e.preventDefault();
+                    dsAlert({
+                        icon: 'error',
+                        title: 'Invalid Commission Amount',
+                        text: 'All level commission amounts must be non-negative numbers.'
+                    });
+                }
+            });
+        }
+
+        // Initial load
+        calculateSums();
+    });
 </script>

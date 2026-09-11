@@ -114,7 +114,6 @@
                                             <option value="">Select Gender</option>
                                             <option value="male" <?php echo (isset($user->gender) && strtolower($user->gender) === 'male') ? 'selected' : ''; ?>>Male</option>
                                             <option value="female" <?php echo (isset($user->gender) && strtolower($user->gender) === 'female') ? 'selected' : ''; ?>>Female</option>
-                                            <option value="other" <?php echo (isset($user->gender) && strtolower($user->gender) === 'other') ? 'selected' : ''; ?>>Other</option>
                                         </select>
                                     </div>
                                 </div>

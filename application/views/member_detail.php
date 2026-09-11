@@ -33,9 +33,31 @@ $mpdSourceMap = [
         <div class="mpd-col-side">
             <div class="mpd-card mpd-profile-card">
 
-                <?php if (!empty($member->profile_image) && file_exists(FCPATH . ltrim($member->profile_image, '/'))): ?>
-                    <img src="<?php echo base_url(ltrim($member->profile_image, '/')); ?>"
-                        class="mpd-avatar" alt="<?php echo htmlspecialchars($member->name); ?>">
+                <?php 
+                    $mpd_avatar_url = null;
+                    if (!empty($member->profile_image)) {
+                        if (filter_var($member->profile_image, FILTER_VALIDATE_URL)) {
+                            $mpd_avatar_url = $member->profile_image;
+                        } else {
+                            $clean_img = ltrim($member->profile_image, '/');
+                            if (file_exists(FCPATH . $clean_img)) {
+                                $mpd_avatar_url = base_url($clean_img);
+                            } else if (file_exists(FCPATH . 'uploads/profile_images/' . basename($clean_img))) {
+                                $mpd_avatar_url = base_url('uploads/profile_images/' . basename($clean_img));
+                            } else {
+                                $mpd_avatar_url = base_url($clean_img);
+                            }
+                        }
+                    }
+                ?>
+                <?php if (!empty($mpd_avatar_url)): ?>
+                    <img src="<?php echo htmlspecialchars($mpd_avatar_url); ?>"
+                        class="mpd-avatar" 
+                        alt="<?php echo htmlspecialchars($member->name ?? 'Member'); ?>"
+                        onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='flex';">
+                    <div class="mpd-avatar mpd-avatar-fallback" style="display: none;">
+                        <?php echo strtoupper(substr($member->name ?? 'M', 0, 1)); ?>
+                    </div>
                 <?php else: ?>
                     <div class="mpd-avatar mpd-avatar-fallback">
                         <?php echo strtoupper(substr($member->name ?? 'M', 0, 1)); ?>

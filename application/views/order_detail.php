@@ -722,10 +722,16 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <?php if (!in_array($order->status, ['completed', 'confirmed', 'packed', 'out_for_delivery', 'delivered']) && empty($is_already_paid) && empty($commissions)): ?>
+                        <?php if (empty($commissions)): ?>
                             <tr>
-                                <td colspan="5" class="empty-row">
-                                    <i class="fa-solid fa-clock"></i> Payout table is only computed for confirmed/paid orders.
+                                <td colspan="5" class="empty-row" style="padding: 24px 16px; text-align: center; color: #64748b;">
+                                    <?php if ($order->status === 'delivered' || $order->status === 'completed'): ?>
+                                        <i class="fa-solid fa-circle-info" style="color: #0ea5e9; margin-right: 6px;"></i> No referral commissions were recorded for this order (e.g., buyer has no eligible active upline sponsor).
+                                    <?php elseif ($order->status === 'cancelled'): ?>
+                                        <i class="fa-solid fa-ban" style="color: #ef4444; margin-right: 6px;"></i> Order is cancelled. No commissions distributed.
+                                    <?php else: ?>
+                                        <i class="fa-solid fa-clock" style="color: #f59e0b; margin-right: 6px;"></i> Referral commissions will be automatically credited to eligible upline wallets once this order is marked as <strong>DELIVERED</strong>. Current status: <strong><?php echo strtoupper($order->status); ?></strong>.
+                                    <?php endif; ?>
                                 </td>
                             </tr>
                         <?php else: ?>
@@ -797,11 +803,20 @@
                 const orderId = this.getAttribute('data-order-id');
                 const statusLabel = targetStatus.replace(/_/g, ' ').toUpperCase();
 
+                let confirmTitle = 'Advance Order Status?';
+                let confirmText = 'Are you sure you want to advance this order to ' + statusLabel + '?';
+                let confirmBtnText = 'Yes, Advance';
+                if (targetStatus === 'delivered') {
+                    confirmTitle = 'Mark Order as Delivered?';
+                    confirmText = 'Marking this order as DELIVERED will automatically credit referral commissions to eligible upline wallets and complete the order. Are you sure you want to proceed?';
+                    confirmBtnText = 'Yes, Deliver & Distribute Commission';
+                }
+
                 dsConfirm({
-                    title: 'Advance Order Status?',
-                    text: 'Are you sure you want to advance this order to ' + statusLabel + '?',
+                    title: confirmTitle,
+                    text: confirmText,
                     icon: 'question',
-                    confirmText: 'Yes, Advance',
+                    confirmText: confirmBtnText,
                     isDangerous: false,
                     onConfirm: function() {
                         fetch('<?php echo base_url("api/update_order_status"); ?>', {
