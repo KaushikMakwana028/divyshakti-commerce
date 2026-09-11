@@ -12,7 +12,7 @@
             <div class="card-body">
                 <!-- Avatar with Camera Overlay (Clickable) -->
                 <div class="position-relative d-inline-block mb-3 avatar-container" id="avatarClickTarget" style="cursor: pointer;">
-                    <img id="profileImagePreview" src="<?php echo $user->profile_image ? base_url($user->profile_image) : 'https://www.gravatar.com/avatar/' . md5(strtolower(trim($user->email))) . '?d=mp'; ?>" 
+                    <img id="profileImagePreview" src="<?php echo $user->profile_image ? base_url($user->profile_image) : 'https://www.gravatar.com/avatar/' . md5(strtolower(trim($user->email ?? ''))) . '?d=mp'; ?>" 
                          alt="User Avatar" 
                          class="img-fluid rounded-circle border" 
                          style="width: 140px; height: 140px; object-fit: cover; border: 3px solid var(--primary-gold) !important; transition: all 0.3s ease;">
@@ -21,8 +21,8 @@
                     </div>
                 </div>
                 
-                <h5 class="fw-bold m-0" style="color: var(--dark-sidebar);"><?php echo htmlspecialchars($user->name); ?></h5>
-                <p class="text-muted small mb-2"><?php echo htmlspecialchars($user->email); ?></p>
+                <h5 class="fw-bold m-0" style="color: var(--dark-sidebar);"><?php echo htmlspecialchars($user->name ?? 'User'); ?></h5>
+                <p class="text-muted small mb-2"><?php echo !empty($user->email) ? htmlspecialchars($user->email) : '<span class="fst-italic text-muted">No email provided</span>'; ?></p>
                 <span class="badge" style="background-color: rgba(212, 175, 55, 0.15); color: var(--primary-gold); border: 1px solid var(--primary-gold); padding: 4px 10px; font-size: 0.75rem; border-radius: 50px;">
                     <?php echo ((int)$user->role === 1) ? 'Admin Account' : 'User Account'; ?>
                 </span>
@@ -32,12 +32,12 @@
                 <div class="text-start">
                     <p class="mb-3 d-flex align-items-center">
                         <strong style="color: var(--dark-sidebar); min-width: 90px;"><i class="fa-solid fa-phone me-2 text-muted"></i> Phone:</strong> 
-                        <span class="text-muted"><?php echo htmlspecialchars($user->phone); ?></span>
+                        <span class="text-muted"><?php echo htmlspecialchars($user->phone ?? '-'); ?></span>
                     </p>
                     <p class="mb-3 d-flex align-items-center">
                         <strong style="color: var(--dark-sidebar); min-width: 90px;"><i class="fa-solid fa-gift me-2 text-muted"></i> Referral:</strong> 
                         <span class="badge ms-1 text-uppercase" style="background-color: rgba(212, 175, 55, 0.12); color: var(--primary-gold); border: 1px dashed var(--primary-gold); padding: 6px 12px; font-size: 0.85rem; font-weight: bold; border-radius: 6px; letter-spacing: 0.5px;">
-                            <?php echo htmlspecialchars($user->referral_code); ?>
+                            <?php echo htmlspecialchars($user->referral_code ?? '-'); ?>
                         </span>
                     </p>
                     <p class="mb-0">
@@ -52,15 +52,6 @@
 
     <!-- Forms (Right Column) -->
     <div class="col-lg-8">
-        <!-- Display PHP validation errors locally, if any -->
-        <?php if (validation_errors()): ?>
-            <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm mb-4" role="alert" style="border-left: 4px solid #dc3545 !important;">
-                <i class="fa-solid fa-circle-exclamation me-2 text-danger"></i>
-                <?php echo validation_errors(' ', ' '); ?>
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        <?php endif; ?>
-
         <div class="card border-0 shadow-sm" style="border-radius: 12px; overflow: hidden;">
             <div class="card-header bg-white p-0">
                 <!-- Navigation Tabs -->
@@ -93,7 +84,7 @@
                                     <label for="name" class="form-label fw-semibold text-dark">Full Name</label>
                                     <div class="input-group">
                                         <span class="input-group-text"><i class="fa-solid fa-user"></i></span>
-                                        <input type="text" name="name" id="name" class="form-control" value="<?php echo htmlspecialchars($user->name); ?>" required>
+                                        <input type="text" name="name" id="name" class="form-control" value="<?php echo htmlspecialchars($user->name ?? ''); ?>" required>
                                     </div>
                                 </div>
                                 
@@ -101,16 +92,31 @@
                                     <label for="email" class="form-label fw-semibold text-dark">Email Address</label>
                                     <div class="input-group">
                                         <span class="input-group-text"><i class="fa-solid fa-envelope"></i></span>
-                                        <input type="email" name="email" id="email" class="form-control" value="<?php echo htmlspecialchars($user->email); ?>" required>
+                                        <input type="email" name="email" id="email" class="form-control" value="<?php echo htmlspecialchars($user->email ?? ''); ?>">
                                     </div>
                                 </div>
                             </div>
 
-                            <div class="mb-3">
-                                <label for="phone" class="form-label fw-semibold text-dark">Phone Number</label>
-                                <div class="input-group">
-                                    <span class="input-group-text"><i class="fa-solid fa-phone"></i></span>
-                                    <input type="text" name="phone" id="phone" class="form-control" value="<?php echo htmlspecialchars($user->phone); ?>" required>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="phone" class="form-label fw-semibold text-dark">Phone Number</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fa-solid fa-phone"></i></span>
+                                        <input type="text" name="phone" id="phone" class="form-control" value="<?php echo htmlspecialchars($user->phone ?? ''); ?>" required>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-6 mb-3">
+                                    <label for="gender" class="form-label fw-semibold text-dark">Gender</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fa-solid fa-venus-mars"></i></span>
+                                        <select name="gender" id="gender" class="form-select">
+                                            <option value="">Select Gender</option>
+                                            <option value="male" <?php echo (isset($user->gender) && strtolower($user->gender) === 'male') ? 'selected' : ''; ?>>Male</option>
+                                            <option value="female" <?php echo (isset($user->gender) && strtolower($user->gender) === 'female') ? 'selected' : ''; ?>>Female</option>
+                                            <option value="other" <?php echo (isset($user->gender) && strtolower($user->gender) === 'other') ? 'selected' : ''; ?>>Other</option>
+                                        </select>
+                                    </div>
                                 </div>
                             </div>
 
@@ -221,11 +227,10 @@ document.addEventListener('DOMContentLoaded', function() {
             if (file) {
                 // Verify file size is within limits (optional warning)
                 if (file.size > 2 * 1024 * 1024) {
-                    Swal.fire({
+                    dsAlert({
                         icon: 'warning',
-                        title: 'File too large',
-                        text: 'Please select an image smaller than 2MB.',
-                        confirmButtonColor: '#ec407a'
+                        title: 'File Too Large',
+                        text: 'Please select an image smaller than 2MB.'
                     });
                     fileInput.value = ''; // clear input
                     return;
@@ -233,11 +238,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 // Verify file is an image
                 if (!file.type.match('image.*')) {
-                    Swal.fire({
+                    dsAlert({
                         icon: 'warning',
-                        title: 'Invalid file type',
-                        text: 'Please select an image file (PNG, JPG, JPEG).',
-                        confirmButtonColor: '#ec407a'
+                        title: 'Invalid File Type',
+                        text: 'Please select an image file (PNG, JPG, JPEG).'
                     });
                     fileInput.value = '';
                     return;

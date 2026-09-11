@@ -46,6 +46,12 @@ class Login extends CI_Controller
     {
         $this->check_logged_in();
 
+        // If accessed at root (empty URI) or 'login', redirect to 'admin/login' so direct /admin/login is shown in the URL
+        $uri = trim($this->uri->uri_string(), '/');
+        if ($uri === '' || strtolower($uri) === 'login') {
+            redirect('admin/login');
+        }
+
         $this->load->library('form_validation');
 
         if ($this->input->method(TRUE) === 'POST') {
@@ -130,6 +136,7 @@ class Login extends CI_Controller
                     $new_referral_code = $this->generate_unique_referral_code();
 
                     $insert_data = [
+                        'custom_id'      => $this->General_model->generateUniqueCustomId(),
                         'name'           => $this->input->post('name', TRUE),
                         'email'          => $this->input->post('email', TRUE),
                         'phone'          => $this->input->post('phone', TRUE),

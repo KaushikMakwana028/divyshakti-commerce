@@ -88,4 +88,82 @@ class General_model extends CI_Model
             ->get('categories')
             ->result();
     }
+
+    /**
+     * Generate sequential unique member ID starting from '0002001' (7-digit format)
+     */
+    public function generateUniqueCustomId()
+    {
+        $min_start = 2001;
+        $this->db->select_max("CAST(custom_id AS UNSIGNED)", "max_id");
+        $this->db->where("custom_id IS NOT NULL");
+        $this->db->where("custom_id !=", "");
+        $this->db->where("role", 0);
+        $query = $this->db->get('users');
+        $row = $query->row();
+
+        $next_num = ($row && (int)$row->max_id >= $min_start) ? ((int)$row->max_id + 1) : $min_start;
+        $custom_id = str_pad($next_num, 7, '0', STR_PAD_LEFT);
+
+        // Ensure collision safety
+        while ($this->getOne('users', ['custom_id' => $custom_id])) {
+            $next_num++;
+            $custom_id = str_pad($next_num, 7, '0', STR_PAD_LEFT);
+        }
+
+        return $custom_id;
+    }
+
+    /**
+     * Calculate profile completion stats
+     * 14 required fields for 100% completion (including gender)
+     */
+    public function calculateProfileCompletion($user)
+    {
+        $required_fields = [
+            'name'                => 'Name',
+            'phone'               => 'Phone',
+            'gender'              => 'Gender',
+            'address'             => 'Address',
+            'aadhar_number'       => 'Aadhar Number',
+            'aadhar_image'        => 'Aadhar Image',
+            'pan_number'          => 'PAN Number',
+            'pan_image'           => 'PAN Image',
+            'account_holder_name' => 'Account Holder Name',
+            'bank_name'           => 'Bank Name',
+            'account_number'      => 'Account Number',
+            'ifsc_code'           => 'IFSC Code',
+            'account_type'        => 'Account Type',
+            'branch_name'         => 'Branch Name',
+        ];
+
+        $completed_count = 0;
+        $missing_fields = [];
+
+        foreach ($required_fields as $field => $label) {
+            $val = isset($user->$field) ? trim((string)$user->$field) : '';
+            if ($val !== '') {
+                $completed_count++;
+            } else {
+                $missing_fields[] = $field;
+            }
+        }
+
+        $total_fields = count($required_fields);
+        $percentage = (int) round(($completed_count / $total_fields) * 100);
+        if ($percentage > 100) {
+            $percentage = 100;
+        }
+
+        $is_completed = ($completed_count === $total_fields);
+
+        return [
+            'total_fields'    => $total_fields,
+            'completed_count' => $completed_count,
+            'percentage'      => $percentage,
+            'is_completed'    => $is_completed,
+            'missing_fields'  => $missing_fields
+        ];
+    }
 }
+

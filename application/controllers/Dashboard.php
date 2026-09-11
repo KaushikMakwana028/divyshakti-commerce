@@ -39,7 +39,12 @@ class Dashboard extends CI_Controller
             $data['total_products'] = $this->db->count_all_results('products');
             $data['total_orders'] = $this->db->count_all_results('orders');
             
-            $data['pending_orders'] = $this->db->where('status', 'pending')->count_all_results('orders');
+            $data['placed_orders'] = $this->db->where_in('status', ['placed', 'pending'])->count_all_results('orders');
+            $data['pending_orders'] = $data['placed_orders'];
+            $data['confirmed_orders'] = $this->db->where('status', 'confirmed')->count_all_results('orders');
+            $data['packed_orders'] = $this->db->where('status', 'packed')->count_all_results('orders');
+            $data['out_for_delivery_orders'] = $this->db->where('status', 'out_for_delivery')->count_all_results('orders');
+            $data['delivered_orders'] = $this->db->where_in('status', ['delivered', 'completed'])->count_all_results('orders');
             $data['completed_orders'] = $this->db->where_in('status', ['confirmed', 'packed', 'out_for_delivery', 'delivered', 'completed'])->count_all_results('orders');
             $data['cancelled_orders'] = $this->db->where('status', 'cancelled')->count_all_results('orders');
             
@@ -110,8 +115,14 @@ class Dashboard extends CI_Controller
             
             // Total orders bought by this user
             $data['my_total_orders'] = $this->db->where('user_id', $user_id)->count_all_results('orders');
+            $data['my_placed_orders'] = $this->db->where('user_id', $user_id)->where_in('status', ['placed', 'pending'])->count_all_results('orders');
+            $data['my_pending_orders'] = $data['my_placed_orders'];
+            $data['my_confirmed_orders'] = $this->db->where('user_id', $user_id)->where('status', 'confirmed')->count_all_results('orders');
+            $data['my_packed_orders'] = $this->db->where('user_id', $user_id)->where('status', 'packed')->count_all_results('orders');
+            $data['my_out_for_delivery_orders'] = $this->db->where('user_id', $user_id)->where('status', 'out_for_delivery')->count_all_results('orders');
+            $data['my_delivered_orders'] = $this->db->where('user_id', $user_id)->where_in('status', ['delivered', 'completed'])->count_all_results('orders');
             $data['my_completed_orders'] = $this->db->where('user_id', $user_id)->where_in('status', ['confirmed', 'packed', 'out_for_delivery', 'delivered', 'completed'])->count_all_results('orders');
-            $data['my_pending_orders'] = $this->db->where('user_id', $user_id)->where('status', 'pending')->count_all_results('orders');
+            $data['my_cancelled_orders'] = $this->db->where('user_id', $user_id)->where('status', 'cancelled')->count_all_results('orders');
 
             // Total spent on purchases and total referral earnings
             $purchase_sum = $this->db->select_sum('amount')->where(['user_id' => $user_id, 'type' => 'debit', 'source' => 'purchase'])->get('wallet_transactions')->row();

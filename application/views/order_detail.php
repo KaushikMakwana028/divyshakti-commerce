@@ -512,29 +512,38 @@
             <h1>Order Detail Audit</h1>
             <p>Detailed review of ordering items, buyer details, and MLM commission chains.</p>
         </div>
-        <a href="<?php echo base_url('admin/orders'); ?>" class="back-btn">
-            <i class="fa-solid fa-arrow-left"></i> Back to Orders
-        </a>
+        <div class="d-flex align-items-center gap-2">
+            <button type="button" class="btn btn-sm btn-outline-danger px-3 py-2 fw-semibold rounded-2" id="deleteOrderAuditBtn" data-order-id="<?php echo $order->id; ?>" title="Delete this order">
+                <i class="fa-solid fa-trash-can me-1"></i> Delete Order
+            </button>
+            <a href="<?php echo base_url('admin/orders'); ?>" class="back-btn">
+                <i class="fa-solid fa-arrow-left"></i> Back to Orders
+            </a>
+        </div>
     </div>
 
     <div class="order-meta">
         <span><strong>Order #<?php echo $order->id; ?></strong></span>
         <span class="sep">&bull;</span>
         <?php if ($order->status === 'pending'): ?>
-            <span class="status-pill pending"><i class="fa-solid fa-spinner fa-spin"></i> Pending</span>
+            <span class="status-pill" style="background:#fffbeb; color:#b45309; border:1px solid #fcd34d;"><i class="fa-solid fa-clock"></i> Awaiting Payment</span>
+        <?php elseif ($order->status === 'placed'): ?>
+            <span class="status-pill" style="background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe;"><i class="fa-solid fa-receipt"></i> Placed</span>
         <?php elseif ($order->status === 'confirmed'): ?>
-            <span class="status-pill confirmed"><i class="fa-solid fa-circle-check"></i> Confirmed</span>
+            <span class="status-pill" style="background:#eef2ff; color:#4338ca; border:1px solid #c7d2fe;"><i class="fa-solid fa-circle-check"></i> Confirmed</span>
         <?php elseif ($order->status === 'packed'): ?>
-            <span class="status-pill packed"><i class="fa-solid fa-box"></i> Packed</span>
+            <span class="status-pill" style="background:#ecfeff; color:#0e7490; border:1px solid #a5f3fc;"><i class="fa-solid fa-box-open"></i> Packed</span>
         <?php elseif ($order->status === 'out_for_delivery'): ?>
-            <span class="status-pill out-for-delivery"><i class="fa-solid fa-truck"></i> Out for Delivery</span>
-        <?php elseif ($order->status === 'delivered' || $order->status === 'completed'): ?>
-            <span class="status-pill delivered"><i class="fa-solid fa-circle-check"></i> <?php echo ($order->status === 'completed') ? 'Completed' : 'Delivered'; ?></span>
+            <span class="status-pill" style="background:#fff7ed; color:#c2410c; border:1px solid #fed7aa;"><i class="fa-solid fa-truck-fast"></i> Out for Delivery</span>
+        <?php elseif ($order->status === 'delivered'): ?>
+            <span class="status-pill" style="background:#f0fdf4; color:#15803d; border:1px solid #bbf7d0;"><i class="fa-solid fa-circle-check"></i> Delivered</span>
+        <?php elseif ($order->status === 'completed'): ?>
+            <span class="status-pill" style="background:#f0fdfa; color:#0f766e; border:1px solid #99f6e4;"><i class="fa-solid fa-award"></i> Completed</span>
         <?php else: ?>
-            <span class="status-pill cancelled"><i class="fa-solid fa-circle-xmark"></i> Cancelled</span>
+            <span class="status-pill" style="background:#fef2f2; color:#b91c1c; border:1px solid #fecaca;"><i class="fa-solid fa-circle-xmark"></i> Cancelled</span>
         <?php endif; ?>
         <span class="sep">&bull;</span>
-        <span style="color:var(--dsk-muted)">Placed by <strong style="color:var(--dsk-text)"><?php echo htmlspecialchars($order->buyer_name); ?></strong></span>
+        <span style="color:var(--dsk-muted)">Placed by <strong style="color:var(--dsk-text)"><?php echo htmlspecialchars($order->buyer_name ?? 'Customer'); ?></strong></span>
     </div>
 
     <div class="sections">
@@ -548,65 +557,59 @@
                     <h2>Order Status Control</h2>
                 </div>
                 <div class="card-body">
-                    <form action="<?php echo base_url('admin/orders/status/' . $order->id); ?>" method="POST" id="statusChangeForm">
-                        <?php if ($order->status === 'pending'): ?>
-                            <div class="btn-row">
-                                <button type="button" class="abtn approve submit-status-btn" data-status="confirmed">
-                                    <i class="fa-solid fa-circle-check"></i> Confirm Order
-                                </button>
-                                <button type="button" class="abtn cancel submit-status-btn" data-status="cancelled">
-                                    <i class="fa-solid fa-xmark"></i> Cancel Order
-                                </button>
-                                <input type="hidden" name="status" id="statusVal" value="">
-                            </div>
-                            <span class="warn-note">Confirming this order will deduct user balance and trigger MLM commission payouts.</span>
-                        <?php elseif ($order->status === 'confirmed'): ?>
-                            <div class="btn-row">
-                                <button type="button" class="abtn approve submit-status-btn" style="background-color: var(--primary-gold) !important; color: #fff;" data-status="packed">
-                                    <i class="fa-solid fa-box"></i> Pack Order
-                                </button>
-                                <button type="button" class="abtn cancel submit-status-btn" data-status="cancelled">
-                                    <i class="fa-solid fa-triangle-exclamation"></i> Cancel &amp; Refund
-                                </button>
-                                <input type="hidden" name="status" id="statusVal" value="">
-                            </div>
-                            <span class="warn-note">Cancel & Refund will restore stock, refund buyer balance, and reverse commissions.</span>
-                        <?php elseif ($order->status === 'packed'): ?>
-                            <div class="btn-row">
-                                <button type="button" class="abtn approve submit-status-btn" style="background-color: #0dcaf0 !important; color: #fff;" data-status="out_for_delivery">
-                                    <i class="fa-solid fa-truck"></i> Out for Delivery
-                                </button>
-                                <button type="button" class="abtn cancel submit-status-btn" data-status="cancelled">
-                                    <i class="fa-solid fa-triangle-exclamation"></i> Cancel &amp; Refund
-                                </button>
-                                <input type="hidden" name="status" id="statusVal" value="">
-                            </div>
-                            <span class="warn-note">Cancel & Refund will restore stock, refund buyer balance, and reverse commissions.</span>
-                        <?php elseif ($order->status === 'out_for_delivery'): ?>
-                            <div class="btn-row">
-                                <button type="button" class="abtn approve submit-status-btn" style="background-color: #198754 !important; color: #fff;" data-status="delivered">
-                                    <i class="fa-solid fa-house-chimney-user"></i> Deliver Order
-                                </button>
-                                <button type="button" class="abtn cancel submit-status-btn" data-status="cancelled">
-                                    <i class="fa-solid fa-triangle-exclamation"></i> Cancel &amp; Refund
-                                </button>
-                                <input type="hidden" name="status" id="statusVal" value="">
-                            </div>
-                            <span class="warn-note">Cancel & Refund will restore stock, refund buyer balance, and reverse commissions.</span>
-                        <?php elseif ($order->status === 'delivered' || $order->status === 'completed'): ?>
-                            <div class="btn-row">
-                                <button type="button" class="abtn cancel submit-status-btn" data-status="cancelled">
-                                    <i class="fa-solid fa-triangle-exclamation"></i> Cancel &amp; Refund
-                                </button>
-                                <input type="hidden" name="status" id="statusVal" value="">
-                            </div>
-                            <span class="warn-note critical"><i class="fa-solid fa-circle-exclamation"></i> Order is <?php echo ($order->status === 'completed') ? 'completed' : 'delivered'; ?>. Reversing will refund buyer, restore stock, and reverse commissions.</span>
-                        <?php else: ?>
-                            <div class="archived-note">
-                                <i class="fa-solid fa-archive"></i> Order is cancelled and archived.
-                            </div>
-                        <?php endif; ?>
-                    </form>
+                    <?php if ($order->status === 'pending'): ?>
+                        <div class="alert alert-warning mb-3 py-2 px-3 fw-semibold text-warning-emphasis" style="background:#fef3c7; border:1px solid #f59e0b; border-radius:8px; font-size:0.82rem;">
+                            <i class="fa-solid fa-clock me-1 text-warning"></i> Awaiting buyer payment
+                        </div>
+                        <div class="btn-row">
+                            <button type="button" class="abtn cancel order-cancel-btn" data-order-id="<?php echo $order->id; ?>" style="width:100%;">
+                                <i class="fa-solid fa-xmark"></i> Cancel Order
+                            </button>
+                        </div>
+                        <span class="warn-note"><i class="fa-solid fa-circle-info me-1"></i> Forward fulfillment controls are disabled until payment is completed by the buyer.</span>
+                    <?php elseif ($order->status === 'placed'): ?>
+                        <div class="btn-row">
+                            <button type="button" class="abtn approve order-status-btn" data-status="confirmed" data-order-id="<?php echo $order->id; ?>">
+                                <i class="fa-solid fa-circle-check"></i> Confirm Order
+                            </button>
+                            <button type="button" class="abtn cancel order-cancel-btn" data-order-id="<?php echo $order->id; ?>">
+                                <i class="fa-solid fa-triangle-exclamation"></i> Cancel Order
+                            </button>
+                        </div>
+                        <span class="warn-note" style="color: #0d6efd;"><i class="fa-solid fa-circle-check"></i> Order paid from wallet. Confirming will advance the order to Confirmed status.</span>
+                    <?php elseif ($order->status === 'confirmed'): ?>
+                        <div class="btn-row">
+                            <button type="button" class="abtn approve order-status-btn" style="background-color: var(--primary-gold) !important; color: #fff;" data-status="packed" data-order-id="<?php echo $order->id; ?>">
+                                <i class="fa-solid fa-box"></i> Pack Order
+                            </button>
+                            <button type="button" class="abtn cancel order-cancel-btn" data-order-id="<?php echo $order->id; ?>">
+                                <i class="fa-solid fa-triangle-exclamation"></i> Cancel &amp; Refund
+                            </button>
+                        </div>
+                        <span class="warn-note">Cancel &amp; Refund will restore stock, refund buyer balance, and reverse commissions.</span>
+                    <?php elseif ($order->status === 'packed'): ?>
+                        <div class="btn-row">
+                            <button type="button" class="abtn approve order-status-btn" style="background-color: #0dcaf0 !important; color: #fff;" data-status="out_for_delivery" data-order-id="<?php echo $order->id; ?>">
+                                <i class="fa-solid fa-truck"></i> Out for Delivery
+                            </button>
+                        </div>
+                        <span class="warn-note">Order is packed. Advance to Out for Delivery once courier dispatches.</span>
+                    <?php elseif ($order->status === 'out_for_delivery'): ?>
+                        <div class="btn-row">
+                            <button type="button" class="abtn approve order-status-btn" style="background-color: #198754 !important; color: #fff;" data-status="delivered" data-order-id="<?php echo $order->id; ?>">
+                                <i class="fa-solid fa-house-chimney-user"></i> Deliver Order
+                            </button>
+                        </div>
+                        <span class="warn-note">Mark as Delivered once customer receives the package.</span>
+                    <?php elseif ($order->status === 'delivered' || $order->status === 'completed'): ?>
+                        <div class="archived-note" style="background:#e8f8ee; color:#0f9d58;">
+                            <i class="fa-solid fa-circle-check"></i> Order is delivered and completed.
+                        </div>
+                    <?php else: ?>
+                        <div class="archived-note">
+                            <i class="fa-solid fa-archive"></i> Order is cancelled and archived.
+                        </div>
+                    <?php endif; ?>
                 </div>
             </div>
 
@@ -618,19 +621,19 @@
                 <div class="card-body">
                     <div class="field">
                         <span class="lbl">Buyer Name</span>
-                        <span class="val"><?php echo htmlspecialchars($order->buyer_name); ?></span>
+                        <span class="val"><?php echo htmlspecialchars($order->buyer_name ?? '-'); ?></span>
                     </div>
                     <div class="field">
                         <span class="lbl">Email Address</span>
-                        <span class="val sub"><?php echo htmlspecialchars($order->buyer_email); ?></span>
+                        <span class="val sub"><?php echo !empty($order->buyer_email) ? htmlspecialchars($order->buyer_email) : '<span class="text-muted fst-italic">Not provided</span>'; ?></span>
                     </div>
                     <div class="field">
                         <span class="lbl">Phone Number</span>
-                        <span class="val sub"><?php echo htmlspecialchars($order->buyer_phone); ?></span>
+                        <span class="val sub"><?php echo !empty($order->buyer_phone) ? htmlspecialchars($order->buyer_phone) : '<span class="text-muted fst-italic">Not provided</span>'; ?></span>
                     </div>
                     <div class="field">
                         <span class="lbl">Sponsor Code</span>
-                        <span class="code-chip"><?php echo htmlspecialchars($order->buyer_ref); ?></span>
+                        <span class="code-chip"><?php echo htmlspecialchars($order->buyer_ref ?? '-'); ?></span>
                     </div>
                 </div>
             </div>
@@ -646,20 +649,20 @@
                     <?php else: ?>
                         <div class="field">
                             <span class="lbl">Contact Person</span>
-                            <span class="val"><?php echo htmlspecialchars($shipping_address->full_name); ?></span>
+                            <span class="val"><?php echo htmlspecialchars($shipping_address->full_name ?? '-'); ?></span>
                         </div>
                         <div class="field">
                             <span class="lbl">Phone Number</span>
-                            <span class="val sub"><?php echo htmlspecialchars($shipping_address->mobile); ?></span>
+                            <span class="val sub"><?php echo htmlspecialchars($shipping_address->mobile ?? '-'); ?></span>
                         </div>
                         <div class="field">
                             <span class="lbl">Street Address</span>
                             <span class="val sub">
-                                <?php echo htmlspecialchars($shipping_address->address_line1); ?><br>
-                                <?php if ($shipping_address->address_line2): ?>
+                                <?php echo htmlspecialchars($shipping_address->address_line1 ?? ''); ?><br>
+                                <?php if (!empty($shipping_address->address_line2)): ?>
                                     <?php echo htmlspecialchars($shipping_address->address_line2); ?><br>
                                 <?php endif; ?>
-                                <?php if ($shipping_address->landmark): ?>
+                                <?php if (!empty($shipping_address->landmark)): ?>
                                     Landmark: <?php echo htmlspecialchars($shipping_address->landmark); ?>
                                 <?php endif; ?>
                             </span>
@@ -667,10 +670,10 @@
                         <div class="field">
                             <span class="lbl">Location</span>
                             <span class="val sub">
-                                <?php echo htmlspecialchars($shipping_address->city); ?>,
-                                <?php echo htmlspecialchars($shipping_address->state); ?> -
-                                <strong><?php echo htmlspecialchars($shipping_address->pincode); ?></strong>,
-                                <?php echo htmlspecialchars($shipping_address->country); ?>
+                                <?php echo htmlspecialchars($shipping_address->city ?? ''); ?>,
+                                <?php echo htmlspecialchars($shipping_address->state ?? ''); ?> -
+                                <strong><?php echo htmlspecialchars($shipping_address->pincode ?? ''); ?></strong>,
+                                <?php echo htmlspecialchars($shipping_address->country ?? ''); ?>
                             </span>
                         </div>
                     <?php endif; ?>
@@ -713,13 +716,13 @@
                         <tr>
                             <th>Level</th>
                             <th>Receiver Member</th>
-                            <th>Allocation %</th>
+                            <th>Commission Rule</th>
                             <th>Payout Amount</th>
                             <th>Action Type</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <?php if (!in_array($order->status, ['completed', 'confirmed', 'packed', 'out_for_delivery', 'delivered'])): ?>
+                        <?php if (!in_array($order->status, ['completed', 'confirmed', 'packed', 'out_for_delivery', 'delivered']) && empty($is_already_paid) && empty($commissions)): ?>
                             <tr>
                                 <td colspan="5" class="empty-row">
                                     <i class="fa-solid fa-clock"></i> Payout table is only computed for confirmed/paid orders.
@@ -727,24 +730,22 @@
                             </tr>
                         <?php else: ?>
                             <?php
-                            $total_paid_pct = 0.00;
                             $total_paid_amt = 0.00;
                             ?>
                             <?php foreach ($commissions as $comm): ?>
                                 <?php
-                                // Fetch percentage config dynamically for this level
+                                // Fetch fixed amount config dynamically for this level
                                 $settings_item = $this->db->get_where('commission_settings', ['level' => $comm->level])->row();
-                                $level_pct = $settings_item ? (float)$settings_item->percentage : 0.00;
-                                $total_paid_pct += $level_pct;
+                                $level_amt_setting = $settings_item ? (float)($settings_item->amount ?? $settings_item->percentage ?? 0) : 0.00;
                                 $total_paid_amt += (float)$comm->amount;
                                 ?>
                                 <tr>
                                     <td data-label="Level"><span class="lvl-badge">L<?php echo $comm->level; ?></span></td>
                                     <td data-label="Receiver Member">
-                                        <span class="recv-name"><?php echo htmlspecialchars($comm->receiver_name); ?></span>
-                                        <span class="recv-mail"><?php echo htmlspecialchars($comm->receiver_email); ?></span>
+                                        <span class="recv-name"><?php echo htmlspecialchars($comm->receiver_name ?? 'Member'); ?></span>
+                                        <span class="recv-mail"><?php echo !empty($comm->receiver_email) ? htmlspecialchars($comm->receiver_email) : 'Not provided'; ?></span>
                                     </td>
-                                    <td data-label="Allocation %"><?php echo number_format($level_pct, 2); ?>%</td>
+                                    <td data-label="Commission Rule">&#8377;<?php echo number_format($level_amt_setting, 2); ?> Fixed Money</td>
                                     <td data-label="Payout Amount" class="amt-pos">+&#8377;<?php echo number_format($comm->amount, 2); ?></td>
                                     <td data-label="Action Type"><span class="action-badge ref">Referral Commission</span></td>
                                 </tr>
@@ -753,16 +754,15 @@
                             <!-- Admin remainder cut record -->
                             <?php if ($admin_commission): ?>
                                 <?php
-                                $admin_pct = 100.00 - $total_paid_pct;
                                 $total_paid_amt += (float)$admin_commission->amount;
                                 ?>
                                 <tr>
                                     <td data-label="Level"><span class="lvl-badge remainder">R</span></td>
                                     <td data-label="Receiver Member">
                                         <span class="recv-name">Main Admin Cut (Lowest ID Admin)</span>
-                                        <span class="recv-mail">System Base Cut + Skipped Levels</span>
+                                        <span class="recv-mail">System Base Cut + Product Revenue Remainder</span>
                                     </td>
-                                    <td data-label="Allocation %"><?php echo number_format($admin_pct, 2); ?>%</td>
+                                    <td data-label="Commission Rule">Order Remainder Cut</td>
                                     <td data-label="Payout Amount" class="amt-adm">+&#8377;<?php echo number_format($admin_commission->amount, 2); ?></td>
                                     <td data-label="Action Type"><span class="action-badge adm">Admin Commission</span></td>
                                 </tr>
@@ -771,7 +771,7 @@
                             <!-- Summary Footer row -->
                             <tr class="total-row">
                                 <td colspan="2" data-label="">Total Distributed Payouts</td>
-                                <td data-label="">100.00%</td>
+                                <td data-label=""></td>
                                 <td data-label="">&#8377;<?php echo number_format($total_paid_amt, 2); ?></td>
                                 <td data-label=""></td>
                             </tr>
@@ -786,47 +786,181 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        const submitBtns = document.querySelectorAll('.submit-status-btn');
-        const statusValInput = document.getElementById('statusVal');
-        const statusChangeForm = document.getElementById('statusChangeForm');
+        const statusBtns = document.querySelectorAll('.order-status-btn');
+        const cancelBtns = document.querySelectorAll('.order-cancel-btn');
 
-        submitBtns.forEach(btn => {
+        // Status progression handler
+        statusBtns.forEach(btn => {
             btn.addEventListener('click', function(e) {
                 e.preventDefault();
                 const targetStatus = this.getAttribute('data-status');
+                const orderId = this.getAttribute('data-order-id');
+                const statusLabel = targetStatus.replace(/_/g, ' ').toUpperCase();
 
-                let titleStr = "Change Order Status?";
-                let textStr = "Are you sure you want to mark this order as " + targetStatus.toUpperCase() + "?";
-                let confirmBtnColor = "#ec4899";
-
-                if (targetStatus === 'cancelled') {
-                    const currentStatus = "<?php echo $order->status; ?>";
-                    if (currentStatus === 'pending') {
-                        titleStr = "Cancel Order?";
-                        textStr = "Are you sure you want to cancel this pending order? No funds have been deducted yet.";
-                        confirmBtnColor = "#e0273d";
-                    } else {
-                        titleStr = "Cancel & Refund Order?";
-                        textStr = "This will refund the buyer's wallet, restore product stock, and reverse all MLM level commission payouts! This action cannot be undone.";
-                        confirmBtnColor = "#e0273d";
-                    }
-                }
-
-                Swal.fire({
-                    title: titleStr,
-                    text: textStr,
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonColor: confirmBtnColor,
-                    cancelButtonColor: '#6c757d',
-                    confirmButtonText: 'Yes, proceed!'
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        statusValInput.value = targetStatus;
-                        statusChangeForm.submit();
+                dsConfirm({
+                    title: 'Advance Order Status?',
+                    text: 'Are you sure you want to advance this order to ' + statusLabel + '?',
+                    icon: 'question',
+                    confirmText: 'Yes, Advance',
+                    isDangerous: false,
+                    onConfirm: function() {
+                        fetch('<?php echo base_url("api/update_order_status"); ?>', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest'
+                            },
+                            body: JSON.stringify({
+                                order_id: orderId,
+                                status: targetStatus
+                            })
+                        })
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data && data.status) {
+                                dsToast({
+                                    icon: 'success',
+                                    title: data.message || 'Order status updated successfully'
+                                });
+                                setTimeout(() => window.location.reload(), 1200);
+                            } else {
+                                dsAlert({
+                                    icon: 'error',
+                                    title: 'Status Update Failed',
+                                    text: (data && data.message) ? data.message : 'Could not update order status.'
+                                });
+                            }
+                        })
+                        .catch(err => {
+                            dsAlert({
+                                icon: 'error',
+                                title: 'Network Error',
+                                text: 'Failed to communicate with the server. Please try again.'
+                            });
+                        });
                     }
                 });
             });
         });
+
+        // Cancel order handler
+        cancelBtns.forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                const orderId = this.getAttribute('data-order-id');
+                const isPaid = <?php echo !empty($is_already_paid) ? 'true' : 'false'; ?>;
+
+                let titleStr = "Cancel Order?";
+                let textStr = "Are you sure you want to cancel this order?";
+                if (isPaid) {
+                    titleStr = "Cancel & Refund Order?";
+                    textStr = "This will refund the buyer's wallet, restore product stock, and reverse all MLM level commission payouts! This action cannot be undone.";
+                } else {
+                    titleStr = "Cancel Unpaid Order?";
+                    textStr = "Are you sure you want to cancel this pending order? No funds have been deducted yet.";
+                }
+
+                dsConfirm({
+                    title: titleStr,
+                    text: textStr,
+                    icon: 'warning',
+                    confirmText: 'Yes, Cancel Order',
+                    isDangerous: true,
+                    onConfirm: function() {
+                        fetch('<?php echo base_url("api/cancel_order"); ?>', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest'
+                            },
+                            body: JSON.stringify({
+                                order_id: orderId
+                            })
+                        })
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data && data.status) {
+                                let toastMsg = data.message || 'Order cancelled successfully.';
+                                if (data.data && data.data.refund_issued) {
+                                    toastMsg = 'Order cancelled: ₹' + (data.data.refund_amount ? Number(data.data.refund_amount).toFixed(2) : '') + ' refunded & commissions reversed.';
+                                }
+                                dsToast({
+                                    icon: 'success',
+                                    title: toastMsg
+                                });
+                                setTimeout(() => window.location.reload(), 1200);
+                            } else {
+                                dsAlert({
+                                    icon: 'error',
+                                    title: 'Cancellation Failed',
+                                    text: (data && data.message) ? data.message : 'Could not cancel order.'
+                                });
+                            }
+                        })
+                        .catch(err => {
+                            dsAlert({
+                                icon: 'error',
+                                title: 'Network Error',
+                                text: 'Failed to communicate with the server. Please try again.'
+                            });
+                        });
+                    }
+                });
+            });
+        });
+
+        // Delete order handler
+        const deleteOrderAuditBtn = document.getElementById('deleteOrderAuditBtn');
+        if (deleteOrderAuditBtn) {
+            deleteOrderAuditBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                const orderId = this.getAttribute('data-order-id');
+
+                dsConfirm({
+                    title: 'Delete Order #' + orderId + '?',
+                    text: 'Are you sure you want to permanently delete Order #' + orderId + '? All associated commissions will be removed and product inventory restored. This action cannot be undone!',
+                    icon: 'warning',
+                    confirmText: 'Yes, Delete Order',
+                    cancelText: 'Cancel',
+                    isDangerous: true,
+                    onConfirm: function() {
+                        fetch('<?php echo base_url("admin/orders/delete/"); ?>' + orderId, {
+                            method: 'POST',
+                            headers: {
+                                'Accept': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest'
+                            }
+                        })
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data && data.status) {
+                                dsToast({
+                                    icon: 'success',
+                                    title: data.message || 'Order deleted successfully'
+                                });
+                                setTimeout(() => {
+                                    window.location.href = '<?php echo base_url("admin/orders"); ?>';
+                                }, 1000);
+                            } else {
+                                dsAlert({
+                                    icon: 'error',
+                                    title: 'Delete Failed',
+                                    text: (data && data.message) ? data.message : 'Could not delete order.'
+                                });
+                            }
+                        })
+                        .catch(err => {
+                            dsAlert({
+                                icon: 'error',
+                                title: 'Error',
+                                text: 'Failed to communicate with server.'
+                            });
+                        });
+                    }
+                });
+            });
+        }
     });
 </script>

@@ -92,7 +92,6 @@
                                         </td>
                                         <td>
                                             <h6 class="fw-bold m-0" style="color: var(--dark-sidebar);"><?php echo htmlspecialchars($prod->name); ?></h6>
-                                            <span class="text-muted small"><?php echo htmlspecialchars($prod->slug); ?></span>
                                         </td>
                                         <td>
                                             <span class="badge" style="background-color: rgba(236, 64, 122, 0.1); color: var(--primary-pink); font-size: 0.75rem;">
@@ -139,10 +138,17 @@
                 </div>
 
                 <!-- Pagination footer inside container -->
-                <?php if ($total_pages > 1): ?>
-                    <div class="card-footer bg-white border-0 p-3">
+                <?php if (!empty($total_rows) && $total_rows > 0): 
+                    $start_record = ($current_page - 1) * 10 + 1;
+                    $end_record = min($current_page * 10, $total_rows);
+                ?>
+                    <div class="card-footer bg-white border-top p-3 d-flex flex-column flex-sm-row justify-content-between align-items-center gap-2">
+                        <div class="text-muted small">
+                            Showing <strong><?php echo $start_record; ?></strong> to <strong><?php echo $end_record; ?></strong> of <strong><?php echo number_format($total_rows); ?></strong> available products
+                        </div>
+                        <?php if ($total_pages > 1): ?>
                         <nav aria-label="Product Page Navigation">
-                            <ul class="pagination justify-content-center mb-0">
+                            <ul class="pagination pagination-sm justify-content-center mb-0">
                                 <li class="page-item <?php echo ($current_page <= 1) ? 'disabled' : ''; ?>">
                                     <a class="page-link" href="#" data-page="<?php echo $current_page - 1; ?>">&laquo; Prev</a>
                                 </li>
@@ -156,6 +162,7 @@
                                 </li>
                             </ul>
                         </nav>
+                        <?php endif; ?>
                     </div>
                 <?php endif; ?>
             </div>
@@ -244,16 +251,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 e.preventDefault();
                 const deleteUrl = this.getAttribute('href');
                 
-                Swal.fire({
-                    title: 'Are you sure?',
-                    text: "You are about to delete this product catalog item!",
+                dsConfirm({
+                    title: 'Delete Product?',
+                    text: 'You are about to delete this product catalog item! This action cannot be undone.',
                     icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonColor: '#ec407a',
-                    cancelButtonColor: '#6c757d',
-                    confirmButtonText: 'Yes, delete it!'
-                }).then((result) => {
-                    if (result.isConfirmed) {
+                    confirmText: 'Yes, Delete',
+                    cancelText: 'Cancel',
+                    isDangerous: true,
+                    onConfirm: function() {
                         window.location.href = deleteUrl;
                     }
                 });

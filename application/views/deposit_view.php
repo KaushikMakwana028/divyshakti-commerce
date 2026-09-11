@@ -12,6 +12,13 @@
 .cursor-zoom-in {
     cursor: zoom-in;
 }
+.deposit-row-clickable {
+    cursor: pointer;
+    transition: background-color 0.15s ease-in-out;
+}
+.deposit-row-clickable:hover {
+    background-color: rgba(212, 175, 55, 0.08) !important;
+}
 </style>
 
 <div class="row mb-4 align-items-center">
@@ -85,11 +92,15 @@
                                 $index_num = ($current_page - 1) * 10 + 1;
                                 foreach ($requests as $req): 
                                 ?>
-                                    <tr>
+                                    <tr class="deposit-row-clickable" data-id="<?php echo $req->id; ?>">
                                         <td class="ps-4 fw-semibold text-muted"><?php echo $index_num++; ?></td>
                                         <td>
-                                            <div class="fw-semibold text-dark"><?php echo htmlspecialchars($req->user_name); ?></div>
-                                            <span class="text-muted small"><?php echo htmlspecialchars($req->user_email); ?></span>
+                                            <div class="fw-semibold text-dark"><?php echo htmlspecialchars($req->user_name ?? 'Member'); ?></div>
+                                            <?php if (!empty($req->user_email)): ?>
+                                                <span class="text-muted small"><?php echo htmlspecialchars($req->user_email); ?></span>
+                                            <?php else: ?>
+                                                <span class="badge bg-light text-muted border px-1.5 py-0.5" style="font-size: 0.68rem; font-weight: 500;"><i class="fa-regular fa-envelope-open me-1 opacity-50"></i>Not provided</span>
+                                            <?php endif; ?>
                                         </td>
                                         <td>
                                             <span class="fw-bold text-success fs-6">₹<?php echo number_format($req->amount, 2); ?></span>
@@ -146,12 +157,13 @@
                                                         data-bs-toggle="modal"
                                                         data-bs-target="#depositDetailsModal"
                                                         data-id="<?php echo $req->id; ?>"
-                                                        data-member-name="<?php echo htmlspecialchars($req->user_name); ?>"
-                                                        data-member-email="<?php echo htmlspecialchars($req->user_email); ?>"
+                                                        data-member-name="<?php echo htmlspecialchars($req->user_name ?? 'Member'); ?>"
+                                                        data-member-email="<?php echo htmlspecialchars($req->user_email ?? 'Not provided'); ?>"
+                                                        data-member-phone="<?php echo htmlspecialchars($req->user_phone ?? ''); ?>"
                                                         data-amount="<?php echo number_format($req->amount, 2); ?>"
-                                                        data-method="<?php echo htmlspecialchars($req->payment_method); ?>"
+                                                        data-method="<?php echo htmlspecialchars($req->payment_method ?? ''); ?>"
                                                         data-remark="<?php echo htmlspecialchars($req->remark ?: 'No remark provided'); ?>"
-                                                        data-status="<?php echo htmlspecialchars($req->status); ?>"
+                                                        data-status="<?php echo htmlspecialchars($req->status ?? 'pending'); ?>"
                                                         data-proof-file="<?php echo $req->proof_file ? base_url($req->proof_file) : ''; ?>"
                                                         data-requested-at="<?php echo date('M d, Y H:i', strtotime($req->created_at)); ?>">
                                                     <i class="fa-solid fa-eye"></i>
@@ -178,10 +190,17 @@
                 </div>
 
                 <!-- Pagination footer inside container -->
-                <?php if ($total_pages > 1): ?>
-                    <div class="card-footer bg-white border-0 p-3">
+                <?php if (!empty($total_rows) && $total_rows > 0): 
+                    $start_record = ($current_page - 1) * 10 + 1;
+                    $end_record = min($current_page * 10, $total_rows);
+                ?>
+                    <div class="card-footer bg-white border-top p-3 d-flex flex-column flex-sm-row justify-content-between align-items-center gap-2">
+                        <div class="text-muted small">
+                            Showing <strong><?php echo $start_record; ?></strong> to <strong><?php echo $end_record; ?></strong> of <strong><?php echo number_format($total_rows); ?></strong> available deposit requests
+                        </div>
+                        <?php if ($total_pages > 1): ?>
                         <nav aria-label="Deposit Request Page Navigation">
-                            <ul class="pagination justify-content-center mb-0">
+                            <ul class="pagination pagination-sm justify-content-center mb-0">
                                 <li class="page-item <?php echo ($current_page <= 1) ? 'disabled' : ''; ?>">
                                     <a class="page-link" href="#" data-page="<?php echo $current_page - 1; ?>">&laquo; Prev</a>
                                 </li>
@@ -195,6 +214,7 @@
                                 </li>
                             </ul>
                         </nav>
+                        <?php endif; ?>
                     </div>
                 <?php endif; ?>
             </div>
@@ -221,6 +241,7 @@
                                 <td class="py-2.5">
                                     <div class="fw-bold text-dark" id="modalMemberName"></div>
                                     <div class="text-muted small" id="modalMemberEmail"></div>
+                                    <div class="text-muted small" id="modalMemberPhone"></div>
                                 </td>
                             </tr>
                             <tr class="border-bottom">
@@ -271,13 +292,10 @@ function viewReceipt(url) {
         imageAlt: 'Receipt Payment Proof',
         showCloseButton: true,
         showConfirmButton: false,
-        background: '#ffffff',
-        width: '550px',
-        padding: '1.25rem',
+        width: '560px',
+        padding: '1.5rem',
         customClass: {
-            popup: 'rounded-4 shadow-lg border-0',
-            title: 'fw-bold text-dark fs-5 mb-2',
-            image: 'rounded border img-fluid shadow-sm'
+            image: 'rounded-3 border border-secondary shadow-lg img-fluid my-2'
         }
     });
 }
@@ -342,6 +360,16 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
 
+        // Handle table row click to open details modal
+        const depositRow = e.target.closest('.deposit-row-clickable');
+        if (depositRow && !e.target.closest('.action-btn') && !e.target.closest('a') && !e.target.closest('button') && !e.target.closest('.proof-thumbnail')) {
+            const rowBtn = depositRow.querySelector('.view-details-btn');
+            if (rowBtn) {
+                rowBtn.click();
+                return;
+            }
+        }
+
         // Handle view details button clicks (Event Delegation)
         const viewBtn = e.target.closest('.view-details-btn');
         if (viewBtn) {
@@ -349,6 +377,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const id = viewBtn.getAttribute('data-id');
             const name = viewBtn.getAttribute('data-member-name');
             const email = viewBtn.getAttribute('data-member-email');
+            const phone = viewBtn.getAttribute('data-member-phone');
             const amount = viewBtn.getAttribute('data-amount');
             const method = viewBtn.getAttribute('data-method');
             const remark = viewBtn.getAttribute('data-remark');
@@ -358,6 +387,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
             document.getElementById('modalMemberName').textContent = name;
             document.getElementById('modalMemberEmail').textContent = email;
+            const phoneEl = document.getElementById('modalMemberPhone');
+            if (phoneEl) {
+                phoneEl.textContent = phone ? ('📞 ' + phone) : '';
+            }
             document.getElementById('modalAmount').textContent = '₹' + amount;
             
             // Method badge
@@ -451,20 +484,19 @@ document.addEventListener('DOMContentLoaded', function() {
             const modalEl = document.getElementById('depositDetailsModal');
             const bootstrapModal = bootstrap.Modal.getInstance(modalEl);
             
-            Swal.fire({
+            dsConfirm({
                 title: titleStr,
                 text: textStr,
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: confirmBtnColor,
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: 'Yes, proceed!'
-            }).then((result) => {
-                if (result.isConfirmed) {
+                icon: (action === 'reject') ? 'warning' : 'question',
+                confirmText: (action === 'reject') ? 'Yes, Reject' : 'Yes, Approve',
+                isDangerous: (action === 'reject'),
+                onConfirm: function() {
                     form.submit();
-                } else if (bootstrapModal) {
-                    // Re-open details modal if cancelled
-                    bootstrapModal.show();
+                },
+                onCancel: function() {
+                    if (bootstrapModal) {
+                        bootstrapModal.show();
+                    }
                 }
             });
         }

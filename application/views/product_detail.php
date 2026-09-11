@@ -56,14 +56,6 @@
                                     <td class="fw-bold text-dark">#<?php echo htmlspecialchars($product->id); ?></td>
                                 </tr>
                                 <tr>
-                                    <td class="fw-semibold text-muted">URL Slug</td>
-                                    <td>
-                                        <code style="color: var(--primary-pink); background-color: rgba(236, 64, 122, 0.05); padding: 3px 8px; border-radius: 4px; font-size: 0.9rem;">
-                                            <?php echo htmlspecialchars($product->slug); ?>
-                                        </code>
-                                    </td>
-                                </tr>
-                                <tr>
                                     <td class="fw-semibold text-muted">Pricing</td>
                                     <td>
                                         <span class="fs-4 fw-bold" style="color: var(--dark-sidebar);">₹<?php echo number_format($product->price, 2); ?></span>

@@ -83,16 +83,12 @@ class Product extends CI_Controller
         if ($this->input->method(TRUE) === 'POST') {
             $this->form_validation->set_rules('category_id', 'Category', 'required|numeric');
             $this->form_validation->set_rules('name', 'Product Name', 'required|trim');
-            $this->form_validation->set_rules('slug', 'Slug', 'required|trim|is_unique[products.slug]', [
-                'is_unique' => 'This product slug is already in use.'
-            ]);
             $this->form_validation->set_rules('price', 'Price', 'required|numeric|greater_than[0]');
             $this->form_validation->set_rules('stock', 'Stock', 'integer|greater_than_equal_to[0]');
 
             if ($this->form_validation->run() === TRUE) {
                 $category_id = (int)$this->input->post('category_id');
                 $name = $this->input->post('name', TRUE);
-                $slug = url_title(strtolower($this->input->post('slug', TRUE)));
                 $description = $this->input->post('description', TRUE) ?: null;
                 $price = (float)$this->input->post('price');
                 
@@ -131,7 +127,7 @@ class Product extends CI_Controller
                     $insert_data = [
                         'category_id'    => $category_id,
                         'name'           => $name,
-                        'slug'           => $slug,
+                        'slug'           => null,
                         'description'    => $description,
                         'price'          => $price,
                         'image'          => $image_path,
@@ -177,14 +173,12 @@ class Product extends CI_Controller
         if ($this->input->method(TRUE) === 'POST') {
             $this->form_validation->set_rules('category_id', 'Category', 'required|numeric');
             $this->form_validation->set_rules('name', 'Product Name', 'required|trim');
-            $this->form_validation->set_rules('slug', 'Slug', 'required|trim');
             $this->form_validation->set_rules('price', 'Price', 'required|numeric|greater_than[0]');
             $this->form_validation->set_rules('stock', 'Stock', 'integer|greater_than_equal_to[0]');
 
             if ($this->form_validation->run() === TRUE) {
                 $category_id = (int)$this->input->post('category_id');
                 $name = $this->input->post('name', TRUE);
-                $slug = url_title(strtolower($this->input->post('slug', TRUE)));
                 $description = $this->input->post('description', TRUE) ?: null;
                 $price = (float)$this->input->post('price');
                 
@@ -193,61 +187,54 @@ class Product extends CI_Controller
                 
                 $status = (int)$this->input->post('status') === 1 ? 1 : 0;
 
-                // Unique check for slug excluding current product
-                $slug_check = $this->General_model->getOne('products', ['slug' => $slug, 'id !=' => $id]);
+                $image_path = $product->image;
+                $upload_success = TRUE;
 
-                if ($slug_check) {
-                    $this->session->set_flashdata('error', 'This slug is already used by another product.');
-                } else {
-                    $image_path = $product->image;
-                    $upload_success = TRUE;
-
-                    if (!empty($_FILES['image']['name'])) {
-                        $upload_path = './uploads/products/';
-                        if (!is_dir($upload_path)) {
-                            mkdir($upload_path, 0777, true);
-                        }
-
-                        $config['upload_path']   = $upload_path;
-                        $config['allowed_types'] = 'jpg|jpeg|png|gif|webp';
-                        $config['max_size']      = 2048;
-                        $config['encrypt_name']  = TRUE;
-
-                        $this->load->library('upload', $config);
-                        $this->upload->initialize($config);
-
-                        if (!$this->upload->do_upload('image')) {
-                            $this->session->set_flashdata('error', $this->upload->display_errors('', ''));
-                            $upload_success = FALSE;
-                        } else {
-                            $upload_data = $this->upload->data();
-
-                            // Delete old image file
-                            if (!empty($product->image) && file_exists('./' . $product->image)) {
-                                @unlink('./' . $product->image);
-                            }
-
-                            $image_path = 'uploads/products/' . $upload_data['file_name'];
-                        }
+                if (!empty($_FILES['image']['name'])) {
+                    $upload_path = './uploads/products/';
+                    if (!is_dir($upload_path)) {
+                        mkdir($upload_path, 0777, true);
                     }
 
-                    if ($upload_success) {
-                        $update_data = [
-                            'category_id'    => $category_id,
-                            'name'           => $name,
-                            'slug'           => $slug,
-                            'description'    => $description,
-                            'price'          => $price,
-                            'image'          => $image_path,
-                            'stock'          => $stock,
-                            'status'         => $status,
-                            'updated_at'     => date('Y-m-d H:i:s')
-                        ];
+                    $config['upload_path']   = $upload_path;
+                    $config['allowed_types'] = 'jpg|jpeg|png|gif|webp';
+                    $config['max_size']      = 2048;
+                    $config['encrypt_name']  = TRUE;
 
-                        $this->General_model->update('products', ['id' => $id], $update_data);
-                        $this->session->set_flashdata('success', 'Product updated successfully!');
-                        redirect('admin/products');
+                    $this->load->library('upload', $config);
+                    $this->upload->initialize($config);
+
+                    if (!$this->upload->do_upload('image')) {
+                        $this->session->set_flashdata('error', $this->upload->display_errors('', ''));
+                        $upload_success = FALSE;
+                    } else {
+                        $upload_data = $this->upload->data();
+
+                        // Delete old image file
+                        if (!empty($product->image) && file_exists('./' . $product->image)) {
+                            @unlink('./' . $product->image);
+                        }
+
+                        $image_path = 'uploads/products/' . $upload_data['file_name'];
                     }
+                }
+
+                if ($upload_success) {
+                    $update_data = [
+                        'category_id'    => $category_id,
+                        'name'           => $name,
+                        'slug'           => null,
+                        'description'    => $description,
+                        'price'          => $price,
+                        'image'          => $image_path,
+                        'stock'          => $stock,
+                        'status'         => $status,
+                        'updated_at'     => date('Y-m-d H:i:s')
+                    ];
+
+                    $this->General_model->update('products', ['id' => $id], $update_data);
+                    $this->session->set_flashdata('success', 'Product updated successfully!');
+                    redirect('admin/products');
                 }
             }
         }

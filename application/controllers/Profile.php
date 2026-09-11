@@ -45,6 +45,7 @@ class Profile extends CI_Controller
                     $name = $this->input->post('name', TRUE);
                     $email = $this->input->post('email', TRUE);
                     $phone = $this->input->post('phone', TRUE);
+                    $gender = $this->input->post('gender', TRUE) ?: null;
                     $address = $this->input->post('address', TRUE) ?: null;
 
                     // Unique check for email excluding current user
@@ -90,6 +91,7 @@ class Profile extends CI_Controller
                                 'name'          => $name,
                                 'email'         => $email,
                                 'phone'         => $phone,
+                                'gender'        => $gender,
                                 'profile_image' => $profile_image_path,
                                 'address'       => $address,
                                 'updated_at'    => date('Y-m-d H:i:s')

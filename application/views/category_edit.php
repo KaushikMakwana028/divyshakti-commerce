@@ -7,15 +7,6 @@
 
 <div class="row">
     <div class="col-12">
-        <!-- Display form validation errors locally if any -->
-        <?php if (validation_errors()): ?>
-            <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm mb-4" role="alert" style="border-left: 4px solid #dc3545 !important;">
-                <i class="fa-solid fa-circle-exclamation me-2 text-danger"></i>
-                <?php echo validation_errors(' ', ' '); ?>
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        <?php endif; ?>
-
         <div class="card border-0 shadow-sm" style="border-radius: 12px; overflow: hidden;">
             <div class="p-4 text-white" style="background: linear-gradient(135deg, var(--dark-sidebar) 0%, #1f2937 100%); border-bottom: 3px solid var(--primary-gold);">
                 <span class="badge mb-2 text-uppercase" style="background-color: var(--primary-pink); font-size: 0.75rem; font-weight: 600; padding: 5px 10px;">
@@ -60,15 +51,6 @@
                                 </div>
                             </div>
 
-                            <div class="mb-3">
-                                <label for="slug" class="form-label fw-semibold text-dark">URL Slug</label>
-                                <div class="input-group">
-                                    <span class="input-group-text"><i class="fa-solid fa-link"></i></span>
-                                    <input type="text" name="slug" id="slug" class="form-control" placeholder="e.g. health-drinks" value="<?php echo set_value('slug', $category->slug); ?>" required>
-                                </div>
-                                <span class="text-muted small">URL-safe name.</span>
-                            </div>
-
                             <div class="mb-4">
                                 <label for="status" class="form-label fw-semibold text-dark">Status</label>
                                 <div class="input-group">
@@ -109,11 +91,10 @@ document.addEventListener('DOMContentLoaded', function() {
             if (file) {
                 // Size validation (2MB limit)
                 if (file.size > 2 * 1024 * 1024) {
-                    Swal.fire({
+                    dsAlert({
                         icon: 'warning',
-                        title: 'File too large',
-                        text: 'Please select an image smaller than 2MB.',
-                        confirmButtonColor: '#ec407a'
+                        title: 'File Too Large',
+                        text: 'Please select an image smaller than 2MB.'
                     });
                     imageInput.value = '';
                     return;

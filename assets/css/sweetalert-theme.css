@@ -1,0 +1,370 @@
+/**
+ * Divy Shakti - Custom SweetAlert2 Theme
+ * Elegant modern luxury aesthetic with gold & pink accents
+ */
+
+/* Container Backdrop for Modals (Only when not a toast) */
+div:where(.swal2-container):not(:has(.swal2-toast)) {
+    z-index: 10000 !important;
+    backdrop-filter: blur(6px) !important;
+    -webkit-backdrop-filter: blur(6px) !important;
+    background: rgba(15, 23, 42, 0.45) !important;
+    transition: background-color 0.3s ease !important;
+}
+
+/* Ensure no dark backdrop or blocking for toasts */
+div:where(.swal2-container):has(.swal2-toast),
+div:where(.swal2-container).swal2-top-end,
+div:where(.swal2-container).swal2-top-right,
+div:where(.swal2-container).swal2-bottom-end {
+    background: transparent !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    pointer-events: none !important;
+}
+
+/* =======================================================
+   Main Modal Card (dsAlert, dsConfirm)
+   ======================================================= */
+div:where(.swal2-container) .swal2-popup:not(.swal2-toast) {
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 20px !important;
+    box-shadow: 0 25px 60px -12px rgba(15, 23, 42, 0.22), 
+                0 0 25px rgba(212, 175, 55, 0.12) !important;
+    color: #1e293b !important;
+    font-family: 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif !important;
+    padding: 2.25rem 2rem !important;
+    position: relative !important;
+    overflow: hidden !important;
+}
+
+/* Golden & Pink Crown Accent Bar on Modal Top */
+div:where(.swal2-container) .swal2-popup:not(.swal2-toast)::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #ec407a 0%, #d4af37 100%);
+    opacity: 0.95;
+}
+
+/* Title Styling */
+div:where(.swal2-container) .swal2-popup:not(.swal2-toast) .swal2-title {
+    font-family: 'Playfair Display', Georgia, serif !important;
+    color: #0f172a !important;
+    font-size: 1.55rem !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.01em !important;
+    margin-top: 0.5rem !important;
+    margin-bottom: 0.5rem !important;
+    text-shadow: none !important;
+}
+
+/* Body Content */
+div:where(.swal2-container) .swal2-popup:not(.swal2-toast) .swal2-html-container {
+    font-family: 'Poppins', sans-serif !important;
+    color: #475569 !important;
+    font-size: 0.95rem !important;
+    line-height: 1.65 !important;
+    font-weight: 400 !important;
+    margin: 0.5rem 0.5rem 1.5rem !important;
+}
+
+div:where(.swal2-container) .swal2-popup:not(.swal2-toast) .swal2-html-container b,
+div:where(.swal2-container) .swal2-popup:not(.swal2-toast) .swal2-html-container strong {
+    color: #0f172a !important;
+    font-weight: 600 !important;
+}
+
+/* Actions Container */
+div:where(.swal2-container) .swal2-popup:not(.swal2-toast) .swal2-actions {
+    margin: 1.25rem auto 0 !important;
+    gap: 12px !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+}
+
+/* Confirm Button (Primary Luxury Gradient) */
+div:where(.swal2-container) .swal2-confirm,
+.ds-swal-confirm {
+    background: linear-gradient(135deg, #ec407a 0%, #d4af37 100%) !important;
+    color: #ffffff !important;
+    font-family: 'Poppins', sans-serif !important;
+    font-weight: 600 !important;
+    font-size: 0.88rem !important;
+    letter-spacing: 0.4px !important;
+    padding: 11px 26px !important;
+    border-radius: 10px !important;
+    border: none !important;
+    box-shadow: 0 4px 14px rgba(236, 64, 122, 0.35) !important;
+    transition: all 0.2s ease !important;
+    cursor: pointer !important;
+}
+
+div:where(.swal2-container) .swal2-confirm:hover,
+.ds-swal-confirm:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 20px rgba(236, 64, 122, 0.45) !important;
+    filter: brightness(1.05) !important;
+}
+
+div:where(.swal2-container) .swal2-confirm:active,
+.ds-swal-confirm:active {
+    transform: translateY(0) !important;
+}
+
+/* Danger Confirm Button (For Delete / Destructive Actions) */
+div:where(.swal2-container) .swal2-confirm.swal2-confirm-danger,
+.ds-swal-danger {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+    box-shadow: 0 4px 14px rgba(239, 68, 68, 0.35) !important;
+}
+
+div:where(.swal2-container) .swal2-confirm.swal2-confirm-danger:hover,
+.ds-swal-danger:hover {
+    box-shadow: 0 6px 20px rgba(239, 68, 68, 0.48) !important;
+    filter: brightness(1.05) !important;
+}
+
+/* Cancel Button */
+div:where(.swal2-container) .swal2-cancel,
+div:where(.swal2-container) .swal2-deny,
+.ds-swal-cancel {
+    background: #f1f5f9 !important;
+    color: #475569 !important;
+    border: 1px solid #cbd5e1 !important;
+    font-family: 'Poppins', sans-serif !important;
+    font-weight: 500 !important;
+    font-size: 0.88rem !important;
+    letter-spacing: 0.2px !important;
+    padding: 11px 22px !important;
+    border-radius: 10px !important;
+    transition: all 0.2s ease !important;
+    cursor: pointer !important;
+}
+
+div:where(.swal2-container) .swal2-cancel:hover,
+div:where(.swal2-container) .swal2-deny:hover,
+.ds-swal-cancel:hover {
+    background: #e2e8f0 !important;
+    color: #0f172a !important;
+    border-color: #94a3b8 !important;
+    transform: translateY(-1px) !important;
+}
+
+/* Close ('X') Button in Modal */
+div:where(.swal2-container) .swal2-popup:not(.swal2-toast) .swal2-close {
+    color: #94a3b8 !important;
+    font-family: inherit !important;
+    font-size: 1.5rem !important;
+    transition: all 0.2s ease !important;
+    outline: none !important;
+    box-shadow: none !important;
+    top: 14px !important;
+    right: 14px !important;
+}
+
+div:where(.swal2-container) .swal2-popup:not(.swal2-toast) .swal2-close:hover {
+    color: #ef4444 !important;
+    transform: rotate(90deg) scale(1.1) !important;
+}
+
+/* Modal Icons */
+div:where(.swal2-container) .swal2-popup:not(.swal2-toast) .swal2-icon {
+    margin: 1.25rem auto 0.75rem !important;
+    transform: scale(1.05);
+}
+
+div:where(.swal2-container) .swal2-icon.swal2-success {
+    border-color: #10b981 !important;
+    color: #10b981 !important;
+}
+div:where(.swal2-container) .swal2-icon.swal2-success .swal2-success-ring {
+    border: 4px solid rgba(16, 185, 129, 0.3) !important;
+}
+div:where(.swal2-container) .swal2-icon.swal2-success [class^='swal2-success-line'] {
+    background-color: #10b981 !important;
+}
+
+div:where(.swal2-container) .swal2-icon.swal2-error {
+    border-color: #ef4444 !important;
+    color: #ef4444 !important;
+}
+div:where(.swal2-container) .swal2-icon.swal2-error [class^='swal2-x-mark-line'] {
+    background-color: #ef4444 !important;
+}
+
+div:where(.swal2-container) .swal2-icon.swal2-warning {
+    border-color: #f59e0b !important;
+    color: #f59e0b !important;
+}
+
+div:where(.swal2-container) .swal2-icon.swal2-info {
+    border-color: #3b82f6 !important;
+    color: #3b82f6 !important;
+}
+
+div:where(.swal2-container) .swal2-icon.swal2-question {
+    border-color: #d4af37 !important;
+    color: #d4af37 !important;
+}
+
+/* =======================================================
+   Toast Customization (Crisp, Modern Floating Capsule)
+   ======================================================= */
+
+.swal2-popup.swal2-toast {
+    pointer-events: auto !important;
+    background: #ffffff !important;
+    color: #1e293b !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 12px !important;
+    box-shadow: 0 14px 34px -4px rgba(15, 23, 42, 0.14), 
+                0 4px 8px -2px rgba(15, 23, 42, 0.04),
+                0 0 0 1px rgba(15, 23, 42, 0.03) !important;
+    padding: 0.95rem 1.25rem !important;
+    position: relative !important;
+    overflow: hidden !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+    min-width: 320px !important;
+    max-width: 440px !important;
+    transition: all 0.25s ease !important;
+}
+
+.swal2-popup.swal2-toast:hover {
+    box-shadow: 0 18px 40px -4px rgba(15, 23, 42, 0.18), 
+                0 6px 12px -2px rgba(15, 23, 42, 0.06) !important;
+}
+
+/* Left Accent Indicator on Toasts */
+.swal2-popup.swal2-toast {
+    border-left: 5px solid #10b981 !important;
+}
+.swal2-popup.swal2-toast:has(.swal2-error),
+.swal2-popup.swal2-toast.swal2-icon-error {
+    border-left: 5px solid #ef4444 !important;
+}
+.swal2-popup.swal2-toast:has(.swal2-warning),
+.swal2-popup.swal2-toast.swal2-icon-warning {
+    border-left: 5px solid #f59e0b !important;
+}
+.swal2-popup.swal2-toast:has(.swal2-info),
+.swal2-popup.swal2-toast.swal2-icon-info {
+    border-left: 5px solid #3b82f6 !important;
+}
+.swal2-popup.swal2-toast:has(.swal2-question),
+.swal2-popup.swal2-toast.swal2-icon-question {
+    border-left: 5px solid #d4af37 !important;
+}
+
+/* Toast Title & Text */
+.swal2-popup.swal2-toast .swal2-title {
+    font-family: 'Poppins', sans-serif !important;
+    font-size: 0.88rem !important;
+    font-weight: 600 !important;
+    color: #0f172a !important;
+    line-height: 1.45 !important;
+    margin: 0 !important;
+    text-shadow: none !important;
+    text-align: left !important;
+}
+
+.swal2-popup.swal2-toast .swal2-html-container {
+    font-family: 'Poppins', sans-serif !important;
+    font-size: 0.82rem !important;
+    color: #475569 !important;
+    line-height: 1.4 !important;
+    margin: 2px 0 0 !important;
+    text-align: left !important;
+}
+
+/* Toast Icon Sizing */
+.swal2-popup.swal2-toast .swal2-icon {
+    width: 28px !important;
+    height: 28px !important;
+    min-width: 28px !important;
+    margin: 0 !important;
+    border-width: 2.5px !important;
+    transform: none !important;
+    box-shadow: none !important;
+    flex-shrink: 0 !important;
+}
+
+.swal2-popup.swal2-toast .swal2-icon.swal2-success {
+    border-color: #10b981 !important;
+    color: #10b981 !important;
+}
+.swal2-popup.swal2-toast .swal2-icon.swal2-success [class^='swal2-success-line'] {
+    background-color: #10b981 !important;
+}
+
+.swal2-popup.swal2-toast .swal2-icon.swal2-error {
+    border-color: #ef4444 !important;
+    color: #ef4444 !important;
+}
+.swal2-popup.swal2-toast .swal2-icon.swal2-error [class^='swal2-x-mark-line'] {
+    background-color: #ef4444 !important;
+}
+
+.swal2-popup.swal2-toast .swal2-icon.swal2-warning {
+    border-color: #f59e0b !important;
+    color: #f59e0b !important;
+}
+
+.swal2-popup.swal2-toast .swal2-icon.swal2-info {
+    border-color: #3b82f6 !important;
+    color: #3b82f6 !important;
+}
+
+/* Toast Progress Bar */
+.swal2-popup.swal2-toast .swal2-timer-progress-bar {
+    height: 3px !important;
+    background: #10b981 !important;
+    opacity: 0.85 !important;
+}
+.swal2-popup.swal2-toast:has(.swal2-error) .swal2-timer-progress-bar {
+    background: #ef4444 !important;
+}
+.swal2-popup.swal2-toast:has(.swal2-warning) .swal2-timer-progress-bar {
+    background: #f59e0b !important;
+}
+.swal2-popup.swal2-toast:has(.swal2-info) .swal2-timer-progress-bar {
+    background: #3b82f6 !important;
+}
+
+/* Close button on Toast */
+.swal2-popup.swal2-toast .swal2-close {
+    font-size: 1.25rem !important;
+    color: #94a3b8 !important;
+    top: 8px !important;
+    right: 8px !important;
+    transition: color 0.15s ease !important;
+}
+.swal2-popup.swal2-toast .swal2-close:hover {
+    color: #0f172a !important;
+}
+
+/* Form Inputs within SweetAlert */
+div:where(.swal2-container) .swal2-input,
+div:where(.swal2-container) .swal2-textarea,
+div:where(.swal2-container) .swal2-select {
+    background: #f8fafc !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #0f172a !important;
+    border-radius: 8px !important;
+    font-family: 'Poppins', sans-serif !important;
+}
+
+div:where(.swal2-container) .swal2-input:focus,
+div:where(.swal2-container) .swal2-textarea:focus,
+div:where(.swal2-container) .swal2-select:focus {
+    border-color: var(--primary-gold, #d4af37) !important;
+    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.25) !important;
+    outline: none !important;
+}

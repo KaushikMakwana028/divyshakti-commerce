@@ -7,68 +7,50 @@
     <!-- SweetAlert2 CDN -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     
-    <!-- Custom styling for SweetAlert2 matching project theme -->
-    <style>
-        .swal-custom-popup {
-            background-color: #111827 !important; /* matches var(--dark-sidebar) */
-            border: 2px solid #d4af37 !important; /* matches var(--primary-gold) */
-            border-radius: 16px !important;
-            font-family: sans-serif;
-        }
-        .swal-custom-title {
-            color: #f3f4f6 !important;
-            font-weight: 700 !important;
-        }
-        .swal-custom-content {
-            color: #d1d5db !important;
-        }
-        .swal-custom-confirm-btn {
-            background: linear-gradient(45deg, #ec407a, #d4af37) !important;
-            border: none !important;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
-            padding: 8px 24px !important;
-            border-radius: 6px !important;
-            font-weight: 600 !important;
-        }
-        .swal-custom-confirm-btn:hover {
-            opacity: 0.9 !important;
-        }
-    </style>
+    <!-- Custom SweetAlert2 Theme & Helper -->
+    <link rel="stylesheet" href="<?php echo base_url('assets/css/sweetalert-theme.css'); ?>">
+    <script src="<?php echo base_url('assets/js/sweetalert-custom.js'); ?>"></script>
 
     <!-- Global SweetAlert Flash Handlers -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             <?php if ($this->session->flashdata('success')): ?>
-                Swal.fire({
+                dsAlert({
                     icon: 'success',
                     title: 'Success!',
-                    text: '<?php echo addslashes(htmlspecialchars($this->session->flashdata('success'))); ?>',
-                    background: '#111827',
-                    iconColor: '#ec407a',
-                    customClass: {
-                        popup: 'swal-custom-popup',
-                        title: 'swal-custom-title',
-                        htmlContainer: 'swal-custom-content',
-                        confirmButton: 'swal-custom-confirm-btn'
-                    },
-                    buttonsStyling: false
+                    text: '<?php echo addslashes(htmlspecialchars($this->session->flashdata('success'))); ?>'
                 });
             <?php endif; ?>
 
             <?php if ($this->session->flashdata('error')): ?>
-                Swal.fire({
+                dsAlert({
                     icon: 'error',
                     title: 'Oops...',
-                    text: '<?php echo addslashes(htmlspecialchars($this->session->flashdata('error'))); ?>',
-                    background: '#111827',
-                    iconColor: '#dc3545',
-                    customClass: {
-                        popup: 'swal-custom-popup',
-                        title: 'swal-custom-title',
-                        htmlContainer: 'swal-custom-content',
-                        confirmButton: 'swal-custom-confirm-btn'
-                    },
-                    buttonsStyling: false
+                    text: '<?php echo addslashes(htmlspecialchars($this->session->flashdata('error'))); ?>'
+                });
+            <?php endif; ?>
+
+            <?php if ($this->session->flashdata('warning')): ?>
+                dsAlert({
+                    icon: 'warning',
+                    title: 'Notice',
+                    text: '<?php echo addslashes(htmlspecialchars($this->session->flashdata('warning'))); ?>'
+                });
+            <?php endif; ?>
+
+            <?php if ($this->session->flashdata('info')): ?>
+                dsAlert({
+                    icon: 'info',
+                    title: 'Information',
+                    text: '<?php echo addslashes(htmlspecialchars($this->session->flashdata('info'))); ?>'
+                });
+            <?php endif; ?>
+
+            <?php if (function_exists('validation_errors') && validation_errors()): ?>
+                dsAlert({
+                    icon: 'error',
+                    title: 'Validation Error',
+                    html: '<?php echo addslashes(str_replace(["\r", "\n"], ' ', validation_errors('<div style="text-align:left; margin-bottom:4px;"><i class="fa-solid fa-circle-exclamation text-danger me-2"></i>', '</div>'))); ?>'
                 });
             <?php endif; ?>
         });

@@ -11,6 +11,11 @@
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
     
+    <!-- SweetAlert2 CDN & Custom Theme -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link rel="stylesheet" href="<?php echo base_url('assets/css/sweetalert-theme.css'); ?>">
+    <script src="<?php echo base_url('assets/js/sweetalert-custom.js'); ?>"></script>
+    
     <style>
         :root {
             --primary-pink: #ec407a;
@@ -144,23 +149,6 @@
         </div>
         
         <div class="register-body">
-            <!-- Flash Errors -->
-            <?php if ($this->session->flashdata('error')): ?>
-                <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                    <i class="fa-solid fa-circle-exclamation me-2"></i>
-                    <?php echo $this->session->flashdata('error'); ?>
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            <?php endif; ?>
-
-            <?php if (validation_errors()): ?>
-                <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                    <i class="fa-solid fa-circle-exclamation me-2"></i>
-                    <?php echo validation_errors(' ', ' '); ?>
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            <?php endif; ?>
-
             <form action="<?php echo base_url('admin/register'); ?>" method="POST">
                 <div class="row">
                     <div class="col-md-6 mb-3">
@@ -229,5 +217,34 @@
 
     <!-- Bootstrap 5 JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- SweetAlert Flash & Validation Handlers -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            <?php if ($this->session->flashdata('success')): ?>
+                dsAlert({
+                    icon: 'success',
+                    title: 'Success!',
+                    text: '<?php echo addslashes(htmlspecialchars($this->session->flashdata('success'))); ?>'
+                });
+            <?php endif; ?>
+
+            <?php if ($this->session->flashdata('error')): ?>
+                dsAlert({
+                    icon: 'error',
+                    title: 'Registration Failed',
+                    text: '<?php echo addslashes(htmlspecialchars($this->session->flashdata('error'))); ?>'
+                });
+            <?php endif; ?>
+
+            <?php if (validation_errors()): ?>
+                dsAlert({
+                    icon: 'error',
+                    title: 'Validation Error',
+                    html: '<?php echo addslashes(str_replace(["\r", "\n"], ' ', validation_errors('<div style="text-align:left; margin-bottom:4px;"><i class="fa-solid fa-circle-exclamation text-danger me-2"></i>', '</div>'))); ?>'
+                });
+            <?php endif; ?>
+        });
+    </script>
 </body>
 </html>

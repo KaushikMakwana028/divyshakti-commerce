@@ -10,6 +10,8 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <!-- Custom SweetAlert2 Theme -->
+    <link rel="stylesheet" href="<?php echo base_url('assets/css/sweetalert-theme.css'); ?>">
 
     <style>
         :root {
@@ -460,6 +462,12 @@
                             <span>Deposits</span>
                         </a>
                     </li>
+                    <li class="<?php echo ($this->uri->segment(1) == 'admin' && $this->uri->segment(2) == 'cms') ? 'active' : ''; ?>">
+                        <a href="<?php echo base_url('admin/cms'); ?>">
+                            <i class="fa-solid fa-file-contract"></i>
+                            <span>Policy &amp; Terms CMS</span>
+                        </a>
+                    </li>
                 <?php endif; ?>
             </ul>
         </div>
@@ -494,14 +502,14 @@
             <!-- User Dropdown Menu -->
             <div class="dropdown">
                 <button class="user-info-btn dropdown-toggle" type="button" id="userProfileDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                    <img src="<?php echo $user->profile_image ? base_url($user->profile_image) : 'https://www.gravatar.com/avatar/' . md5(strtolower(trim($user->email))) . '?d=mp'; ?>" alt="User Avatar">
-                    <span><?php echo htmlspecialchars($user->name); ?></span>
+                    <img src="<?php echo $user->profile_image ? base_url($user->profile_image) : 'https://www.gravatar.com/avatar/' . md5(strtolower(trim($user->email ?? ''))) . '?d=mp'; ?>" alt="User Avatar">
+                    <span><?php echo htmlspecialchars($user->name ?? 'User'); ?></span>
                 </button>
                 <div class="dropdown-menu dropdown-menu-end user-dropdown-menu" aria-labelledby="userProfileDropdown">
                     <div class="dropdown-header-custom">
-                        <img src="<?php echo $user->profile_image ? base_url($user->profile_image) : 'https://www.gravatar.com/avatar/' . md5(strtolower(trim($user->email))) . '?d=mp'; ?>" alt="User Avatar Large">
-                        <h6><?php echo htmlspecialchars($user->name); ?></h6>
-                        <p><?php echo htmlspecialchars($user->email); ?></p>
+                        <img src="<?php echo $user->profile_image ? base_url($user->profile_image) : 'https://www.gravatar.com/avatar/' . md5(strtolower(trim($user->email ?? ''))) . '?d=mp'; ?>" alt="User Avatar Large">
+                        <h6><?php echo htmlspecialchars($user->name ?? 'User'); ?></h6>
+                        <p><?php echo htmlspecialchars($user->email ?? ($user->phone ?? '')); ?></p>
                         <span class="badge-role">
                             <?php echo ((int)$user->role === 1) ? 'Admin Role' : 'User Role'; ?>
                         </span>

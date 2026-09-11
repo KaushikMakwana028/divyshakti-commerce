@@ -37,7 +37,7 @@ class Commission extends CI_Controller
     }
 
     /**
-     * Saves updated percentages for levels 1 to 12
+     * Saves updated money amounts for levels 1 to 12
      */
     public function update()
     {
@@ -45,34 +45,37 @@ class Commission extends CI_Controller
             redirect('admin/commissions');
         }
 
-        $percentages = $this->input->post('percentages', TRUE);
-        if (!is_array($percentages)) {
+        // Support 'amounts' (fixed money ₹) or fallback to 'percentages'
+        $amounts = $this->input->post('amounts', TRUE);
+        if (!is_array($amounts)) {
+            $amounts = $this->input->post('percentages', TRUE);
+        }
+
+        if (!is_array($amounts)) {
             $this->session->set_flashdata('error', 'Invalid input format.');
             redirect('admin/commissions');
         }
 
-        $total_percentage = 0.00;
-        // Basic pre-validation: check numbers
-        foreach ($percentages as $level => $val) {
+        $total_amount = 0.00;
+        // Basic pre-validation: check non-negative numbers
+        foreach ($amounts as $level => $val) {
             if (!is_numeric($val) || (float)$val < 0) {
-                $this->session->set_flashdata('error', "Percentage for Level {$level} must be a non-negative number.");
+                $this->session->set_flashdata('error', "Commission amount for Level {$level} must be a non-negative number.");
                 redirect('admin/commissions');
             }
-            $total_percentage += (float)$val;
-        }
-
-        // Commission settings must sum to less than 100%
-        if ($total_percentage >= 100.00) {
-            $this->session->set_flashdata('error', "Total level commission allocation ({$total_percentage}%) must be strictly less than 100.00% to reserve a base cut for the admin.");
-            redirect('admin/commissions');
+            $total_amount += (float)$val;
         }
 
         $this->db->trans_begin();
 
-        foreach ($percentages as $level => $val) {
+        foreach ($amounts as $level => $val) {
+            $amt = round((float)$val, 2);
             $this->db->update(
                 'commission_settings',
-                ['percentage' => (float)$val],
+                [
+                    'amount'     => $amt,
+                    'percentage' => 0.00
+                ],
                 ['level' => (int)$level]
             );
         }
@@ -82,8 +85,7 @@ class Commission extends CI_Controller
             $this->session->set_flashdata('error', 'Failed to update commission settings due to a transaction database error.');
         } else {
             $this->db->trans_commit();
-            $admin_cut = 100.00 - $total_percentage;
-            $this->session->set_flashdata('success', "Commission settings updated successfully. Admin base cut is set to " . number_format($admin_cut, 2) . "%.");
+            $this->session->set_flashdata('success', "Commission settings updated successfully. Total level payout is ₹" . number_format($total_amount, 2) . ".");
         }
 
         redirect('admin/commissions');

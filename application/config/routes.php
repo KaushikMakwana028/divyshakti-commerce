@@ -49,14 +49,20 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 | Examples:	my-controller/index	-> my_controller/index
 |		my-controller/my-method	-> my_controller/my_method
 */
-$route['default_controller'] = 'Home';
+$route['default_controller'] = 'Login';
 $route['404_override'] = '';
 $route['translate_uri_dashes'] = FALSE;
 
 // API Routes
 $route['api/register'] = 'Api/register';
+$route['api/send_register_otp'] = 'Api/send_register_otp';
+$route['api/register_verify_otp'] = 'Api/register_verify_otp';
+$route['api/verify_register_otp'] = 'Api/register_verify_otp';
+$route['api/send_otp'] = 'Api/send_otp';
+$route['api/verify_otp'] = 'Api/verify_otp';
 $route['api/login'] = 'Api/login';
 $route['api/logout'] = 'Api/logout';
+$route['api/dashboard'] = 'Api/dashboard';
 $route['api/get_profile'] = 'Api/get_profile';
 $route['api/update_profile'] = 'Api/update_profile';
 $route['api/get_referrals'] = 'Api/get_referrals';
@@ -86,6 +92,9 @@ $route['api/get_order_details/(:num)'] = 'Api/get_order_details/$1';
 
 $route['api/cancel_order'] = 'Api/cancel_order';
 $route['api/cancel_order/(:num)'] = 'Api/cancel_order/$1';
+$route['api/update_order_status'] = 'Api/update_order_status';
+$route['api/update_order_status/(:num)'] = 'Api/update_order_status/$1';
+
 
 // Cart Operations
 $route['api/get_cart'] = 'Api/get_cart';
@@ -99,6 +108,9 @@ $route['api/clear_cart'] = 'Api/clear_cart';
 // User Wallet Deposit Request APIs
 $route['api/request_wallet_deposit'] = 'Api/request_wallet_deposit';
 $route['api/get_deposit_requests'] = 'Api/get_deposit_requests';
+$route['api/get_deposit_requests/(:num)'] = 'Api/get_deposit_requests/$1';
+$route['api/get_deposit_request_details'] = 'Api/get_deposit_request_details';
+$route['api/get_deposit_request_details/(:num)'] = 'Api/get_deposit_request_details/$1';
 
 // User Address Management APIs
 $route['api/get_addresses'] = 'Api/get_addresses';
@@ -130,6 +142,9 @@ $route['admin/logout'] = 'Login/logout';
 // Admin Member Routes
 $route['admin/members'] = 'Member/index';
 $route['admin/members/view/(:num)'] = 'Member/view/$1';
+$route['admin/members/edit/(:num)'] = 'Member/edit/$1';
+$route['admin/members/ajax_check_sponsor'] = 'Member/ajax_check_sponsor';
+$route['admin/members/activate_profile/(:num)'] = 'Member/activate_profile/$1';
 $route['admin/members/wallet/(:num)'] = 'Member/add_wallet/$1';
 $route['admin/members/network'] = 'Member/network';
 $route['admin/members/search'] = 'Member/search_autocomplete';
@@ -141,6 +156,7 @@ $route['admin/members/transactions/(:num)'] = 'Member/transactions/$1';
 $route['admin/orders'] = 'Order/index';
 $route['admin/orders/detail/(:num)'] = 'Order/detail/$1';
 $route['admin/orders/status/(:num)'] = 'Order/update_status/$1';
+$route['admin/orders/delete/(:num)'] = 'Order/delete/$1';
 
 // Admin Commission Routes
 $route['admin/commissions'] = 'Commission/index';
@@ -151,8 +167,23 @@ $route['admin/deposits'] = 'Deposit/index';
 $route['admin/deposits/approve/(:num)'] = 'Deposit/approve/$1';
 $route['admin/deposits/reject/(:num)'] = 'Deposit/reject/$1';
 
+// Admin CMS Content Management Routes
+$route['admin/cms'] = 'Cms/index';
+$route['admin/cms/update'] = 'Cms/update';
+$route['admin/cms/reset/(:any)'] = 'Cms/reset_default/$1';
+
+// Direct Public CMS Pages & Account Deletion (Accessible without login)
+$route['terms_conditions'] = 'Home/terms_conditions';
+$route['terms-conditions'] = 'Home/terms_conditions';
+$route['privacy_policy'] = 'Home/privacy_policy';
+$route['privacy-policy'] = 'Home/privacy_policy';
+$route['delete_account'] = 'Home/delete_account';
+$route['delete-account'] = 'Home/delete_account';
+$route['process_delete_account'] = 'Home/process_delete_account';
+
 // Static Pages & Account Deletion APIs
 $route['api/privacy_policy'] = 'Api/privacy_policy';
 $route['api/terms_conditions'] = 'Api/terms_conditions';
 $route['api/delete_account'] = 'Api/delete_account';
+
 

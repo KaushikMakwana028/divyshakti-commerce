@@ -42,13 +42,71 @@ $mpdSourceMap = [
                     </div>
                 <?php endif; ?>
 
-                <h2 class="mpd-member-name"><?php echo htmlspecialchars($member->name); ?></h2>
-                <p class="mpd-member-email"><?php echo htmlspecialchars($member->email); ?></p>
+                <h2 class="mpd-member-name"><?php echo htmlspecialchars($member->name ?? 'Member'); ?></h2>
+                <div class="mb-2">
+                    <span class="badge bg-dark-subtle text-dark border font-monospace fw-bold px-2.5 py-1" style="font-size: 0.82rem; letter-spacing: 0.5px;">
+                        <i class="fa-solid fa-id-badge text-primary me-1"></i>ID: <?php echo htmlspecialchars($member->custom_id ?? '-'); ?>
+                    </span>
+                </div>
+                <?php if (!empty($member->email)): ?>
+                    <p class="mpd-member-email"><i class="fa-regular fa-envelope me-1 text-muted"></i><?php echo htmlspecialchars($member->email); ?></p>
+                <?php else: ?>
+                    <p class="mpd-member-email text-muted fst-italic" style="font-size: 0.84rem;"><i class="fa-regular fa-envelope-open me-1 opacity-50"></i>No email provided</p>
+                <?php endif; ?>
 
                 <div class="mpd-balance-panel">
                     <span class="mpd-balance-label">Wallet Balance</span>
                     <span class="mpd-balance-amount">₹<?php echo number_format($member->wallet_balance, 2); ?></span>
                 </div>
+
+                <!-- Profile Completion & Admin Activation Status -->
+                <div class="mt-3 text-start w-100 p-3 rounded" style="background: rgba(0,0,0,0.03); border: 1px solid rgba(0,0,0,0.06);">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="small fw-semibold text-muted">Profile Completion</span>
+                        <?php 
+                            $detail_pct = (int)($member->profile_completion_percentage ?? 0);
+                            if ($detail_pct >= 100) {
+                                $badge_cls = 'bg-success text-white';
+                                $bar_cls = 'bg-success';
+                            } elseif ($detail_pct > 0) {
+                                $badge_cls = 'bg-primary text-white';
+                                $bar_cls = 'bg-primary';
+                            } else {
+                                $badge_cls = 'bg-slate text-dark border border-secondary fw-bold';
+                                $bar_cls = 'bg-secondary opacity-25';
+                            }
+                        ?>
+                        <span class="badge <?php echo $badge_cls; ?> px-2 py-1" style="font-size: 0.78rem;">
+                            <?php echo $detail_pct; ?>% Profile
+                        </span>
+                    </div>
+                    <div class="progress mb-2" style="height: 6px; background-color: #e2e8f0; border-radius: 999px;">
+                        <div class="progress-bar <?php echo $bar_cls; ?>"
+                             role="progressbar"
+                             style="width: <?php echo max(5, $detail_pct); ?>%; border-radius: 999px;"></div>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="small fw-semibold text-muted">Profile Activation</span>
+                        <?php if (!empty($member->is_profile_active)): ?>
+                            <span class="badge bg-success"><i class="fa-solid fa-circle-check me-1"></i> Active</span>
+                        <?php else: ?>
+                            <span class="badge bg-danger"><i class="fa-solid fa-clock me-1"></i> Pending Activation</span>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+                <!-- Activate/Deactivate Profile Action -->
+                <a href="<?php echo base_url('admin/members/activate_profile/' . $member->id); ?>"
+                   class="mpd-btn w-100 mt-2 text-center"
+                   style="<?php echo empty($member->is_profile_active) ? 'background-color: #198754; color: #fff; border-color: #198754;' : 'background-color: #fff; color: #dc3545; border: 1px solid #dc3545;'; ?>"
+                   data-confirm="Are you sure you want to <?php echo (!empty($member->is_profile_active)) ? 'deactivate' : 'activate and approve'; ?> this member profile?"
+                   data-confirm-title="<?php echo (!empty($member->is_profile_active)) ? 'Deactivate Profile?' : 'Activate Profile?'; ?>"
+                   data-confirm-btn="<?php echo (!empty($member->is_profile_active)) ? 'Yes, Deactivate' : 'Yes, Activate & Approve'; ?>"
+                   data-confirm-icon="<?php echo (!empty($member->is_profile_active)) ? 'warning' : 'question'; ?>"
+                   data-confirm-danger="<?php echo (!empty($member->is_profile_active)) ? 'true' : 'false'; ?>">
+                    <i class="fa-solid <?php echo (!empty($member->is_profile_active)) ? 'fa-ban' : 'fa-check-double'; ?> me-1"></i>
+                    <?php echo (!empty($member->is_profile_active)) ? 'Deactivate Profile' : 'Activate Profile'; ?>
+                </a>
 
                 <!-- Add funds directly inside detail page -->
                 <button type="button" class="mpd-btn mpd-btn-primary"
@@ -56,6 +114,10 @@ $mpdSourceMap = [
                     data-bs-target="#loadWalletModal">
                     <i class="fa-solid fa-plus"></i> Load Wallet Funds
                 </button>
+                <a href="<?php echo base_url('admin/members/edit/' . $member->id); ?>"
+                    class="mpd-btn mpd-btn-edit">
+                    <i class="fa-solid fa-pen-to-square"></i> Edit Member Details
+                </a>
                 <a href="<?php echo base_url('admin/members/network?user_id=' . $member->id); ?>"
                     class="mpd-btn mpd-btn-outline">
                     <i class="fa-solid fa-sitemap"></i> View Network Tree
@@ -72,6 +134,14 @@ $mpdSourceMap = [
                 </div>
 
                 <div class="mpd-info-grid">
+                    <div class="mpd-info-tile">
+                        <span class="mpd-info-icon mpd-icon-gold"><i class="fa-solid fa-id-badge"></i></span>
+                        <div>
+                            <span class="mpd-info-label">Unique User ID</span>
+                            <code class="mpd-info-value mpd-info-code font-monospace fw-bold" style="color: #0d6efd;"><?php echo htmlspecialchars($member->custom_id ?? '-'); ?></code>
+                        </div>
+                    </div>
+
                     <div class="mpd-info-tile">
                         <span class="mpd-info-icon mpd-icon-pink"><i class="fa-solid fa-tag"></i></span>
                         <div>
@@ -92,7 +162,15 @@ $mpdSourceMap = [
                         <span class="mpd-info-icon mpd-icon-slate"><i class="fa-solid fa-phone"></i></span>
                         <div>
                             <span class="mpd-info-label">Phone Number</span>
-                            <span class="mpd-info-value"><?php echo htmlspecialchars($member->phone); ?></span>
+                            <span class="mpd-info-value"><?php echo htmlspecialchars($member->phone ?? '-'); ?></span>
+                        </div>
+                    </div>
+
+                    <div class="mpd-info-tile">
+                        <span class="mpd-info-icon mpd-icon-pink"><i class="fa-solid fa-venus-mars"></i></span>
+                        <div>
+                            <span class="mpd-info-label">Gender</span>
+                            <span class="mpd-info-value"><?php echo !empty($member->gender) ? ucfirst(htmlspecialchars($member->gender)) : '<span class="text-muted">Not specified</span>'; ?></span>
                         </div>
                     </div>
 
@@ -124,12 +202,127 @@ $mpdSourceMap = [
                             <span class="mpd-info-label">Parent Referrer (Sponsor)</span>
                             <?php if ($referrer): ?>
                                 <span class="mpd-info-value">
-                                    <?php echo htmlspecialchars($referrer->name); ?>
-                                    <span class="mpd-sponsor-meta">#<?php echo $referrer->id; ?> · <?php echo htmlspecialchars($referrer->email); ?></span>
+                                    <?php echo htmlspecialchars($referrer->name ?? 'Referrer'); ?>
+                                    <span class="mpd-sponsor-meta">#<?php echo $referrer->id; ?> · <?php echo htmlspecialchars($referrer->email ?? $referrer->phone ?? ''); ?></span>
                                 </span>
                             <?php else: ?>
                                 <span class="mpd-info-value mpd-info-muted">No sponsor (top-level root member)</span>
                             <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- KYC Identity Documents Card -->
+            <div class="mpd-card mpd-section-card mt-3">
+                <div class="mpd-section-header">
+                    <h5><i class="fa-solid fa-id-card"></i> KYC & Identity Documents</h5>
+                    <?php if (!empty($member->is_profile_completed)): ?>
+                        <span class="badge bg-success">100% Completed</span>
+                    <?php else: ?>
+                        <span class="badge bg-warning text-dark"><?php echo (int)($member->profile_completion_percentage ?? 0); ?>% Completed</span>
+                    <?php endif; ?>
+                </div>
+
+                <div class="mpd-info-grid">
+                    <div class="mpd-info-tile">
+                        <span class="mpd-info-icon mpd-icon-pink"><i class="fa-solid fa-fingerprint"></i></span>
+                        <div>
+                            <span class="mpd-info-label">Aadhar Number</span>
+                            <span class="mpd-info-value fw-semibold"><?php echo !empty($member->aadhar_number) ? htmlspecialchars($member->aadhar_number) : '<span class="text-muted">Not provided</span>'; ?></span>
+                        </div>
+                    </div>
+
+                    <div class="mpd-info-tile">
+                        <span class="mpd-info-icon mpd-icon-gold"><i class="fa-solid fa-file-image"></i></span>
+                        <div>
+                            <span class="mpd-info-label">Aadhar Document / Image</span>
+                            <?php if (!empty($member->aadhar_image)): ?>
+                                <a href="<?php echo base_url(ltrim($member->aadhar_image, '/')); ?>" target="_blank" class="btn btn-sm btn-outline-primary mt-1">
+                                    <i class="fa-solid fa-arrow-up-right-from-square me-1"></i> View / Download Document
+                                </a>
+                            <?php else: ?>
+                                <span class="mpd-info-value text-muted">No file uploaded</span>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+
+                    <div class="mpd-info-tile">
+                        <span class="mpd-info-icon mpd-icon-slate"><i class="fa-solid fa-id-badge"></i></span>
+                        <div>
+                            <span class="mpd-info-label">PAN Number</span>
+                            <span class="mpd-info-value fw-semibold"><?php echo !empty($member->pan_number) ? htmlspecialchars($member->pan_number) : '<span class="text-muted">Not provided</span>'; ?></span>
+                        </div>
+                    </div>
+
+                    <div class="mpd-info-tile">
+                        <span class="mpd-info-icon mpd-icon-gold"><i class="fa-solid fa-file-image"></i></span>
+                        <div>
+                            <span class="mpd-info-label">PAN Document / Image</span>
+                            <?php if (!empty($member->pan_image)): ?>
+                                <a href="<?php echo base_url(ltrim($member->pan_image, '/')); ?>" target="_blank" class="btn btn-sm btn-outline-primary mt-1">
+                                    <i class="fa-solid fa-arrow-up-right-from-square me-1"></i> View / Download Document
+                                </a>
+                            <?php else: ?>
+                                <span class="mpd-info-value text-muted">No file uploaded</span>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bank Account Details Card -->
+            <div class="mpd-card mpd-section-card mt-3">
+                <div class="mpd-section-header">
+                    <h5><i class="fa-solid fa-building-columns"></i> Bank Account Information</h5>
+                </div>
+
+                <div class="mpd-info-grid">
+                    <div class="mpd-info-tile">
+                        <span class="mpd-info-icon mpd-icon-slate"><i class="fa-solid fa-user-check"></i></span>
+                        <div>
+                            <span class="mpd-info-label">Account Holder Name</span>
+                            <span class="mpd-info-value"><?php echo !empty($member->account_holder_name) ? htmlspecialchars($member->account_holder_name) : '<span class="text-muted">Not provided</span>'; ?></span>
+                        </div>
+                    </div>
+
+                    <div class="mpd-info-tile">
+                        <span class="mpd-info-icon mpd-icon-slate"><i class="fa-solid fa-landmark"></i></span>
+                        <div>
+                            <span class="mpd-info-label">Bank Name</span>
+                            <span class="mpd-info-value"><?php echo !empty($member->bank_name) ? htmlspecialchars($member->bank_name) : '<span class="text-muted">Not provided</span>'; ?></span>
+                        </div>
+                    </div>
+
+                    <div class="mpd-info-tile">
+                        <span class="mpd-info-icon mpd-icon-gold"><i class="fa-solid fa-money-check"></i></span>
+                        <div>
+                            <span class="mpd-info-label">Account Number</span>
+                            <code class="mpd-info-value mpd-info-code"><?php echo !empty($member->account_number) ? htmlspecialchars($member->account_number) : 'Not provided'; ?></code>
+                        </div>
+                    </div>
+
+                    <div class="mpd-info-tile">
+                        <span class="mpd-info-icon mpd-icon-pink"><i class="fa-solid fa-hashtag"></i></span>
+                        <div>
+                            <span class="mpd-info-label">IFSC Code</span>
+                            <code class="mpd-info-value mpd-info-code"><?php echo !empty($member->ifsc_code) ? htmlspecialchars($member->ifsc_code) : 'Not provided'; ?></code>
+                        </div>
+                    </div>
+
+                    <div class="mpd-info-tile">
+                        <span class="mpd-info-icon mpd-icon-slate"><i class="fa-solid fa-wallet"></i></span>
+                        <div>
+                            <span class="mpd-info-label">Account Type</span>
+                            <span class="mpd-info-value"><?php echo !empty($member->account_type) ? htmlspecialchars($member->account_type) : '<span class="text-muted">Not provided</span>'; ?></span>
+                        </div>
+                    </div>
+
+                    <div class="mpd-info-tile">
+                        <span class="mpd-info-icon mpd-icon-slate"><i class="fa-solid fa-map-pin"></i></span>
+                        <div>
+                            <span class="mpd-info-label">Branch Name</span>
+                            <span class="mpd-info-value"><?php echo !empty($member->branch_name) ? htmlspecialchars($member->branch_name) : '<span class="text-muted">Not provided</span>'; ?></span>
                         </div>
                     </div>
                 </div>
@@ -442,6 +635,18 @@ $mpdSourceMap = [
         .mpd-btn-primary:hover {
             color: #fff;
             box-shadow: 0 8px 20px rgba(233, 30, 140, 0.26);
+        }
+
+        .mpd-btn-edit {
+            background: #fff8e6;
+            border-color: var(--mpd-gold);
+            color: #8c6b1b;
+        }
+
+        .mpd-btn-edit:hover {
+            background: var(--mpd-gold);
+            border-color: var(--mpd-gold);
+            color: #fff;
         }
 
         .mpd-btn-outline {

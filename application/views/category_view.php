@@ -52,7 +52,6 @@
                                 <th class="py-3 ps-4" style="width: 100px;">#</th>
                                 <th class="py-3" style="width: 100px;">Image</th>
                                 <th class="py-3">Category Name</th>
-                                <th class="py-3">Slug</th>
                                 <th class="py-3" style="width: 150px;">Status</th>
                                 <th class="py-3" style="width: 180px;">Created At</th>
                                 <th class="py-3 text-center" style="width: 150px;">Actions</th>
@@ -61,7 +60,7 @@
                         <tbody>
                             <?php if (empty($categories)): ?>
                                 <tr>
-                                    <td colspan="7" class="text-center py-5 text-muted">
+                                    <td colspan="6" class="text-center py-5 text-muted">
                                         <i class="fa-regular fa-folder-open fs-2 mb-3 d-block text-muted"></i>
                                         No categories found.
                                     </td>
@@ -81,11 +80,6 @@
                                         </td>
                                         <td>
                                             <h6 class="fw-bold m-0" style="color: var(--dark-sidebar);"><?php echo htmlspecialchars($cat->name); ?></h6>
-                                        </td>
-                                        <td>
-                                            <code style="color: var(--primary-pink); background-color: rgba(236, 64, 122, 0.05); padding: 2px 6px; border-radius: 4px; font-size: 0.85rem;">
-                                                <?php echo htmlspecialchars($cat->slug); ?>
-                                            </code>
                                         </td>
                                         <td>
                                             <?php if ((int)$cat->status === 1): ?>
@@ -117,10 +111,17 @@
                 </div>
 
                 <!-- Pagination footer inside container -->
-                <?php if ($total_pages > 1): ?>
-                    <div class="card-footer bg-white border-0 p-3">
+                <?php if (!empty($total_rows) && $total_rows > 0): 
+                    $start_record = ($current_page - 1) * 10 + 1;
+                    $end_record = min($current_page * 10, $total_rows);
+                ?>
+                    <div class="card-footer bg-white border-top p-3 d-flex flex-column flex-sm-row justify-content-between align-items-center gap-2">
+                        <div class="text-muted small">
+                            Showing <strong><?php echo $start_record; ?></strong> to <strong><?php echo $end_record; ?></strong> of <strong><?php echo number_format($total_rows); ?></strong> available categories
+                        </div>
+                        <?php if ($total_pages > 1): ?>
                         <nav aria-label="Category Page Navigation">
-                            <ul class="pagination justify-content-center mb-0">
+                            <ul class="pagination pagination-sm justify-content-center mb-0">
                                 <li class="page-item <?php echo ($current_page <= 1) ? 'disabled' : ''; ?>">
                                     <a class="page-link" href="#" data-page="<?php echo $current_page - 1; ?>">&laquo; Prev</a>
                                 </li>
@@ -134,6 +135,7 @@
                                 </li>
                             </ul>
                         </nav>
+                        <?php endif; ?>
                     </div>
                 <?php endif; ?>
             </div>
@@ -223,17 +225,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 e.preventDefault();
                 const deleteUrl = this.getAttribute('href');
                 
-                Swal.fire({
-                    title: 'Are you sure?',
-                    text: "All items linked to this category might be affected. This action cannot be undone!",
+                dsConfirm({
+                    title: 'Delete Category?',
+                    text: 'All items linked to this category might be affected. This action cannot be undone!',
                     icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonColor: '#ec407a',
-                    cancelButtonColor: '#6c757d',
-                    confirmButtonText: 'Yes, delete it!',
-                    cancelButtonText: 'Cancel'
-                }).then((result) => {
-                    if (result.isConfirmed) {
+                    confirmText: 'Yes, Delete',
+                    cancelText: 'Cancel',
+                    isDangerous: true,
+                    onConfirm: function() {
                         window.location.href = deleteUrl;
                     }
                 });

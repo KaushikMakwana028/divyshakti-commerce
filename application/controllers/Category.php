@@ -68,13 +68,9 @@ class Category extends CI_Controller
 
         if ($this->input->method(TRUE) === 'POST') {
             $this->form_validation->set_rules('name', 'Category Name', 'required|trim');
-            $this->form_validation->set_rules('slug', 'Slug', 'required|trim|is_unique[categories.slug]', [
-                'is_unique' => 'This category slug is already in use.'
-            ]);
 
             if ($this->form_validation->run() === TRUE) {
                 $name = $this->input->post('name', TRUE);
-                $slug = url_title(strtolower($this->input->post('slug', TRUE)));
                 $status = (int)$this->input->post('status') === 1 ? 1 : 0;
 
                 // Handle image upload
@@ -106,7 +102,7 @@ class Category extends CI_Controller
                 if ($upload_success) {
                     $insert_data = [
                         'name'       => $name,
-                        'slug'       => $slug,
+                        'slug'       => null,
                         'image'      => $image_path,
                         'status'     => $status,
                         'created_at' => date('Y-m-d H:i:s'),
@@ -147,64 +143,55 @@ class Category extends CI_Controller
 
         if ($this->input->method(TRUE) === 'POST') {
             $this->form_validation->set_rules('name', 'Category Name', 'required|trim');
-            $this->form_validation->set_rules('slug', 'Slug', 'required|trim');
 
             if ($this->form_validation->run() === TRUE) {
                 $name = $this->input->post('name', TRUE);
-                $slug = url_title(strtolower($this->input->post('slug', TRUE)));
                 $status = (int)$this->input->post('status') === 1 ? 1 : 0;
 
-                // Unique check for slug excluding current category
-                $slug_check = $this->General_model->getOne('categories', ['slug' => $slug, 'id !=' => $id]);
+                $image_path = $category->image;
+                $upload_success = TRUE;
 
-                if ($slug_check) {
-                    $this->session->set_flashdata('error', 'This slug is already used by another category.');
-                } else {
-                    $image_path = $category->image;
-                    $upload_success = TRUE;
-
-                    if (!empty($_FILES['image']['name'])) {
-                        $upload_path = './uploads/categories/';
-                        if (!is_dir($upload_path)) {
-                            mkdir($upload_path, 0777, true);
-                        }
-
-                        $config['upload_path']   = $upload_path;
-                        $config['allowed_types'] = 'jpg|jpeg|png|gif|webp';
-                        $config['max_size']      = 2048;
-                        $config['encrypt_name']  = TRUE;
-
-                        $this->load->library('upload', $config);
-                        $this->upload->initialize($config);
-
-                        if (!$this->upload->do_upload('image')) {
-                            $this->session->set_flashdata('error', $this->upload->display_errors('', ''));
-                            $upload_success = FALSE;
-                        } else {
-                            $upload_data = $this->upload->data();
-
-                            // Delete old image file
-                            if (!empty($category->image) && file_exists('./' . $category->image)) {
-                                @unlink('./' . $category->image);
-                            }
-
-                            $image_path = 'uploads/categories/' . $upload_data['file_name'];
-                        }
+                if (!empty($_FILES['image']['name'])) {
+                    $upload_path = './uploads/categories/';
+                    if (!is_dir($upload_path)) {
+                        mkdir($upload_path, 0777, true);
                     }
 
-                    if ($upload_success) {
-                        $update_data = [
-                            'name'       => $name,
-                            'slug'       => $slug,
-                            'image'      => $image_path,
-                            'status'     => $status,
-                            'updated_at' => date('Y-m-d H:i:s')
-                        ];
+                    $config['upload_path']   = $upload_path;
+                    $config['allowed_types'] = 'jpg|jpeg|png|gif|webp';
+                    $config['max_size']      = 2048;
+                    $config['encrypt_name']  = TRUE;
 
-                        $this->General_model->update('categories', ['id' => $id], $update_data);
-                        $this->session->set_flashdata('success', 'Category updated successfully!');
-                        redirect('admin/categories');
+                    $this->load->library('upload', $config);
+                    $this->upload->initialize($config);
+
+                    if (!$this->upload->do_upload('image')) {
+                        $this->session->set_flashdata('error', $this->upload->display_errors('', ''));
+                        $upload_success = FALSE;
+                    } else {
+                        $upload_data = $this->upload->data();
+
+                        // Delete old image file
+                        if (!empty($category->image) && file_exists('./' . $category->image)) {
+                            @unlink('./' . $category->image);
+                        }
+
+                        $image_path = 'uploads/categories/' . $upload_data['file_name'];
                     }
+                }
+
+                if ($upload_success) {
+                    $update_data = [
+                        'name'       => $name,
+                        'slug'       => null,
+                        'image'      => $image_path,
+                        'status'     => $status,
+                        'updated_at' => date('Y-m-d H:i:s')
+                    ];
+
+                    $this->General_model->update('categories', ['id' => $id], $update_data);
+                    $this->session->set_flashdata('success', 'Category updated successfully!');
+                    redirect('admin/categories');
                 }
             }
         }

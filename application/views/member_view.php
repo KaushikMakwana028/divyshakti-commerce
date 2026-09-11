@@ -11,12 +11,13 @@
         <form id="filterForm" class="sm-filter-form">
             <div class="sm-filter-search">
                 <i class="fa-solid fa-magnifying-glass"></i>
-                <input type="text" name="search" id="searchInput" placeholder="Search by name, email, or phone…" value="<?php echo htmlspecialchars($search ?? ''); ?>">
+                <input type="text" name="search" id="searchInput" placeholder="Search by User ID, name, email, or phone…" value="<?php echo htmlspecialchars($search ?? ''); ?>">
             </div>
             <select name="status" id="statusFilter" class="sm-filter-select">
                 <option value="">All Statuses</option>
-                <option value="1" <?php echo ($status === '1') ? 'selected' : ''; ?>>Active</option>
-                <option value="0" <?php echo ($status === '0') ? 'selected' : ''; ?>>Inactive</option>
+                <option value="1" <?php echo ($status === '1') ? 'selected' : ''; ?>>Active (Verified)</option>
+                <option value="incomplete" <?php echo ($status === 'incomplete') ? 'selected' : ''; ?>>Incomplete / Pending</option>
+                <option value="0" <?php echo ($status === '0') ? 'selected' : ''; ?>>Blocked</option>
             </select>
             <button type="button" id="resetBtn" class="sm-reset-btn">
                 <i class="fa-solid fa-arrow-rotate-left"></i> Reset
@@ -32,6 +33,7 @@
                     <thead>
                         <tr>
                             <th class="sm-th-idx">#</th>
+                            <th>User ID</th>
                             <th>Name</th>
                             <th>Email</th>
                             <th>Phone</th>
@@ -44,7 +46,7 @@
                     <tbody>
                         <?php if (empty($members)): ?>
                             <tr>
-                                <td colspan="8">
+                                <td colspan="9">
                                     <div class="sm-empty">
                                         <i class="fa-solid fa-users-slash"></i>
                                         <p>No members found.</p>
@@ -58,41 +60,162 @@
                             ?>
                                 <tr>
                                     <td data-label="#" class="sm-td-idx"><?php echo $index_num++; ?></td>
+                                    <td data-label="User ID">
+                                        <span class="badge bg-dark-subtle text-dark border font-monospace fw-bold px-2 py-1" style="font-size: 0.8rem; letter-spacing: 0.5px;">
+                                            <i class="fa-solid fa-id-badge text-primary me-1"></i><?php echo htmlspecialchars($member->custom_id ?? '-'); ?>
+                                        </span>
+                                    </td>
                                     <td data-label="Name">
                                         <div class="sm-name-cell">
                                             <?php if (!empty($member->profile_image) && file_exists(FCPATH . ltrim($member->profile_image, '/'))): ?>
-                                                <img src="<?php echo base_url(ltrim($member->profile_image, '/')); ?>" class="sm-avatar" alt="<?php echo htmlspecialchars($member->name); ?>">
+                                                <img src="<?php echo base_url(ltrim($member->profile_image, '/')); ?>" class="sm-avatar" alt="<?php echo htmlspecialchars($member->name ?? 'Member'); ?>">
                                             <?php else: ?>
                                                 <div class="sm-avatar sm-avatar-fallback"><?php echo strtoupper(substr($member->name ?? 'M', 0, 1)); ?></div>
                                             <?php endif; ?>
-                                            <span class="sm-name-text"><?php echo htmlspecialchars($member->name); ?></span>
+                                            <span class="sm-name-text"><?php echo htmlspecialchars($member->name ?? 'Unknown'); ?></span>
                                         </div>
                                     </td>
-                                    <td data-label="Email" class="sm-td-muted"><?php echo htmlspecialchars($member->email); ?></td>
-                                    <td data-label="Phone" class="sm-td-muted"><?php echo htmlspecialchars($member->phone); ?></td>
+                                    <td data-label="Email" class="sm-td-muted">
+                                        <?php if (!empty($member->email)): ?>
+                                            <span class="text-dark d-inline-flex align-items-center gap-1" title="<?php echo htmlspecialchars($member->email); ?>">
+                                                <i class="fa-regular fa-envelope text-muted me-1"></i><?php echo htmlspecialchars($member->email); ?>
+                                            </span>
+                                        <?php else: ?>
+                                            <span class="badge bg-light text-muted border px-2 py-1" style="font-size: 0.72rem; font-weight: 500;">
+                                                <i class="fa-regular fa-envelope-open me-1 opacity-50"></i>Not provided
+                                            </span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td data-label="Phone" class="sm-td-muted">
+                                        <?php if (!empty($member->phone)): ?>
+                                            <span class="text-dark fw-medium d-inline-flex align-items-center gap-1">
+                                                <i class="fa-solid fa-phone text-muted me-1" style="font-size: 0.72rem;"></i><?php echo htmlspecialchars($member->phone); ?>
+                                            </span>
+                                        <?php else: ?>
+                                            <span class="badge bg-light text-muted border px-2 py-1" style="font-size: 0.72rem; font-weight: 500;">
+                                                <i class="fa-solid fa-phone-slash me-1 opacity-50"></i>-
+                                            </span>
+                                        <?php endif; ?>
+                                    </td>
                                     <td data-label="Wallet Balance">
                                         <span class="sm-balance">₹<?php echo number_format($member->wallet_balance, 2); ?></span>
                                     </td>
-                                    <td data-label="Status">
-                                        <?php if ((int)$member->status === 1): ?>
-                                            <span class="sm-status sm-status-active">Active</span>
-                                        <?php else: ?>
-                                            <span class="sm-status sm-status-blocked">Blocked</span>
-                                        <?php endif; ?>
+                                    <td data-label="Status" class="sm-td-status">
+                                        <div class="sm-status-group">
+                                            <?php 
+                                                $pct = (int)($member->profile_completion_percentage ?? 0);
+                                                $is_completed = !empty($member->is_profile_completed);
+                                                $is_active = !empty($member->is_profile_active);
+                                            ?>
+                                            <!-- Top Status Pill -->
+                                            <?php if ((int)$member->status === 0): ?>
+                                                <span class="sm-status sm-status-blocked" title="Account is Blocked">
+                                                    <i class="fa-solid fa-ban"></i> Blocked
+                                                </span>
+                                            <?php elseif ($is_active && $is_completed): ?>
+                                                <span class="sm-status sm-status-active" title="Account is Active & Verified">
+                                                    <i class="fa-solid fa-circle-check"></i> Active
+                                                </span>
+                                            <?php elseif ($is_completed): ?>
+                                                <span class="sm-status sm-status-review" title="Profile 100% Complete - Awaiting Admin Review">
+                                                    <i class="fa-solid fa-clock"></i> Under Review
+                                                </span>
+                                            <?php else: ?>
+                                                <span class="sm-status sm-status-incomplete" title="Profile is Incomplete (<?php echo $pct; ?>%)">
+                                                    <i class="fa-solid fa-triangle-exclamation"></i> Incomplete
+                                                </span>
+                                            <?php endif; ?>
+
+                                            <!-- Profile Completion Details -->
+                                            <div class="sm-profile-meta">
+                                                <div class="sm-profile-progress-wrap" title="Profile completion: <?php echo $pct; ?>%">
+                                                    <div class="sm-profile-progress-track">
+                                                        <div class="sm-profile-progress-bar <?php 
+                                                            if ($pct >= 100) echo 'sm-progress-100';
+                                                            elseif ($pct >= 50) echo 'sm-progress-mid';
+                                                            elseif ($pct > 0) echo 'sm-progress-low';
+                                                            else echo 'sm-progress-zero';
+                                                        ?>" style="width: <?php echo max(6, $pct); ?>%;"></div>
+                                                    </div>
+                                                </div>
+
+                                                <div class="sm-badges-inline">
+                                                    <?php if ($pct >= 100): ?>
+                                                        <span class="sm-pbadge sm-pbadge-100" title="Profile 100% Complete">
+                                                            <i class="fa-solid fa-circle-check"></i> 100% Profile
+                                                        </span>
+                                                    <?php elseif ($pct > 0): ?>
+                                                        <span class="sm-pbadge sm-pbadge-mid" title="Profile <?php echo $pct; ?>% Complete">
+                                                            <i class="fa-solid fa-chart-pie"></i> <?php echo $pct; ?>% Profile
+                                                        </span>
+                                                    <?php else: ?>
+                                                        <span class="sm-pbadge sm-pbadge-zero" title="Profile 0% Complete (KYC Not Submitted)">
+                                                            <i class="fa-solid fa-circle-xmark"></i> 0% Profile
+                                                        </span>
+                                                    <?php endif; ?>
+
+                                                    <?php if ($is_active): ?>
+                                                        <span class="sm-kyc-tag sm-kyc-tag-verified" title="KYC Approved by Admin">
+                                                            <i class="fa-solid fa-shield-check"></i> Verified
+                                                        </span>
+                                                    <?php else: ?>
+                                                        <span class="sm-kyc-tag sm-kyc-tag-pending" title="KYC Pending Admin Approval">
+                                                            <i class="fa-solid fa-shield-halved"></i> Pending
+                                                        </span>
+                                                    <?php endif; ?>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </td>
                                     <td data-label="Registered" class="sm-td-muted"><?php echo date('M d, Y', strtotime($member->created_at)); ?></td>
                                     <td data-label="Actions" class="sm-td-actions">
                                         <div class="sm-actions">
+                                            <?php if (!empty($member->is_profile_active)): ?>
+                                                <a href="<?php echo base_url('admin/members/activate_profile/' . $member->id); ?>"
+                                                    class="sm-icon-btn sm-icon-btn-deactivate"
+                                                    title="Deactivate Profile"
+                                                    data-confirm="Are you sure you want to deactivate <?php echo htmlspecialchars($member->name ?? 'this member'); ?>'s profile?"
+                                                    data-confirm-title="Deactivate Profile?"
+                                                    data-confirm-btn="Yes, Deactivate"
+                                                    data-confirm-danger="true">
+                                                    <i class="fa-solid fa-ban"></i>
+                                                </a>
+                                            <?php else: ?>
+                                                <?php if ($pct < 100): ?>
+                                                    <a href="<?php echo base_url('admin/members/activate_profile/' . $member->id); ?>"
+                                                        class="sm-icon-btn sm-icon-btn-activate"
+                                                        title="Activate Profile (Warning: Profile is only <?php echo $pct; ?>% complete)"
+                                                        data-confirm="<?php echo htmlspecialchars($member->name ?? 'This member'); ?> has only completed <?php echo $pct; ?>% of their profile. Are you sure you want to activate anyway?"
+                                                        data-confirm-title="Activate Incomplete Profile?"
+                                                        data-confirm-btn="Yes, Activate Anyway"
+                                                        data-confirm-icon="warning">
+                                                        <i class="fa-solid fa-check-double"></i>
+                                                    </a>
+                                                <?php else: ?>
+                                                    <a href="<?php echo base_url('admin/members/activate_profile/' . $member->id); ?>"
+                                                        class="sm-icon-btn sm-icon-btn-activate"
+                                                        title="Activate & Approve Profile"
+                                                        data-confirm="Are you sure you want to activate & approve <?php echo htmlspecialchars($member->name ?? 'this member'); ?>'s 100% complete profile?"
+                                                        data-confirm-title="Activate Profile?"
+                                                        data-confirm-btn="Yes, Activate & Approve"
+                                                        data-confirm-icon="question">
+                                                        <i class="fa-solid fa-check-double"></i>
+                                                    </a>
+                                                <?php endif; ?>
+                                            <?php endif; ?>
                                             <button type="button"
                                                 class="sm-icon-btn sm-icon-btn-wallet load-wallet-btn"
                                                 data-bs-toggle="modal"
                                                 data-bs-target="#loadWalletModal"
                                                 data-id="<?php echo $member->id; ?>"
-                                                data-name="<?php echo htmlspecialchars($member->name); ?>"
+                                                data-name="<?php echo htmlspecialchars($member->name ?? ''); ?>"
                                                 data-balance="₹<?php echo number_format($member->wallet_balance, 2); ?>"
                                                 title="Load Wallet Funds">
                                                 <i class="fa-solid fa-wallet"></i>
                                             </button>
+                                            <a href="<?php echo base_url('admin/members/edit/' . $member->id); ?>" class="sm-icon-btn sm-icon-btn-edit" title="Edit Member Details">
+                                                <i class="fa-solid fa-pen-to-square"></i>
+                                            </a>
                                             <a href="<?php echo base_url('admin/members/view/' . $member->id); ?>" class="sm-icon-btn sm-icon-btn-view" title="Inspect Detail View">
                                                 <i class="fa-solid fa-eye"></i>
                                             </a>
@@ -106,8 +229,15 @@
             </div>
 
             <!-- Pagination footer inside container -->
-            <?php if ($total_pages > 1): ?>
-                <div class="sm-pagination-footer">
+            <?php if (!empty($total_rows) && $total_rows > 0): 
+                $start_record = ($current_page - 1) * 10 + 1;
+                $end_record = min($current_page * 10, $total_rows);
+            ?>
+                <div class="sm-pagination-footer d-flex flex-column flex-sm-row justify-content-between align-items-center gap-2">
+                    <div class="text-muted small">
+                        Showing <strong><?php echo $start_record; ?></strong> to <strong><?php echo $end_record; ?></strong> of <strong><?php echo number_format($total_rows); ?></strong> available members
+                    </div>
+                    <?php if ($total_pages > 1): ?>
                     <nav aria-label="Member Page Navigation">
                         <ul class="pagination justify-content-center mb-0">
                             <li class="page-item <?php echo ($current_page <= 1) ? 'disabled' : ''; ?>">
@@ -123,6 +253,7 @@
                             </li>
                         </ul>
                     </nav>
+                    <?php endif; ?>
                 </div>
             <?php endif; ?>
         </div>
@@ -410,23 +541,163 @@
         color: #16A34A;
     }
 
+    .sm-td-status {
+        min-width: 170px;
+    }
+
+    .sm-status-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+    }
+
     .sm-status {
         display: inline-flex;
         align-items: center;
+        gap: 0.35rem;
         font-size: 0.74rem;
         font-weight: 700;
-        padding: 0.3rem 0.7rem;
+        letter-spacing: 0.02em;
+        padding: 0.28rem 0.7rem;
         border-radius: 999px;
+        width: fit-content;
+        line-height: 1.2;
     }
 
     .sm-status-active {
-        background: #DCFCE7;
-        color: #15803D;
+        background: #ECFDF5;
+        color: #047857;
+        border: 1px solid #A7F3D0;
+    }
+
+    .sm-status-review {
+        background: #FFFBEB;
+        color: #B45309;
+        border: 1px solid #FDE68A;
+    }
+
+    .sm-status-incomplete {
+        background: #FFF7ED;
+        color: #C2410C;
+        border: 1px solid #FFEDD5;
     }
 
     .sm-status-blocked {
-        background: #FEE2E2;
+        background: #FEF2F2;
         color: #B91C1C;
+        border: 1px solid #FECACA;
+    }
+
+    /* Profile Progress and Badges */
+    .sm-profile-meta {
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+    }
+
+    .sm-profile-progress-wrap {
+        width: 100%;
+        max-width: 130px;
+    }
+
+    .sm-profile-progress-track {
+        height: 5px;
+        background: #E2E8F0;
+        border-radius: 999px;
+        overflow: hidden;
+    }
+
+    .sm-profile-progress-bar {
+        height: 100%;
+        border-radius: 999px;
+        transition: width 0.3s ease;
+    }
+
+    .sm-progress-100 {
+        background: linear-gradient(90deg, #10B981, #059669);
+    }
+
+    .sm-progress-mid {
+        background: linear-gradient(90deg, #3B82F6, #2563EB);
+    }
+
+    .sm-progress-low {
+        background: linear-gradient(90deg, #F59E0B, #D97706);
+    }
+
+    .sm-progress-zero {
+        background: #CBD5E1;
+    }
+
+    .sm-badges-inline {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.35rem;
+    }
+
+    /* Profile Completion Badges - Sharp, High-Contrast & Beautiful */
+    .sm-pbadge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        font-size: 0.72rem;
+        font-weight: 700;
+        padding: 0.22rem 0.55rem;
+        border-radius: 6px;
+        line-height: 1.25;
+        white-space: nowrap;
+    }
+
+    .sm-pbadge-100 {
+        background: #DCFCE7;
+        color: #15803D;
+        border: 1px solid #86EFAC;
+    }
+
+    .sm-pbadge-mid {
+        background: #EFF6FF;
+        color: #1D4ED8;
+        border: 1px solid #BFDBFE;
+    }
+
+    /* 0% Profile Badge - Ultra High Contrast & Clearly Visible */
+    .sm-pbadge-zero {
+        background: #F1F5F9;
+        color: #1E293B;
+        border: 1.5px solid #94A3B8;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        font-weight: 700;
+    }
+
+    .sm-pbadge-zero i {
+        color: #EF4444;
+        font-size: 0.72rem;
+    }
+
+    /* KYC Verification Tag */
+    .sm-kyc-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.28rem;
+        font-size: 0.70rem;
+        font-weight: 600;
+        padding: 0.2rem 0.5rem;
+        border-radius: 6px;
+        line-height: 1.25;
+        white-space: nowrap;
+    }
+
+    .sm-kyc-tag-verified {
+        background: #EEF2FF;
+        color: #4338CA;
+        border: 1px solid #C7D2FE;
+    }
+
+    .sm-kyc-tag-pending {
+        background: #FEF3C7;
+        color: #92400E;
+        border: 1px solid #FCD34D;
     }
 
     .sm-actions {
@@ -463,6 +734,18 @@
         color: #fff;
     }
 
+    .sm-icon-btn-edit {
+        background: #FFFBEB;
+        border-color: #FDE68A;
+        color: #D97706;
+    }
+
+    .sm-icon-btn-edit:hover {
+        background: #D97706;
+        border-color: #D97706;
+        color: #fff;
+    }
+
     .sm-icon-btn-view {
         background: #EFF6FF;
         border-color: #BFDBFE;
@@ -472,6 +755,30 @@
     .sm-icon-btn-view:hover {
         background: #2563EB;
         border-color: #2563EB;
+        color: #fff;
+    }
+
+    .sm-icon-btn-activate {
+        background: #ECFDF5;
+        border-color: #A7F3D0;
+        color: #16A34A;
+    }
+
+    .sm-icon-btn-activate:hover {
+        background: #16A34A;
+        border-color: #16A34A;
+        color: #fff;
+    }
+
+    .sm-icon-btn-deactivate {
+        background: #FEF2F2;
+        border-color: #FECACA;
+        color: #DC2626;
+    }
+
+    .sm-icon-btn-deactivate:hover {
+        background: #DC2626;
+        border-color: #DC2626;
         color: #fff;
     }
 

@@ -25,7 +25,7 @@
             </label>
             <div class="rtx-search-field">
                 <i class="fa-solid fa-magnifying-glass rtx-search-icon"></i>
-                <input type="text" id="networkSearch" class="rtx-search-input" placeholder="Name, email, or referral code…" autocomplete="off">
+                <input type="text" id="networkSearch" class="rtx-search-input" placeholder="Search by User ID, name, email, or referral code…" autocomplete="off">
                 <button type="button" id="networkSearchClear" class="rtx-search-clear" style="display:none;" aria-label="Clear search">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
@@ -1149,8 +1149,11 @@
                                 item.className = 'rtx-ac-item';
                                 item.innerHTML = `
                                     <div>
-                                        <span class="rtx-ac-name">${user.name}</span>
-                                        <span class="rtx-ac-email">${user.email}</span>
+                                        <div style="display:flex; align-items:center; gap:6px;">
+                                            <span class="rtx-ac-name">${user.name}</span>
+                                            ${user.custom_id ? `<span class="badge bg-dark-subtle text-dark border font-monospace" style="font-size:10px; padding:2px 6px;">ID: ${user.custom_id}</span>` : ''}
+                                        </div>
+                                        <span class="rtx-ac-email">${user.email ? user.email : (user.phone ? user.phone : 'Not provided')}</span>
                                     </div>
                                     <span class="rtx-ac-badge">Code: ${user.referral_code}</span>
                                 `;
