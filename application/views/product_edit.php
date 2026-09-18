@@ -1,145 +1,656 @@
-<div class="row mb-4">
-    <div class="col-12">
-        <h3 class="fw-bold" style="color: var(--dark-sidebar);">Edit Product</h3>
-        <p class="text-muted">Modify product properties.</p>
+<style>
+    /* NOTE: intentionally NOT redefining --primary-pink/--primary-gold/--dark-sidebar on :root here —
+       doing so as a self-reference (var(--primary-pink, ...) inside --primary-pink itself) is an
+       invalid circular reference and silently kills the variable everywhere on the page.
+       We just reference them with a fallback wherever they're used instead. */
+
+    .ep-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-bottom: 20px;
+    }
+
+    .ep-header h3 {
+        color: var(--dark-sidebar, #1f2937);
+        font-weight: 700;
+        margin-bottom: 2px;
+    }
+
+    .ep-header p {
+        color: #6b7280;
+        margin-bottom: 0;
+        font-size: .92rem;
+    }
+
+    .ep-status-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 14px;
+        border-radius: 999px;
+        font-size: .78rem;
+        font-weight: 600;
+    }
+
+    .ep-status-pill.active {
+        background: #dcfce7;
+        color: #15803d;
+        border: 1px solid #bbf3d0;
+    }
+
+    .ep-status-pill.inactive {
+        background: #fee2e2;
+        color: #b91c1c;
+        border: 1px solid #fecaca;
+    }
+
+    .ep-card {
+        position: relative;
+        background: #fff;
+        border: 1px solid #eef0f3;
+        border-radius: 16px;
+        box-shadow: 0 2px 10px rgba(17, 24, 39, .04);
+        overflow: hidden;
+    }
+
+    .ep-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, var(--primary-pink, #ec407a), var(--primary-gold, #d4af37));
+    }
+
+    .ep-card-head {
+        padding: 18px 22px;
+        border-bottom: 1px solid #f1f2f4;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        background: linear-gradient(135deg, rgba(236, 64, 122, .05), rgba(212, 175, 55, .06));
+    }
+
+    .ep-card-head h6 {
+        margin: 0;
+        font-weight: 700;
+        color: var(--dark-sidebar, #1f2937);
+        font-size: .98rem;
+    }
+
+    .ep-card-head .sub {
+        font-size: .78rem;
+        color: #9ca3af;
+        margin-top: 2px;
+    }
+
+    .ep-card-body {
+        padding: 22px;
+    }
+
+    .ep-icon-badge {
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, var(--primary-pink, #ec407a), var(--primary-gold, #d4af37));
+        color: #fff;
+        font-size: .85rem;
+        flex-shrink: 0;
+    }
+
+    /* Main image uploader */
+    .ep-main-image {
+        position: relative;
+        width: 100%;
+        aspect-ratio: 1/1;
+        max-width: 220px;
+        border-radius: 14px;
+        overflow: hidden;
+        background: linear-gradient(135deg, #fdf6e3, #fdf0f5);
+        border: 2px solid var(--primary-gold, #d4af37);
+        box-shadow: 0 4px 14px rgba(212, 175, 55, .18);
+        margin: 0 auto 14px;
+    }
+
+    .ep-main-image img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }
+
+    .ep-main-image .ep-default-tag {
+        position: absolute;
+        top: 8px;
+        left: 8px;
+        background: var(--primary-gold, #d4af37);
+        color: #111;
+        font-weight: 700;
+        font-size: .68rem;
+        padding: 3px 9px;
+        border-radius: 999px;
+    }
+
+    .ep-upload-zone {
+        border: 1.5px dashed #e8c9d6;
+        border-radius: 12px;
+        padding: 14px;
+        text-align: center;
+        background: #fffaf5;
+        cursor: pointer;
+        transition: .15s;
+    }
+
+    .ep-upload-zone:hover {
+        border-color: var(--primary-pink, #ec407a);
+        background: #fff5f8;
+    }
+
+    .ep-upload-zone i {
+        color: var(--primary-pink, #ec407a);
+        font-size: 1.2rem;
+    }
+
+    .ep-upload-zone .ep-upload-text {
+        font-size: .82rem;
+        font-weight: 600;
+        color: #374151;
+        margin-top: 4px;
+    }
+
+    .ep-upload-zone .ep-upload-hint {
+        font-size: .72rem;
+        color: #9ca3af;
+        margin-top: 2px;
+    }
+
+    .ep-upload-zone input[type=file] {
+        display: none;
+    }
+
+    .ep-file-chip {
+        display: none;
+        align-items: center;
+        gap: 8px;
+        margin-top: 10px;
+        background: #fdf0f5;
+        border: 1px solid #f6d3e2;
+        border-radius: 8px;
+        padding: 6px 10px;
+        font-size: .78rem;
+        color: #374151;
+    }
+
+    .ep-file-chip i {
+        color: var(--primary-pink, #ec407a);
+        font-size: .9rem;
+    }
+
+    /* Form fields */
+    .ep-field label {
+        font-weight: 600;
+        font-size: .84rem;
+        color: #374151;
+        margin-bottom: 6px;
+    }
+
+    .ep-field .input-group-text {
+        background: #f9fafb;
+        border-right: 0;
+        color: #9ca3af;
+    }
+
+    .ep-field .form-control,
+    .ep-field .form-select {
+        border-left: 0;
+    }
+
+    .ep-field .input-group:focus-within .input-group-text {
+        border-color: var(--primary-pink, #ec407a);
+        color: var(--primary-pink, #ec407a);
+        background: #fdf0f5;
+    }
+
+    .ep-field .input-group:focus-within .form-control,
+    .ep-field .input-group:focus-within .form-select {
+        border-color: var(--primary-pink, #ec407a);
+        box-shadow: 0 0 0 3px rgba(236, 64, 122, .1);
+    }
+
+    .ep-field .form-control:not(.input-group *) {}
+
+    textarea.form-control {
+        resize: vertical;
+    }
+
+    .ep-status-toggle {
+        display: flex;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        overflow: hidden;
+        background: #fafafa;
+    }
+
+    .ep-status-toggle input {
+        display: none;
+    }
+
+    .ep-status-toggle label {
+        flex: 1;
+        text-align: center;
+        padding: 9px 10px;
+        font-size: .85rem;
+        font-weight: 600;
+        color: #6b7280;
+        cursor: pointer;
+        margin: 0;
+        transition: .15s;
+    }
+
+    .ep-status-toggle input:checked+label.on {
+        background: #dcfce7;
+        color: #15803d;
+        box-shadow: inset 0 -2px 0 #22c55e;
+    }
+
+    .ep-status-toggle input:checked+label.off {
+        background: #fee2e2;
+        color: #b91c1c;
+        box-shadow: inset 0 -2px 0 #ef4444;
+    }
+
+    /* Gallery grid */
+    .ep-gallery-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 14px;
+    }
+
+    .ep-gallery-item {
+        border: 1px solid #eef0f3;
+        border-radius: 12px;
+        overflow: hidden;
+        background: #fff;
+        transition: .15s;
+    }
+
+    .ep-gallery-item.is-default {
+        border-color: var(--primary-gold, #d4af37);
+        box-shadow: 0 0 0 1px var(--primary-gold, #d4af37), 0 4px 12px rgba(212, 175, 55, .15);
+    }
+
+    .ep-gallery-thumb {
+        position: relative;
+        aspect-ratio: 1/1;
+        background: linear-gradient(135deg, #fdf6e3, #fdf0f5);
+    }
+
+    .ep-gallery-thumb img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }
+
+    .ep-gallery-badge {
+        position: absolute;
+        top: 7px;
+        left: 7px;
+        font-size: .64rem;
+        font-weight: 700;
+        padding: 3px 8px;
+        border-radius: 999px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .ep-gallery-badge.default {
+        background: var(--primary-gold, #d4af37);
+        color: #111;
+    }
+
+    .ep-gallery-badge.secondary {
+        background: rgba(236, 64, 122, .82);
+        color: #fff;
+    }
+
+    .ep-gallery-view {
+        position: absolute;
+        top: 7px;
+        right: 7px;
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, .9);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #111;
+        font-size: .68rem;
+        text-decoration: none;
+    }
+
+    .ep-gallery-actions {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px;
+        border-top: 1px solid #f1f2f4;
+    }
+
+    .ep-gallery-actions .btn {
+        font-size: .72rem;
+        padding: 5px 8px;
+        border-radius: 7px;
+    }
+
+    .ep-gallery-actions .ep-active-label {
+        font-size: .72rem;
+        font-weight: 600;
+        color: #15803d;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        flex-grow: 1;
+    }
+
+    .ep-empty-gallery {
+        text-align: center;
+        padding: 34px 10px;
+        color: #9ca3af;
+        background: linear-gradient(135deg, #fdf6e3, #fdf0f5);
+        border-radius: 12px;
+    }
+
+    .ep-empty-gallery i {
+        font-size: 2rem;
+        margin-bottom: 10px;
+        display: block;
+        color: var(--primary-pink, #ec407a);
+        opacity: .55;
+    }
+
+    /* Sticky action bar */
+    .ep-action-bar {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 20px;
+    }
+
+    .ep-btn-save {
+        background: linear-gradient(45deg, var(--primary-pink, #ec407a), var(--primary-gold, #d4af37));
+        border: none;
+        color: #fff;
+        font-weight: 600;
+        border-radius: 10px;
+        padding: 10px 22px;
+        box-shadow: 0 4px 10px rgba(236, 64, 122, .18);
+    }
+
+    .ep-btn-cancel {
+        border-radius: 10px;
+        padding: 10px 22px;
+        font-weight: 600;
+    }
+
+    @media (max-width: 767px) {
+        .ep-action-bar {
+            position: sticky;
+            bottom: 0;
+            background: #fff;
+            padding: 12px;
+            margin: 20px -12px -12px;
+            border-top: 2px solid var(--primary-gold, #d4af37);
+            box-shadow: 0 -4px 12px rgba(17, 24, 39, .08);
+            z-index: 5;
+        }
+
+        .ep-action-bar .btn {
+            flex: 1;
+        }
+
+        .ep-main-image {
+            max-width: 170px;
+        }
+    }
+</style>
+
+<div class="ep-header">
+    <div>
+        <h3>Edit Product</h3>
+        <p>Modify product properties, images and gallery.</p>
     </div>
+    <span class="ep-status-pill <?php echo (int)$product->status === 1 ? 'active' : 'inactive'; ?>">
+        <i class="fa-solid <?php echo (int)$product->status === 1 ? 'fa-circle-check' : 'fa-circle-xmark'; ?>"></i>
+        <?php echo (int)$product->status === 1 ? 'Active' : 'Inactive'; ?>
+    </span>
 </div>
 
-<div class="row">
-    <div class="col-12">
-        <div class="card border-0 shadow-sm" style="border-radius: 12px; overflow: hidden;">
-            <div class="p-4 text-white" style="background: linear-gradient(135deg, var(--dark-sidebar) 0%, #1f2937 100%); border-bottom: 3px solid var(--primary-gold);">
-                <span class="badge mb-2 text-uppercase" style="background-color: var(--primary-pink); font-size: 0.75rem; font-weight: 600; padding: 5px 10px;">
-                    Product Properties
-                </span>
-                <h5 class="fw-bold mb-0">Edit Product</h5>
+<form action="<?php echo base_url('admin/products/edit/' . $product->id); ?>" method="POST" enctype="multipart/form-data" id="editProductForm">
+
+    <div class="row g-3">
+        <!-- Image column -->
+        <div class="col-lg-4">
+            <div class="ep-card h-100">
+                <div class="ep-card-head">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="ep-icon-badge"><i class="fa-solid fa-image"></i></span>
+                        <div>
+                            <h6>Default Image</h6>
+                            <div class="sub">Main product photo</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="ep-card-body">
+                    <div class="ep-main-image">
+                        <span class="ep-default-tag"><i class="fa-solid fa-star me-1"></i>Default</span>
+                        <?php $img_src = $product->image ? base_url($product->image) : ''; ?>
+                        <img id="productImagePreview" src="<?php echo $img_src ?: 'https://placehold.co/220x220/1f2937/d4af37?text=No+Image'; ?>" alt="Product Preview">
+                    </div>
+
+                    <label for="productImageInput" class="ep-upload-zone d-block">
+                        <i class="fa-solid fa-cloud-arrow-up"></i>
+                        <div class="ep-upload-text">Replace default image</div>
+                        <div class="ep-upload-hint">PNG, JPG, GIF, WebP · Max 2MB</div>
+                        <input type="file" name="image" id="productImageInput" accept="image/png, image/jpeg, image/jpg, image/gif, image/webp">
+                    </label>
+                    <div class="ep-file-chip" id="mainImageChip">
+                        <i class="fa-solid fa-file-image"></i>
+                        <span id="mainImageChipName">file.jpg</span>
+                    </div>
+
+                    <hr class="my-3">
+
+                    <label for="galleryImagesInput" class="ep-upload-zone d-block">
+                        <i class="fa-solid fa-images"></i>
+                        <div class="ep-upload-text">Add secondary images</div>
+                        <div class="ep-upload-hint">Upload multiple · Max 2MB each</div>
+                        <input type="file" name="gallery_images[]" id="galleryImagesInput" accept="image/png, image/jpeg, image/jpg, image/gif, image/webp" multiple>
+                    </label>
+                    <div id="galleryPreviewContainer" class="row g-2 mt-2" style="display:none;"></div>
+                </div>
             </div>
-            
-            <div class="card-body p-4">
-                <form action="<?php echo base_url('admin/products/edit/' . $product->id); ?>" method="POST" enctype="multipart/form-data">
+        </div>
+
+        <!-- Details column -->
+        <div class="col-lg-8">
+            <div class="ep-card">
+                <div class="ep-card-head">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="ep-icon-badge"><i class="fa-solid fa-box-open"></i></span>
+                        <div>
+                            <h6>Product Details</h6>
+                            <div class="sub">Basic information & pricing</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="ep-card-body">
                     <div class="row">
-                        <!-- Image Upload Block (Left Side inside form) -->
-                        <div class="col-md-4 text-center mb-4 mb-md-0 border-end pe-md-4">
-                            <label class="form-label fw-semibold d-block text-start text-dark mb-3">Product Image Preview</label>
-                            
-                            <!-- Static Preview Card Wrapper (No camera icon overlay) -->
-                            <div class="mb-3 d-inline-block position-relative shadow-sm rounded border" style="width: 150px; height: 150px; overflow: hidden; border: 2px solid var(--primary-gold) !important; background-color: #f9fafb;">
-                                <?php
-                                $img_src = $product->image ? base_url($product->image) : '';
-                                ?>
-                                <img id="productImagePreview" src="<?php echo $img_src ?: 'https://placehold.co/150x150/1f2937/d4af37?text=No+Image'; ?>" 
-                                     alt="Product Preview" 
-                                     class="img-fluid w-100 h-100" 
-                                     style="object-fit: cover;">
-                            </div>
-                            
-                            <!-- Standard file input field -->
-                            <div class="text-start px-2">
-                                <label for="productImageInput" class="form-label small fw-semibold text-dark mb-1">Change Image File</label>
-                                <input type="file" name="image" id="productImageInput" class="form-control" accept="image/png, image/jpeg, image/jpg, image/gif, image/webp">
-                                <span class="text-muted extra-small d-block mt-1" style="font-size: 0.75rem;">Allowed formats: PNG, JPG, GIF, WebP (Max 2MB)</span>
+                        <div class="col-md-6 mb-3 ep-field">
+                            <label for="category_id">Category</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fa-solid fa-folder-open"></i></span>
+                                <select name="category_id" id="category_id" class="form-select" required>
+                                    <option value="">Select Category</option>
+                                    <?php foreach ($categories as $cat): ?>
+                                        <option value="<?php echo $cat->id; ?>" <?php echo set_select('category_id', $cat->id, (int)$product->category_id === (int)$cat->id); ?>>
+                                            <?php echo htmlspecialchars($cat->name); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
                             </div>
                         </div>
 
-                        <!-- Data Fields (Right Side inside form) -->
-                        <div class="col-md-8 ps-md-4">
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label for="category_id" class="form-label fw-semibold text-dark">Category</label>
-                                    <div class="input-group">
-                                        <span class="input-group-text"><i class="fa-solid fa-folder-open"></i></span>
-                                        <select name="category_id" id="category_id" class="form-select" required>
-                                            <option value="">Select Category</option>
-                                            <?php foreach ($categories as $cat): ?>
-                                                <option value="<?php echo $cat->id; ?>" <?php echo set_select('category_id', $cat->id, (int)$product->category_id === (int)$cat->id); ?>>
-                                                    <?php echo htmlspecialchars($cat->name); ?>
-                                                </option>
-                                            <?php endforeach; ?>
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <div class="col-md-6 mb-3">
-                                    <label for="name" class="form-label fw-semibold text-dark">Product Name</label>
-                                    <div class="input-group">
-                                        <span class="input-group-text"><i class="fa-solid fa-box"></i></span>
-                                        <input type="text" name="name" id="name" class="form-control" placeholder="e.g. Protein Powder" value="<?php echo set_value('name', $product->name); ?>" required>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label for="price" class="form-label fw-semibold text-dark">Price (₹)</label>
-                                    <div class="input-group">
-                                        <span class="input-group-text"><i class="fa-solid fa-indian-rupee-sign"></i></span>
-                                        <input type="number" step="0.01" name="price" id="price" class="form-control" placeholder="0.00" value="<?php echo set_value('price', $product->price); ?>" required>
-                                    </div>
-                                </div>
-
-                                <div class="col-md-6 mb-3">
-                                    <label for="stock" class="form-label fw-semibold text-dark">Stock Count</label>
-                                    <div class="input-group">
-                                        <span class="input-group-text"><i class="fa-solid fa-cubes"></i></span>
-                                        <input type="number" name="stock" id="stock" class="form-control" placeholder="0" value="<?php echo set_value('stock', $product->stock); ?>" required>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="description" class="form-label fw-semibold text-dark">Description</label>
-                                <div class="input-group">
-                                    <span class="input-group-text"><i class="fa-solid fa-align-left"></i></span>
-                                    <textarea name="description" id="description" class="form-control" rows="3" placeholder="Enter product description..."><?php echo set_value('description', $product->description); ?></textarea>
-                                </div>
-                            </div>
-
-                            <div class="mb-4">
-                                <label for="status" class="form-label fw-semibold text-dark">Status</label>
-                                <div class="input-group">
-                                    <span class="input-group-text"><i class="fa-solid fa-toggle-on"></i></span>
-                                    <select name="status" id="status" class="form-select">
-                                        <option value="1" <?php echo set_select('status', '1', (int)$product->status === 1); ?>>Active</option>
-                                        <option value="0" <?php echo set_select('status', '0', (int)$product->status === 0); ?>>Inactive</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div class="d-flex align-items-center justify-content-end gap-2">
-                                <a href="<?php echo base_url('admin/products'); ?>" class="btn btn-secondary px-4 py-2" style="border-radius: 8px;">
-                                    Cancel
-                                </a>
-                                <button type="submit" class="btn px-4 py-2 fw-semibold text-white" style="background: linear-gradient(45deg, var(--primary-pink), var(--primary-gold)); border: none; border-radius: 8px; box-shadow: 0 4px 10px rgba(236, 64, 122, 0.15);">
-                                    <i class="fa-solid fa-floppy-disk me-2"></i> Save Product
-                                </button>
+                        <div class="col-md-6 mb-3 ep-field">
+                            <label for="name">Product Name</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fa-solid fa-tag"></i></span>
+                                <input type="text" name="name" id="name" class="form-control" placeholder="e.g. Protein Powder" value="<?php echo set_value('name', $product->name); ?>" required>
                             </div>
                         </div>
                     </div>
-                </form>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3 ep-field">
+                            <label for="price">Price (₹)</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fa-solid fa-indian-rupee-sign"></i></span>
+                                <input type="number" step="0.01" name="price" id="price" class="form-control" placeholder="0.00" value="<?php echo set_value('price', $product->price); ?>" required>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6 mb-3 ep-field">
+                            <label for="stock">Stock Count</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fa-solid fa-cubes"></i></span>
+                                <input type="number" name="stock" id="stock" class="form-control" placeholder="0" value="<?php echo set_value('stock', $product->stock); ?>" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3 ep-field">
+                        <label for="description">Description</label>
+                        <div class="input-group">
+                            <span class="input-group-text align-items-start pt-2"><i class="fa-solid fa-align-left"></i></span>
+                            <textarea name="description" id="description" class="form-control" rows="4" placeholder="Enter product description..."><?php echo set_value('description', $product->description); ?></textarea>
+                        </div>
+                    </div>
+
+                    <div class="mb-1 ep-field" style="max-width:280px;">
+                        <label>Status</label>
+                        <div class="ep-status-toggle">
+                            <input type="radio" name="status" id="statusActive" value="1" <?php echo set_select('status', '1', (int)$product->status === 1); ?>>
+                            <label for="statusActive" class="on"><i class="fa-solid fa-toggle-on me-1"></i> Active</label>
+
+                            <input type="radio" name="status" id="statusInactive" value="0" <?php echo set_select('status', '0', (int)$product->status === 0); ?>>
+                            <label for="statusInactive" class="off"><i class="fa-solid fa-toggle-off me-1"></i> Inactive</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ep-action-bar">
+                <a href="<?php echo base_url('admin/products'); ?>" class="btn ep-btn-cancel btn-outline-secondary">Cancel</a>
+                <button type="submit" class="btn ep-btn-save"><i class="fa-solid fa-floppy-disk me-2"></i>Save Product</button>
             </div>
         </div>
     </div>
+</form>
+
+<!-- Gallery Management -->
+<div class="ep-card mt-3">
+    <div class="ep-card-head">
+        <div class="d-flex align-items-center gap-2">
+            <span class="ep-icon-badge"><i class="fa-solid fa-photo-film"></i></span>
+            <div>
+                <h6>Product Gallery</h6>
+                <div class="sub">Manage default & secondary images</div>
+            </div>
+        </div>
+        <span class="badge rounded-pill px-3 py-2" style="background:linear-gradient(45deg, var(--primary-pink, #ec407a), var(--primary-gold, #d4af37)); color:#fff;"><?php echo !empty($gallery) ? count($gallery) : 0; ?> Images</span>
+    </div>
+    <div class="ep-card-body">
+        <?php if (empty($gallery)): ?>
+            <div class="ep-empty-gallery">
+                <i class="fa-regular fa-image"></i>
+                <p class="mb-1 fw-semibold text-dark">No gallery images yet</p>
+                <p class="small mb-0">Use the upload panels above to add photos (max 2MB each).</p>
+            </div>
+        <?php else: ?>
+            <div class="ep-gallery-grid">
+                <?php foreach ($gallery as $g): ?>
+                    <div class="ep-gallery-item <?php echo ((int)$g->is_default === 1) ? 'is-default' : ''; ?>">
+                        <div class="ep-gallery-thumb">
+                            <img src="<?php echo base_url($g->image); ?>" alt="Gallery Image">
+                            <?php if ((int)$g->is_default === 1): ?>
+                                <span class="ep-gallery-badge default"><i class="fa-solid fa-star"></i> Default</span>
+                            <?php else: ?>
+                                <span class="ep-gallery-badge secondary"><i class="fa-regular fa-image"></i> Secondary</span>
+                            <?php endif; ?>
+                            <a href="<?php echo base_url($g->image); ?>" target="_blank" class="ep-gallery-view" title="View Full Image">
+                                <i class="fa-solid fa-up-right-from-square"></i>
+                            </a>
+                        </div>
+                        <div class="ep-gallery-actions">
+                            <?php if ((int)$g->is_default === 0): ?>
+                                <a href="<?php echo base_url('admin/products/set_default_image/' . $product->id . '/' . $g->id); ?>" class="btn btn-outline-warning text-dark flex-grow-1">
+                                    <i class="fa-solid fa-star me-1"></i> Set Default
+                                </a>
+                            <?php else: ?>
+                                <span class="ep-active-label"><i class="fa-solid fa-check-circle"></i> Active Main</span>
+                            <?php endif; ?>
+                            <button type="button" class="btn btn-outline-danger btn-delete-gallery" data-url="<?php echo base_url('admin/products/delete_gallery_image/' . $product->id . '/' . $g->id); ?>" title="Delete this image">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
+    </div>
 </div>
 
-<!-- JS Script for Live Image Preview -->
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const imageInput = document.getElementById('productImageInput');
-    const imagePreview = document.getElementById('productImagePreview');
+    document.addEventListener('DOMContentLoaded', function() {
+        const imageInput = document.getElementById('productImageInput');
+        const imagePreview = document.getElementById('productImagePreview');
+        const mainChip = document.getElementById('mainImageChip');
+        const mainChipName = document.getElementById('mainImageChipName');
+        const galleryInput = document.getElementById('galleryImagesInput');
+        const galleryContainer = document.getElementById('galleryPreviewContainer');
 
-    // Live preview selected image
-    if (imageInput && imagePreview) {
-        imageInput.addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                // Size validation (2MB limit)
+        function showAlert(title, text) {
+            if (typeof dsAlert !== 'undefined') {
+                dsAlert({
+                    icon: 'warning',
+                    title,
+                    text
+                });
+            } else {
+                alert(title + ': ' + text);
+            }
+        }
+
+        // Live preview: default image
+        if (imageInput && imagePreview) {
+            imageInput.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+
                 if (file.size > 2 * 1024 * 1024) {
-                    dsAlert({
-                        icon: 'warning',
-                        title: 'File Too Large',
-                        text: 'Please select an image smaller than 2MB.'
-                    });
+                    showAlert('File Too Large', 'Default product image must be smaller than 2MB.');
                     imageInput.value = '';
+                    mainChip.style.display = 'none';
                     return;
                 }
 
@@ -148,8 +659,73 @@ document.addEventListener('DOMContentLoaded', function() {
                     imagePreview.src = event.target.result;
                 };
                 reader.readAsDataURL(file);
-            }
+
+                mainChipName.textContent = file.name;
+                mainChip.style.display = 'flex';
+            });
+        }
+
+        // Live preview: secondary gallery images
+        if (galleryInput && galleryContainer) {
+            galleryInput.addEventListener('change', function(e) {
+                galleryContainer.innerHTML = '';
+                const files = Array.from(e.target.files);
+                if (!files.length) {
+                    galleryContainer.style.display = 'none';
+                    return;
+                }
+
+                let hasOversized = false;
+                const validFiles = [];
+                files.forEach(f => f.size > 2 * 1024 * 1024 ? hasOversized = true : validFiles.push(f));
+
+                if (hasOversized) {
+                    showAlert('Some Images Too Large', 'One or more secondary images exceeded the 2MB limit. Please re-select images under 2MB.');
+                    galleryInput.value = '';
+                    galleryContainer.style.display = 'none';
+                    return;
+                }
+
+                galleryContainer.style.display = 'flex';
+                files.forEach((file, index) => {
+                    const reader = new FileReader();
+                    reader.onload = function(evt) {
+                        const col = document.createElement('div');
+                        col.className = 'col-4 col-sm-3';
+                        col.innerHTML = `
+                        <div class="border rounded-3 p-1 shadow-sm bg-white text-center">
+                            <img src="${evt.target.result}" alt="Secondary preview" class="img-fluid rounded-2" style="width:100%; height:60px; object-fit:cover;">
+                            <span class="badge bg-secondary mt-1 d-block text-truncate" style="font-size:.6rem;">Sec #${index + 1}</span>
+                        </div>`;
+                        galleryContainer.appendChild(col);
+                    };
+                    reader.readAsDataURL(file);
+                });
+            });
+        }
+
+        // Delete gallery confirmation
+        document.querySelectorAll('.btn-delete-gallery').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                const deleteUrl = this.getAttribute('data-url');
+
+                if (typeof dsAlert !== 'undefined' && typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        title: 'Delete Image?',
+                        text: 'Are you sure you want to remove this gallery image? If it is the default image, another image will become default.',
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#d33',
+                        cancelButtonColor: '#3085d6',
+                        confirmButtonText: 'Yes, delete it!'
+                    }).then((result) => {
+                        if (result.isConfirmed) window.location.href = deleteUrl;
+                    });
+                } else if (confirm('Are you sure you want to remove this gallery image?')) {
+                    window.location.href = deleteUrl;
+                }
+            });
         });
-    }
-});
+    });
 </script>

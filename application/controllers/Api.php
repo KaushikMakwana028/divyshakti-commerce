@@ -1586,6 +1586,45 @@ class Api extends CI_Controller
             $this->response(false, 'Product not found', null, 404);
         }
 
+        // Fetch product gallery images (default image first)
+        $gallery_rows = $this->db->order_by('is_default DESC, sort_order ASC, id ASC')
+            ->get_where('product_gallery', ['product_id' => (int)$id])
+            ->result();
+
+        $gallery = [];
+        $images = [];
+
+        foreach ($gallery_rows as $grow) {
+            $img_url = $grow->image ? base_url($grow->image) : null;
+            if ($img_url) {
+                $gallery[] = [
+                    'id'         => (int)$grow->id,
+                    'product_id' => (int)$grow->product_id,
+                    'image'      => $img_url,
+                    'url'        => $img_url,
+                    'is_default' => (int)$grow->is_default,
+                    'sort_order' => (int)$grow->sort_order
+                ];
+                $images[] = $img_url;
+            }
+        }
+
+        // Fallback: if no gallery records exist yet, but products.image exists
+        if (empty($images) && !empty($prod->image)) {
+            $fallback_url = base_url($prod->image);
+            $images[] = $fallback_url;
+            $gallery[] = [
+                'id'         => 0,
+                'product_id' => (int)$prod->id,
+                'image'      => $fallback_url,
+                'url'        => $fallback_url,
+                'is_default' => 1,
+                'sort_order' => 0
+            ];
+        }
+
+        $default_img_url = !empty($images) ? $images[0] : ($prod->image ? base_url($prod->image) : null);
+
         $product_data = [
             'id'             => (int)$prod->id,
             'category_id'    => (int)$prod->category_id,
@@ -1594,7 +1633,9 @@ class Api extends CI_Controller
             'slug'           => null,
             'description'    => $prod->description,
             'price'          => (float)$prod->price,
-            'image'          => $prod->image ? base_url($prod->image) : null,
+            'image'          => $default_img_url,
+            'images'         => $images,
+            'gallery'        => $gallery,
             'stock'          => (int)$prod->stock,
             'status'         => (int)$prod->status,
             'created_at'     => $prod->created_at,
@@ -3699,6 +3740,303 @@ class Api extends CI_Controller
 
         $this->response(true, 'Deposit request details retrieved successfully', [
             'request' => $request_data
+        ], 200);
+    }
+
+    /**
+     * GET api/get_withdraw_info
+     * Authenticated endpoint to retrieve user wallet balance, bank details, and min withdrawal threshold
+     */
+    public function get_withdraw_info()
+    {
+        if ($this->input->method(TRUE) !== 'GET') {
+            $this->response(false, 'Method Not Allowed', null, 405);
+        }
+
+        $auth = $this->check_auth();
+        $user_id = (int)$auth['decoded']->user_id;
+
+        $user = $this->General_model->getOne('users', ['id' => $user_id]);
+        if (!$user) {
+            $this->response(false, 'User account not found', null, 404);
+        }
+
+        $min_withdraw_amount = $this->General_model->getMinWithdrawAmount();
+        $wallet_balance = (float)$user->wallet_balance;
+
+        $bank_details = [
+            'account_holder_name' => $user->account_holder_name ?: '',
+            'bank_name'           => $user->bank_name ?: '',
+            'account_number'      => $user->account_number ?: '',
+            'ifsc_code'           => $user->ifsc_code ?: '',
+            'account_type'        => $user->account_type ?: 'Savings',
+            'branch_name'         => $user->branch_name ?: '',
+        ];
+
+        $has_bank_details = !empty($user->account_number) && !empty($user->ifsc_code);
+
+        // Fetch pending withdrawal count & sum
+        $pending = $this->db->select('COUNT(*) as count, COALESCE(SUM(amount), 0) as total')
+            ->where(['user_id' => $user_id, 'status' => 'pending'])
+            ->get('wallet_withdraw_requests')
+            ->row();
+
+        $can_withdraw = true;
+        $ineligibility_reason = null;
+
+        if (!$has_bank_details) {
+            $can_withdraw = false;
+            $ineligibility_reason = 'Please complete your bank details in profile before withdrawing.';
+        } elseif ($wallet_balance < $min_withdraw_amount) {
+            $can_withdraw = false;
+            $ineligibility_reason = 'Minimum withdrawal amount is ₹' . number_format($min_withdraw_amount, 2) . '. Your balance is ₹' . number_format($wallet_balance, 2) . '.';
+        }
+
+        $this->response(true, 'Withdrawal information retrieved successfully', [
+            'wallet_balance'       => $wallet_balance,
+            'formatted_balance'    => '₹' . number_format($wallet_balance, 2),
+            'min_withdraw_amount'  => $min_withdraw_amount,
+            'formatted_min_amount' => '₹' . number_format($min_withdraw_amount, 2),
+            'bank_details'         => $bank_details,
+            'has_bank_details'     => $has_bank_details,
+            'pending_count'        => (int)($pending->count ?? 0),
+            'pending_amount'       => (float)($pending->total ?? 0),
+            'can_withdraw'         => $can_withdraw,
+            'ineligibility_reason' => $ineligibility_reason
+        ], 200);
+    }
+
+    /**
+     * POST api/request_withdraw
+     * Authenticated endpoint for members to submit a withdrawal request
+     */
+    public function request_withdraw()
+    {
+        if ($this->input->method(TRUE) !== 'POST') {
+            $this->response(false, 'Method Not Allowed', null, 405);
+        }
+
+        // Parse JSON request body if present
+        $content_type = $this->input->server('CONTENT_TYPE');
+        if ($content_type && (strpos($content_type, 'application/json') !== false)) {
+            $json = json_decode(file_get_contents('php://input'), true);
+            if (is_array($json)) {
+                $_POST = array_merge($_POST, $json);
+            }
+        }
+
+        $auth = $this->check_auth();
+        $user_id = (int)$auth['decoded']->user_id;
+
+        $user = $this->General_model->getOne('users', ['id' => $user_id]);
+        if (!$user) {
+            $this->response(false, 'User account not found', null, 404);
+        }
+
+        if ((int)$user->status === 0) {
+            $this->response(false, 'Your account is suspended. Please contact support.', null, 403);
+        }
+
+        $this->load->library('form_validation');
+        $this->form_validation->set_rules('amount', 'Withdrawal Amount', 'required|numeric|greater_than[0]');
+        $this->form_validation->set_rules('remark', 'Remark', 'trim');
+
+        if ($this->form_validation->run() === FALSE) {
+            $errors = $this->form_validation->error_array();
+            $this->response(false, implode(' ', $errors), $errors, 400);
+        }
+
+        $amount = (float)$this->input->post('amount');
+        $remark = $this->input->post('remark', TRUE) ?: null;
+
+        $min_withdraw_amount = $this->General_model->getMinWithdrawAmount();
+
+        // 1. Minimum withdrawal amount enforcement
+        if ($amount < $min_withdraw_amount) {
+            $this->response(
+                false,
+                "Minimum withdrawal amount is ₹" . number_format($min_withdraw_amount, 2) . ". You cannot request an amount lower than this threshold.",
+                ['min_withdraw_amount' => $min_withdraw_amount, 'requested_amount' => $amount],
+                400
+            );
+        }
+
+        // 2. Bank details requirement check
+        if (empty($user->account_number) || empty($user->ifsc_code)) {
+            $this->response(
+                false,
+                "Please update and save your bank details (Account Number and IFSC Code) in your Profile before requesting a withdrawal.",
+                null,
+                400
+            );
+        }
+
+        // 3. Sufficient wallet balance check
+        $wallet_balance = (float)$user->wallet_balance;
+        if ($wallet_balance < $amount) {
+            $this->response(
+                false,
+                "Insufficient wallet balance. Your available balance is ₹" . number_format($wallet_balance, 2) . ", but you requested ₹" . number_format($amount, 2) . ".",
+                ['wallet_balance' => $wallet_balance, 'requested_amount' => $amount],
+                400
+            );
+        }
+
+        // 4. Save withdrawal request (Wallet is NOT cut until admin approval)
+        $insert_data = [
+            'user_id'             => $user_id,
+            'amount'              => $amount,
+            'bank_name'           => $user->bank_name ?: null,
+            'account_holder_name' => $user->account_holder_name ?: $user->name,
+            'account_number'      => $user->account_number,
+            'ifsc_code'           => $user->ifsc_code,
+            'account_type'        => $user->account_type ?: 'Savings',
+            'branch_name'         => $user->branch_name ?: null,
+            'remark'              => $remark,
+            'status'              => 'pending',
+            'created_at'          => date('Y-m-d H:i:s'),
+            'updated_at'          => date('Y-m-d H:i:s')
+        ];
+
+        $request_id = $this->General_model->insert('wallet_withdraw_requests', $insert_data);
+
+        if ($request_id) {
+            $this->response(true, 'Withdrawal request submitted successfully. It is now pending admin review and approval.', [
+                'request_id'          => (int)$request_id,
+                'amount'              => $amount,
+                'formatted_amount'    => '₹' . number_format($amount, 2),
+                'bank_name'           => $user->bank_name,
+                'account_number'      => $user->account_number,
+                'status'              => 'pending',
+                'status_label'        => 'Pending Approval',
+                'created_at'          => date('Y-m-d H:i:s')
+            ], 201);
+        } else {
+            $this->response(false, 'Failed to submit withdrawal request due to database error.', null, 500);
+        }
+    }
+
+    /**
+     * GET api/get_withdraw_requests
+     * GET api/get_withdraw_requests/(:num)
+     * Authenticated endpoint to retrieve user's withdrawal request history or individual request
+     */
+    public function get_withdraw_requests($id = null)
+    {
+        if ($this->input->method(TRUE) !== 'GET') {
+            $this->response(false, 'Method Not Allowed', null, 405);
+        }
+
+        $auth = $this->check_auth();
+        $user_id = (int)$auth['decoded']->user_id;
+        $role = (int)$auth['decoded']->role;
+
+        $id = $id ?: ($this->input->get('id', TRUE) ?: $this->input->get('request_id', TRUE));
+
+        // Single request fetch
+        if (!empty($id) && is_numeric($id)) {
+            $this->db->select('wallet_withdraw_requests.*, users.name as user_name, users.phone as user_phone, users.email as user_email, admin_users.name as action_by_name');
+            $this->db->from('wallet_withdraw_requests');
+            $this->db->join('users', 'users.id = wallet_withdraw_requests.user_id', 'inner');
+            $this->db->join('users as admin_users', 'admin_users.id = wallet_withdraw_requests.action_by', 'left');
+            $this->db->where('wallet_withdraw_requests.id', (int)$id);
+            $row = $this->db->get()->row();
+
+            if (!$row) {
+                $this->response(false, 'Withdrawal request not found', null, 404);
+            }
+
+            if ($role !== 1 && (int)$row->user_id !== $user_id) {
+                $this->response(false, 'Unauthorized access to this withdrawal request', null, 403);
+            }
+
+            $data = [
+                'id'                   => (int)$row->id,
+                'user_id'              => (int)$row->user_id,
+                'user_name'            => $row->user_name,
+                'amount'               => (float)$row->amount,
+                'formatted_amount'     => '₹' . number_format((float)$row->amount, 2),
+                'bank_name'            => $row->bank_name,
+                'account_holder_name'  => $row->account_holder_name,
+                'account_number'       => $row->account_number,
+                'ifsc_code'            => $row->ifsc_code,
+                'account_type'         => $row->account_type,
+                'branch_name'          => $row->branch_name,
+                'remark'               => $row->remark ?: '',
+                'status'               => $row->status,
+                'status_label'         => ucfirst($row->status),
+                'admin_remark'         => $row->admin_remark ?: '',
+                'action_by_name'       => $row->action_by_name,
+                'processed_at'         => $row->processed_at,
+                'created_at'           => $row->created_at,
+                'formatted_created_at' => date('M d, Y h:i A', strtotime($row->created_at)),
+            ];
+
+            $this->response(true, 'Withdrawal request details retrieved successfully', ['request' => $data], 200);
+        }
+
+        // List fetch
+        $page = $this->input->get('page', TRUE) ?: 1;
+        $limit = $this->input->get('limit', TRUE) ?: 10;
+        $status = $this->input->get('status', TRUE);
+
+        $page = (int)$page < 1 ? 1 : (int)$page;
+        $limit = (int)$limit < 1 ? 10 : (int)$limit;
+        $offset = ($page - 1) * $limit;
+
+        $this->db->from('wallet_withdraw_requests');
+        if ($role === 1) {
+            $filter_user_id = $this->input->get('user_id', TRUE);
+            if (!empty($filter_user_id) && is_numeric($filter_user_id)) {
+                $this->db->where('wallet_withdraw_requests.user_id', (int)$filter_user_id);
+            }
+        } else {
+            $this->db->where('wallet_withdraw_requests.user_id', $user_id);
+        }
+
+        if ($status !== '' && $status !== null) {
+            $this->db->where('wallet_withdraw_requests.status', $status);
+        }
+
+        $total = $this->db->count_all_results('', FALSE);
+
+        $this->db->select('wallet_withdraw_requests.*, users.name as user_name, admin_users.name as action_by_name');
+        $this->db->join('users', 'users.id = wallet_withdraw_requests.user_id', 'inner');
+        $this->db->join('users as admin_users', 'admin_users.id = wallet_withdraw_requests.action_by', 'left');
+        $this->db->order_by('wallet_withdraw_requests.id', 'DESC');
+        $this->db->limit($limit, $offset);
+        $rows = $this->db->get()->result();
+
+        $requests = [];
+        foreach ($rows as $row) {
+            $requests[] = [
+                'id'                   => (int)$row->id,
+                'user_id'              => (int)$row->user_id,
+                'user_name'            => $row->user_name,
+                'amount'               => (float)$row->amount,
+                'formatted_amount'     => '₹' . number_format((float)$row->amount, 2),
+                'bank_name'            => $row->bank_name,
+                'account_holder_name'  => $row->account_holder_name,
+                'account_number'       => $row->account_number,
+                'ifsc_code'            => $row->ifsc_code,
+                'account_type'         => $row->account_type,
+                'branch_name'          => $row->branch_name,
+                'remark'               => $row->remark ?: '',
+                'status'               => $row->status,
+                'status_label'         => ucfirst($row->status),
+                'admin_remark'         => $row->admin_remark ?: '',
+                'action_by_name'       => $row->action_by_name,
+                'processed_at'         => $row->processed_at,
+                'created_at'           => $row->created_at,
+                'formatted_created_at' => date('M d, Y h:i A', strtotime($row->created_at)),
+            ];
+        }
+
+        $this->response(true, 'Withdrawal requests retrieved successfully', [
+            'requests' => $requests,
+            'total'    => (int)$total,
+            'page'     => (int)$page,
+            'limit'    => (int)$limit
         ], 200);
     }
 

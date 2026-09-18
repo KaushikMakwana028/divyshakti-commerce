@@ -75,6 +75,9 @@ $route['api/get_products_by_category/(:num)'] = 'Api/get_products_by_category/$1
 
 $route['api/get_product_detail'] = 'Api/get_product_detail';
 $route['api/get_product_detail/(:num)'] = 'Api/get_product_detail/$1';
+$route['api/products'] = 'Api/get_product_list';
+$route['api/products/(:num)'] = 'Api/get_product_detail/$1';
+$route['api/product/(:num)'] = 'Api/get_product_detail/$1';
 
 // MLM Wallet & Admin Operations
 $route['api/add_wallet_money'] = 'Api/add_wallet_money';
@@ -112,6 +115,13 @@ $route['api/get_deposit_requests/(:num)'] = 'Api/get_deposit_requests/$1';
 $route['api/get_deposit_request_details'] = 'Api/get_deposit_request_details';
 $route['api/get_deposit_request_details/(:num)'] = 'Api/get_deposit_request_details/$1';
 
+// User Wallet Withdrawal Request APIs
+$route['api/get_withdraw_info'] = 'Api/get_withdraw_info';
+$route['api/request_withdraw'] = 'Api/request_withdraw';
+$route['api/request_wallet_withdraw'] = 'Api/request_withdraw';
+$route['api/get_withdraw_requests'] = 'Api/get_withdraw_requests';
+$route['api/get_withdraw_requests/(:num)'] = 'Api/get_withdraw_requests/$1';
+
 // User Address Management APIs
 $route['api/get_addresses'] = 'Api/get_addresses';
 $route['api/save_address'] = 'Api/save_address';
@@ -142,6 +152,8 @@ $route['admin/product/add'] = 'Product/add';
 $route['admin/products/detail/(:num)'] = 'Product/detail/$1';
 $route['admin/products/edit/(:num)'] = 'Product/edit/$1';
 $route['admin/products/delete/(:num)'] = 'Product/delete/$1';
+$route['admin/products/set_default_image/(:num)/(:num)'] = 'Product/set_default_image/$1/$2';
+$route['admin/products/delete_gallery_image/(:num)/(:num)'] = 'Product/delete_gallery_image/$1/$2';
 $route['admin/logout'] = 'Login/logout';
 
 // Admin Member Routes
@@ -174,6 +186,13 @@ $route['admin/deposits'] = 'Deposit/index';
 $route['admin/deposit'] = 'Deposit/index';
 $route['admin/deposits/approve/(:num)'] = 'Deposit/approve/$1';
 $route['admin/deposits/reject/(:num)'] = 'Deposit/reject/$1';
+
+// Admin Withdrawal Requests Routes
+$route['admin/withdrawals'] = 'Withdraw/index';
+$route['admin/withdrawal'] = 'Withdraw/index';
+$route['admin/withdrawals/approve/(:num)'] = 'Withdraw/approve/$1';
+$route['admin/withdrawals/reject/(:num)'] = 'Withdraw/reject/$1';
+$route['admin/withdrawals/set_min_amount'] = 'Withdraw/set_min_amount';
 
 // Admin CMS Content Management Routes
 $route['admin/cms'] = 'Cms/index';

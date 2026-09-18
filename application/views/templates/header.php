@@ -462,6 +462,12 @@
                             <span>Deposits</span>
                         </a>
                     </li>
+                    <li class="<?php echo ($this->uri->segment(1) == 'admin' && ($this->uri->segment(2) == 'withdrawals' || $this->uri->segment(2) == 'withdrawal')) ? 'active' : ''; ?>">
+                        <a href="<?php echo base_url('admin/withdrawals'); ?>">
+                            <i class="fa-solid fa-hand-holding-dollar"></i>
+                            <span>Withdrawals</span>
+                        </a>
+                    </li>
                     <li class="<?php echo ($this->uri->segment(1) == 'admin' && $this->uri->segment(2) == 'cms') ? 'active' : ''; ?>">
                         <a href="<?php echo base_url('admin/cms'); ?>">
                             <i class="fa-solid fa-file-contract"></i>

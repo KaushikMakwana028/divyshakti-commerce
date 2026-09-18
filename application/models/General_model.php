@@ -347,6 +347,70 @@ class General_model extends CI_Model
 
         return true;
     }
+
+    /**
+     * Retrieve system setting value by key with optional fallback default
+     *
+     * @param string $key
+     * @param mixed $default
+     * @return mixed
+     */
+    public function getSetting($key, $default = null)
+    {
+        $setting = $this->db->get_where('system_settings', ['setting_key' => $key])->row();
+        if ($setting && isset($setting->setting_value)) {
+            return $setting->setting_value;
+        }
+        return $default;
+    }
+
+    /**
+     * Set or update a system setting value by key
+     *
+     * @param string $key
+     * @param mixed $value
+     * @return bool
+     */
+    public function setSetting($key, $value)
+    {
+        $existing = $this->db->get_where('system_settings', ['setting_key' => $key])->row();
+        if ($existing) {
+            return $this->db->update('system_settings', [
+                'setting_value' => $value,
+                'updated_at'    => date('Y-m-d H:i:s')
+            ], ['setting_key' => $key]);
+        } else {
+            return $this->db->insert('system_settings', [
+                'setting_key'   => $key,
+                'setting_value' => $value,
+                'created_at'    => date('Y-m-d H:i:s'),
+                'updated_at'    => date('Y-m-d H:i:s')
+            ]);
+        }
+    }
+
+    /**
+     * Get minimum withdrawal amount configured by admin
+     *
+     * @return float
+     */
+    public function getMinWithdrawAmount()
+    {
+        $val = $this->getSetting('min_withdraw_amount', '500.00');
+        return max(1.0, (float)$val);
+    }
+
+    /**
+     * Set minimum withdrawal amount
+     *
+     * @param float|int|string $amount
+     * @return bool
+     */
+    public function setMinWithdrawAmount($amount)
+    {
+        $amount = max(1.0, (float)$amount);
+        return $this->setSetting('min_withdraw_amount', number_format($amount, 2, '.', ''));
+    }
 }
 
 

@@ -71,7 +71,78 @@ class Product extends CI_Controller
     }
 
     /**
-     * Adds a new product
+     * Helper to process multiple secondary gallery image uploads
+     * Validates max 2MB (2048 KB) per image and allowed formats.
+     *
+     * @param int $product_id
+     * @return array
+     */
+    private function process_gallery_uploads($product_id)
+    {
+        $result = ['success' => true, 'uploaded_count' => 0, 'errors' => []];
+
+        if (empty($_FILES['gallery_images']['name']) || !is_array($_FILES['gallery_images']['name'])) {
+            return $result;
+        }
+
+        $upload_path = './uploads/products/';
+        if (!is_dir($upload_path)) {
+            mkdir($upload_path, 0777, true);
+        }
+
+        $config['upload_path']   = $upload_path;
+        $config['allowed_types'] = 'jpg|jpeg|png|gif|webp';
+        $config['max_size']      = 2048; // 2MB
+        $config['encrypt_name']  = TRUE;
+
+        $this->load->library('upload');
+        $this->upload->initialize($config);
+
+        $file_count = count($_FILES['gallery_images']['name']);
+        for ($i = 0; $i < $file_count; $i++) {
+            if (empty($_FILES['gallery_images']['name'][$i])) {
+                continue;
+            }
+
+            // Client/Server size check: 2MB limit (2 * 1024 * 1024 bytes)
+            if ($_FILES['gallery_images']['size'][$i] > 2 * 1024 * 1024) {
+                $result['errors'][] = "Image '{$_FILES['gallery_images']['name'][$i]}' exceeds 2MB limit.";
+                continue;
+            }
+
+            $_FILES['single_gallery_file'] = [
+                'name'     => $_FILES['gallery_images']['name'][$i],
+                'type'     => $_FILES['gallery_images']['type'][$i],
+                'tmp_name' => $_FILES['gallery_images']['tmp_name'][$i],
+                'error'    => $_FILES['gallery_images']['error'][$i],
+                'size'     => $_FILES['gallery_images']['size'][$i]
+            ];
+
+            if (!$this->upload->do_upload('single_gallery_file')) {
+                $result['errors'][] = $_FILES['gallery_images']['name'][$i] . ': ' . $this->upload->display_errors('', '');
+            } else {
+                $upload_data = $this->upload->data();
+                $rel_path = 'uploads/products/' . $upload_data['file_name'];
+                $this->General_model->insert('product_gallery', [
+                    'product_id' => (int)$product_id,
+                    'image'      => $rel_path,
+                    'is_default' => 0,
+                    'sort_order' => $result['uploaded_count'],
+                    'created_at' => date('Y-m-d H:i:s')
+                ]);
+                $result['uploaded_count']++;
+            }
+        }
+
+        if (!empty($result['errors'])) {
+            $result['success'] = false;
+        }
+
+        return $result;
+    }
+
+    /**
+     * Adds a new product with default image and optional secondary gallery images
      */
     public function add()
     {
@@ -97,29 +168,35 @@ class Product extends CI_Controller
                 
                 $status = (int)$this->input->post('status') === 1 ? 1 : 0;
 
-                // Handle image upload
+                // Handle primary/default image upload (max 2MB)
                 $image_path = null;
                 $upload_success = TRUE;
 
                 if (!empty($_FILES['image']['name'])) {
-                    $upload_path = './uploads/products/';
-                    if (!is_dir($upload_path)) {
-                        mkdir($upload_path, 0777, true);
-                    }
-
-                    $config['upload_path']   = $upload_path;
-                    $config['allowed_types'] = 'jpg|jpeg|png|gif|webp';
-                    $config['max_size']      = 2048; // 2MB
-                    $config['encrypt_name']  = TRUE;
-
-                    $this->load->library('upload', $config);
-
-                    if (!$this->upload->do_upload('image')) {
-                        $this->session->set_flashdata('error', $this->upload->display_errors('', ''));
+                    if ($_FILES['image']['size'] > 2 * 1024 * 1024) {
+                        $this->session->set_flashdata('error', 'Main product image exceeds 2MB limit.');
                         $upload_success = FALSE;
                     } else {
-                        $upload_data = $this->upload->data();
-                        $image_path = 'uploads/products/' . $upload_data['file_name'];
+                        $upload_path = './uploads/products/';
+                        if (!is_dir($upload_path)) {
+                            mkdir($upload_path, 0777, true);
+                        }
+
+                        $config['upload_path']   = $upload_path;
+                        $config['allowed_types'] = 'jpg|jpeg|png|gif|webp';
+                        $config['max_size']      = 2048; // 2MB
+                        $config['encrypt_name']  = TRUE;
+
+                        $this->load->library('upload', $config);
+                        $this->upload->initialize($config);
+
+                        if (!$this->upload->do_upload('image')) {
+                            $this->session->set_flashdata('error', 'Main image error: ' . $this->upload->display_errors('', ''));
+                            $upload_success = FALSE;
+                        } else {
+                            $upload_data = $this->upload->data();
+                            $image_path = 'uploads/products/' . $upload_data['file_name'];
+                        }
                     }
                 }
 
@@ -137,9 +214,39 @@ class Product extends CI_Controller
                         'updated_at'     => date('Y-m-d H:i:s')
                     ];
 
-                    $this->General_model->insert('products', $insert_data);
-                    $this->session->set_flashdata('success', 'Product added successfully!');
-                    redirect('admin/products');
+                    $product_id = $this->General_model->insert('products', $insert_data);
+
+                    if ($product_id) {
+                        // 1. If primary image uploaded, insert into product_gallery as default
+                        if ($image_path) {
+                            $this->General_model->insert('product_gallery', [
+                                'product_id' => (int)$product_id,
+                                'image'      => $image_path,
+                                'is_default' => 1,
+                                'sort_order' => 0,
+                                'created_at' => date('Y-m-d H:i:s')
+                            ]);
+                        }
+
+                        // 2. Process secondary gallery images
+                        $gallery_res = $this->process_gallery_uploads($product_id);
+
+                        // If no main image was uploaded, but gallery images were, make the first one default
+                        if (!$image_path && $gallery_res['uploaded_count'] > 0) {
+                            $first_gallery = $this->db->where('product_id', $product_id)->order_by('id', 'ASC')->get('product_gallery')->row();
+                            if ($first_gallery) {
+                                $this->db->update('product_gallery', ['is_default' => 1], ['id' => $first_gallery->id]);
+                                $this->db->update('products', ['image' => $first_gallery->image], ['id' => $product_id]);
+                            }
+                        }
+
+                        $msg = 'Product added successfully!';
+                        if (!empty($gallery_res['errors'])) {
+                            $msg .= ' (Some gallery images failed: ' . implode(', ', $gallery_res['errors']) . ')';
+                        }
+                        $this->session->set_flashdata('success', $msg);
+                        redirect('admin/products');
+                    }
                 }
             }
         }
@@ -150,7 +257,7 @@ class Product extends CI_Controller
     }
 
     /**
-     * Edits an existing product
+     * Edits an existing product with primary image and gallery management
      */
     public function edit($id = null)
     {
@@ -165,6 +272,7 @@ class Product extends CI_Controller
         }
 
         $data['product'] = $product;
+        $data['gallery'] = $this->db->order_by('is_default DESC, id ASC')->get_where('product_gallery', ['product_id' => (int)$id])->result();
         $data['categories'] = $this->General_model->getAll('categories', ['status' => 1]);
         $data['user'] = $this->General_model->getOne('users', ['id' => $this->session->userdata('user_id')]);
         
@@ -190,32 +298,44 @@ class Product extends CI_Controller
                 $image_path = $product->image;
                 $upload_success = TRUE;
 
+                // Handle primary image update
                 if (!empty($_FILES['image']['name'])) {
-                    $upload_path = './uploads/products/';
-                    if (!is_dir($upload_path)) {
-                        mkdir($upload_path, 0777, true);
-                    }
-
-                    $config['upload_path']   = $upload_path;
-                    $config['allowed_types'] = 'jpg|jpeg|png|gif|webp';
-                    $config['max_size']      = 2048;
-                    $config['encrypt_name']  = TRUE;
-
-                    $this->load->library('upload', $config);
-                    $this->upload->initialize($config);
-
-                    if (!$this->upload->do_upload('image')) {
-                        $this->session->set_flashdata('error', $this->upload->display_errors('', ''));
+                    if ($_FILES['image']['size'] > 2 * 1024 * 1024) {
+                        $this->session->set_flashdata('error', 'Main product image exceeds 2MB limit.');
                         $upload_success = FALSE;
                     } else {
-                        $upload_data = $this->upload->data();
-
-                        // Delete old image file
-                        if (!empty($product->image) && file_exists('./' . $product->image)) {
-                            @unlink('./' . $product->image);
+                        $upload_path = './uploads/products/';
+                        if (!is_dir($upload_path)) {
+                            mkdir($upload_path, 0777, true);
                         }
 
-                        $image_path = 'uploads/products/' . $upload_data['file_name'];
+                        $config['upload_path']   = $upload_path;
+                        $config['allowed_types'] = 'jpg|jpeg|png|gif|webp';
+                        $config['max_size']      = 2048; // 2MB
+                        $config['encrypt_name']  = TRUE;
+
+                        $this->load->library('upload', $config);
+                        $this->upload->initialize($config);
+
+                        if (!$this->upload->do_upload('image')) {
+                            $this->session->set_flashdata('error', $this->upload->display_errors('', ''));
+                            $upload_success = FALSE;
+                        } else {
+                            $upload_data = $this->upload->data();
+                            $image_path = 'uploads/products/' . $upload_data['file_name'];
+
+                            // Set existing default images to 0
+                            $this->db->update('product_gallery', ['is_default' => 0], ['product_id' => (int)$id]);
+
+                            // Insert new image into product_gallery as default
+                            $this->General_model->insert('product_gallery', [
+                                'product_id' => (int)$id,
+                                'image'      => $image_path,
+                                'is_default' => 1,
+                                'sort_order' => 0,
+                                'created_at' => date('Y-m-d H:i:s')
+                            ]);
+                        }
                     }
                 }
 
@@ -233,8 +353,16 @@ class Product extends CI_Controller
                     ];
 
                     $this->General_model->update('products', ['id' => $id], $update_data);
-                    $this->session->set_flashdata('success', 'Product updated successfully!');
-                    redirect('admin/products');
+
+                    // Process any uploaded secondary gallery images
+                    $gallery_res = $this->process_gallery_uploads($id);
+
+                    $msg = 'Product updated successfully!';
+                    if (!empty($gallery_res['errors'])) {
+                        $msg .= ' (Some gallery images failed: ' . implode(', ', $gallery_res['errors']) . ')';
+                    }
+                    $this->session->set_flashdata('success', $msg);
+                    redirect('admin/products/edit/' . $id);
                 }
             }
         }
@@ -245,7 +373,82 @@ class Product extends CI_Controller
     }
 
     /**
-     * Deletes a product
+     * Sets a specific gallery image as the primary default image
+     */
+    public function set_default_image($product_id = null, $gallery_id = null)
+    {
+        if (empty($product_id) || empty($gallery_id)) {
+            redirect('admin/products');
+        }
+
+        $gallery_item = $this->General_model->getOne('product_gallery', [
+            'id'         => (int)$gallery_id,
+            'product_id' => (int)$product_id
+        ]);
+
+        if (!$gallery_item) {
+            $this->session->set_flashdata('error', 'Gallery image not found.');
+            redirect('admin/products/edit/' . $product_id);
+        }
+
+        // Set all other images to is_default = 0
+        $this->db->update('product_gallery', ['is_default' => 0], ['product_id' => (int)$product_id]);
+        // Set this image to is_default = 1
+        $this->db->update('product_gallery', ['is_default' => 1], ['id' => (int)$gallery_id]);
+        // Sync products.image with the new default image
+        $this->db->update('products', [
+            'image'      => $gallery_item->image,
+            'updated_at' => date('Y-m-d H:i:s')
+        ], ['id' => (int)$product_id]);
+
+        $this->session->set_flashdata('success', 'Default product image updated successfully.');
+        redirect('admin/products/edit/' . $product_id);
+    }
+
+    /**
+     * Deletes a gallery image and file from disk
+     */
+    public function delete_gallery_image($product_id = null, $gallery_id = null)
+    {
+        if (empty($product_id) || empty($gallery_id)) {
+            redirect('admin/products');
+        }
+
+        $gallery_item = $this->General_model->getOne('product_gallery', [
+            'id'         => (int)$gallery_id,
+            'product_id' => (int)$product_id
+        ]);
+
+        if (!$gallery_item) {
+            $this->session->set_flashdata('error', 'Gallery image not found.');
+            redirect('admin/products/edit/' . $product_id);
+        }
+
+        // Delete physical file
+        if (!empty($gallery_item->image) && file_exists('./' . $gallery_item->image)) {
+            @unlink('./' . $gallery_item->image);
+        }
+
+        // Delete DB record
+        $this->db->delete('product_gallery', ['id' => (int)$gallery_id]);
+
+        // If the deleted image was the default image, pick another remaining image
+        if ((int)$gallery_item->is_default === 1) {
+            $next = $this->db->where('product_id', (int)$product_id)->order_by('id', 'ASC')->get('product_gallery')->row();
+            if ($next) {
+                $this->db->update('product_gallery', ['is_default' => 1], ['id' => $next->id]);
+                $this->db->update('products', ['image' => $next->image], ['id' => (int)$product_id]);
+            } else {
+                $this->db->update('products', ['image' => null], ['id' => (int)$product_id]);
+            }
+        }
+
+        $this->session->set_flashdata('success', 'Gallery image removed successfully.');
+        redirect('admin/products/edit/' . $product_id);
+    }
+
+    /**
+     * Deletes a product and all its gallery images
      */
     public function delete($id = null)
     {
@@ -259,20 +462,29 @@ class Product extends CI_Controller
             redirect('admin/products');
         }
 
-        // Delete associated image file
+        // Delete all associated gallery images from disk
+        $gallery_items = $this->General_model->getAll('product_gallery', ['product_id' => (int)$id]);
+        foreach ($gallery_items as $item) {
+            if (!empty($item->image) && file_exists('./' . $item->image)) {
+                @unlink('./' . $item->image);
+            }
+        }
+        $this->db->delete('product_gallery', ['product_id' => (int)$id]);
+
+        // Delete primary image file if still around
         if (!empty($product->image) && file_exists('./' . $product->image)) {
             @unlink('./' . $product->image);
         }
 
-        // Delete from database
+        // Delete product from database
         $this->db->delete('products', ['id' => $id]);
 
-        $this->session->set_flashdata('success', 'Product deleted successfully!');
+        $this->session->set_flashdata('success', 'Product and gallery images deleted successfully!');
         redirect('admin/products');
     }
 
     /**
-     * View details of a specific product
+     * View details of a specific product with its gallery images
      */
     public function detail($id = null)
     {
@@ -292,6 +504,7 @@ class Product extends CI_Controller
         }
 
         $data['product'] = $product;
+        $data['gallery'] = $this->db->order_by('is_default DESC, id ASC')->get_where('product_gallery', ['product_id' => (int)$id])->result();
         $data['user'] = $this->General_model->getOne('users', ['id' => $this->session->userdata('user_id')]);
 
         $this->load->view('templates/header', $data);
