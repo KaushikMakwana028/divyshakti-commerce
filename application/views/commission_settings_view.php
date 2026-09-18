@@ -343,7 +343,7 @@
 
     <div class="cms-header">
         <h3>MLM Level Commission Settings</h3>
-        <p>Configure the referral payout distribution rules for levels 1 to 12.</p>
+        <p>Configure the referral payout distribution rules for levels 1 to 12 when an admin activates a member account.</p>
     </div>
 
     <div class="cms-card">
@@ -355,7 +355,7 @@
             </div>
 
             <div class="cms-payout-panel">
-                <span class="cms-payout-label">Total MLM Payout per Product</span>
+                <span class="cms-payout-label">Total Referral Payout on Activation</span>
                 <h4 class="cms-payout-value" id="totalPayoutIndicator">₹0.00</h4>
             </div>
         </div>
@@ -388,7 +388,7 @@
                     <div class="cms-info-icon"><i class="fa-solid fa-circle-info"></i></div>
                     <div>
                         <span class="cms-info-title">Fixed Money Referral Commission: <span id="allocatedSum">₹0.00</span></span>
-                        <div class="cms-info-sub">When a customer purchases a product, these fixed money amounts (₹) will be directly credited to each active ancestor's wallet.</div>
+                        <div class="cms-info-sub">When an admin activates a member account, these fixed money amounts (₹) will be directly credited once to each active ancestor's wallet.</div>
                     </div>
                 </div>
 

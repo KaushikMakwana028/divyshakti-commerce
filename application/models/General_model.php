@@ -95,10 +95,15 @@ class General_model extends CI_Model
     public function generateUniqueCustomId()
     {
         $min_start = 2001;
+        // Only consider standard 7-digit sequence (e.g. '0002001' to '0099999')
+        // Ignores any out-of-range or large numbers (such as 15215145) from corrupting the sequence
         $this->db->select_max("CAST(custom_id AS UNSIGNED)", "max_id");
         $this->db->where("custom_id IS NOT NULL");
         $this->db->where("custom_id !=", "");
         $this->db->where("role", 0);
+        $this->db->where("LENGTH(custom_id)", 7);
+        $this->db->where("CAST(custom_id AS UNSIGNED) <", 1000000);
+        $this->db->like("custom_id", "00", "after");
         $query = $this->db->get('users');
         $row = $query->row();
 
@@ -167,52 +172,43 @@ class General_model extends CI_Model
     }
 
     /**
-     * Distributes referral and admin commissions for a delivered order.
-     * Guaranteed idempotent - runs once per order upon reaching 'delivered' status.
-     * Decided fixed commission amount is credited per level (NOT multiplied by quantity).
+     * Distributes referral commissions across all eligible upline levels when an admin activates a member.
+     * Guaranteed idempotent - runs only ONCE per member when the account is activated.
+     * Fixed money amounts configured in commission_settings are credited directly to each upline member's wallet.
      *
-     * @param int $order_id
+     * @param int $user_id
      * @return bool
      */
-    public function distribute_order_commissions($order_id)
+    public function distribute_activation_commissions($user_id)
     {
-        $order_id = (int)$order_id;
-        $order = $this->getOne('orders', ['id' => $order_id]);
-        if (!$order) {
+        $user_id = (int)$user_id;
+        $member = $this->getOne('users', ['id' => $user_id]);
+        if (!$member || (int)$member->role === 1) {
             return false;
         }
 
-        // Must be in delivered or completed status
-        if (!in_array($order->status, ['delivered', 'completed'])) {
+        // Must be active
+        if ((int)($member->is_profile_active ?? 0) !== 1) {
             return false;
         }
 
-        // Idempotency check 1: Check commission_distributed flag if column exists
-        if (isset($order->commission_distributed) && (int)$order->commission_distributed === 1) {
+        // Idempotency check 1: Column flag
+        if (isset($member->is_commission_distributed) && (int)$member->is_commission_distributed === 1) {
             return false;
         }
 
-        // Idempotency check 2: Check existing order_commissions or admin_commission transactions
-        $has_commissions = $this->db->where('order_id', $order_id)->count_all_results('order_commissions') > 0;
-        $has_admin_txn = $this->db->where([
-            'reference_id' => $order_id,
-            'source'       => 'admin_commission'
-        ])->count_all_results('wallet_transactions') > 0;
+        // Idempotency check 2: Check existing wallet_transactions for this member activation
+        $has_txns = $this->db->where([
+            'reference_id' => $user_id,
+            'source'       => 'referral_commission'
+        ])->like('remark', 'member activation')->count_all_results('wallet_transactions') > 0;
 
-        if ($has_commissions || $has_admin_txn) {
-            // Ensure flag is updated if table has column
+        if ($has_txns) {
             try {
-                $this->db->update('orders', ['commission_distributed' => 1], ['id' => $order_id]);
+                $this->db->update('users', ['is_commission_distributed' => 1], ['id' => $user_id]);
             } catch (\Throwable $e) {}
             return false;
         }
-
-        $buyer = $this->getOne('users', ['id' => (int)$order->user_id]);
-        if (!$buyer) {
-            return false;
-        }
-
-        $order_amount = (float)$order->amount;
 
         // Fetch fixed amount settings per level from commission_settings
         $settings = $this->db->order_by('level', 'ASC')->get('commission_settings')->result();
@@ -221,103 +217,136 @@ class General_model extends CI_Model
             $levels_amount[(int)$setting->level] = (float)($setting->amount ?? $setting->percentage ?? 0.00);
         }
 
-        // Find lowest-ID active admin for remainder cut
-        $this->db->where('role', 1);
-        $this->db->order_by('id', 'ASC');
-        $this->db->limit(1);
-        $admin = $this->db->get('users')->row();
+        $ancestor_id = $member->parent_id;
+        if (empty($ancestor_id)) {
+            // Member has no upline sponsor, mark commission distributed and exit
+            try {
+                $this->db->update('users', ['is_commission_distributed' => 1], ['id' => $user_id]);
+            } catch (\Throwable $e) {}
+            return true;
+        }
 
-        $total_allocated_commission_sum = 0.00;
-        $ancestor_id = ((int)$buyer->role !== 1) ? $buyer->parent_id : null;
+        $this->db->trans_begin();
 
-        if (!empty($ancestor_id)) {
-            for ($level = 1; $level <= 12; $level++) {
-                if (empty($ancestor_id)) {
-                    break;
-                }
+        $member_display = !empty($member->name) ? $member->name : ('Member #' . $member->id);
+        $member_custom_id = !empty($member->custom_id) ? " ({$member->custom_id})" : "";
 
-                $fixed_amount = isset($levels_amount[$level]) ? $levels_amount[$level] : 0.00;
-                $ancestor = $this->getOne('users', ['id' => (int)$ancestor_id]);
-                if (!$ancestor) {
-                    break;
-                }
+        for ($level = 1; $level <= 12; $level++) {
+            if (empty($ancestor_id)) {
+                break;
+            }
 
-                // Skip blocked ancestor (status == 0)
-                if ((int)$ancestor->status === 0) {
-                    $ancestor_id = $ancestor->parent_id;
-                    continue;
-                }
+            $fixed_amount = isset($levels_amount[$level]) ? $levels_amount[$level] : 0.00;
+            $ancestor = $this->getOne('users', ['id' => (int)$ancestor_id]);
+            if (!$ancestor) {
+                break;
+            }
 
-                // Skip admin ancestor (role == 1)
-                if ((int)$ancestor->role === 1) {
-                    $ancestor_id = $ancestor->parent_id;
-                    continue;
-                }
+            // Skip blocked ancestor (status == 0)
+            if ((int)$ancestor->status === 0) {
+                $ancestor_id = $ancestor->parent_id;
+                continue;
+            }
 
-                // Decided commission amount ONLY - never multiply by quantity
-                $level_comm = round($fixed_amount, 2);
+            // Skip admin ancestor (role == 1)
+            if ((int)$ancestor->role === 1) {
+                $ancestor_id = $ancestor->parent_id;
+                continue;
+            }
 
-                if ($level_comm > 0) {
-                    // Credit ancestor wallet balance
-                    $this->db->set('wallet_balance', 'wallet_balance + ' . $level_comm, FALSE);
-                    $this->db->where('id', (int)$ancestor->id);
-                    $this->db->update('users');
+            $level_comm = round($fixed_amount, 2);
 
-                    // Wallet transaction log
-                    $this->db->insert('wallet_transactions', [
-                        'user_id'      => (int)$ancestor->id,
-                        'type'         => 'credit',
-                        'amount'       => $level_comm,
-                        'source'       => 'referral_commission',
-                        'reference_id' => $order_id,
-                        'remark'       => "Referral commission (₹" . number_format($fixed_amount, 2) . ") from level {$level} purchase (Order ID: #{$order_id})",
-                        'created_at'   => date('Y-m-d H:i:s')
-                    ]);
+            if ($level_comm > 0) {
+                // 1. Directly credit ancestor wallet balance
+                $this->db->set('wallet_balance', 'wallet_balance + ' . $level_comm, FALSE);
+                $this->db->where('id', (int)$ancestor->id);
+                $this->db->update('users');
 
-                    // Order commissions row
-                    $this->db->insert('order_commissions', [
-                        'order_id'    => $order_id,
-                        'buyer_id'    => (int)$order->user_id,
+                // 2. Insert wallet transaction record
+                $this->db->insert('wallet_transactions', [
+                    'user_id'      => (int)$ancestor->id,
+                    'type'         => 'credit',
+                    'amount'       => $level_comm,
+                    'source'       => 'referral_commission',
+                    'reference_id' => $user_id,
+                    'remark'       => "Referral commission (₹" . number_format($level_comm, 2) . ") from Level {$level} member activation ({$member_display}{$member_custom_id})",
+                    'created_at'   => date('Y-m-d H:i:s')
+                ]);
+
+                // 3. Insert into member_commissions audit log
+                try {
+                    $this->db->insert('member_commissions', [
+                        'member_id'   => $user_id,
                         'receiver_id' => (int)$ancestor->id,
                         'level'       => $level,
                         'amount'      => $level_comm,
                         'created_at'  => date('Y-m-d H:i:s')
                     ]);
-
-                    $total_allocated_commission_sum += $level_comm;
-                }
-
-                $ancestor_id = $ancestor->parent_id;
+                } catch (\Throwable $e) {}
             }
+
+            $ancestor_id = $ancestor->parent_id;
         }
 
-        // Admin remainder cut: order total minus total allocated referral commissions
-        $admin_commission = max(0, round($order_amount - $total_allocated_commission_sum, 2));
+        // Mark member as having commission distributed
+        $this->db->update('users', ['is_commission_distributed' => 1], ['id' => $user_id]);
 
-        if ($admin && $admin_commission > 0) {
-            $this->db->set('wallet_balance', 'wallet_balance + ' . $admin_commission, FALSE);
-            $this->db->where('id', (int)$admin->id);
-            $this->db->update('users');
-
-            $this->db->insert('wallet_transactions', [
-                'user_id'      => (int)$admin->id,
-                'type'         => 'credit',
-                'amount'       => $admin_commission,
-                'source'       => 'admin_commission',
-                'reference_id' => $order_id,
-                'remark'       => "Admin commission remainder cut for Order ID: #{$order_id}",
-                'created_at'   => date('Y-m-d H:i:s')
-            ]);
+        if ($this->db->trans_status() === FALSE) {
+            $this->db->trans_rollback();
+            return false;
         }
 
-        // Mark commission_distributed = 1
-        try {
-            $this->db->update('orders', ['commission_distributed' => 1], ['id' => $order_id]);
-        } catch (\Throwable $e) {
-            // In case column does not exist yet on DB
+        $this->db->trans_commit();
+        return true;
+    }
+
+    /**
+     * Deprecated: Order-based commission distribution is disabled.
+     * Referral commissions are now distributed exclusively upon member activation.
+     *
+     * @param int $order_id
+     * @return bool
+     */
+    public function distribute_order_commissions($order_id)
+    {
+        return false;
+    }
+
+    /**
+     * Validates whether a referrer user is eligible to sponsor other members.
+     * Requires:
+     * 1. Referrer exists
+     * 2. Account status is unblocked (status == 1)
+     * 3. Profile is active / approved by Admin (is_profile_active == 1)
+     *
+     * @param object|array $referrer
+     * @param string|null &$error_message
+     * @return bool
+     */
+    public function isReferrerEligible($referrer, &$error_message = null)
+    {
+        if (!$referrer) {
+            $error_message = 'Invalid referral code. Referrer not found.';
+            return false;
+        }
+
+        // Cast to object if array
+        if (is_array($referrer)) {
+            $referrer = (object)$referrer;
+        }
+
+        if (isset($referrer->status) && (int)$referrer->status === 0) {
+            $error_message = 'This referral code belongs to a suspended account.';
+            return false;
+        }
+
+        if (empty($referrer->is_profile_active) || (int)$referrer->is_profile_active !== 1) {
+            $error_message = 'This referral code cannot be used because the referrer\'s profile is not active yet.';
+            return false;
         }
 
         return true;
     }
 }
+
 

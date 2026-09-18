@@ -325,11 +325,7 @@ class Order extends CI_Controller
                 'status'     => $new_status,
                 'updated_at' => date('Y-m-d H:i:s')
             ], ['id' => (int)$order->id]);
-
-            // Distribute MLM referral commissions only when order reaches delivered status!
-            if ($new_status === 'delivered') {
-                $this->General_model->distribute_order_commissions((int)$id);
-            }
+            // Note: MLM commissions are distributed exclusively once upon member account activation
         }
 
         if ($this->db->trans_status() === FALSE) {

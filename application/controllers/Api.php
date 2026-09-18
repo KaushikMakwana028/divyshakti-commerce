@@ -544,8 +544,9 @@ class Api extends CI_Controller
         // Check referral code
         if (!empty($referral_code)) {
             $referrer = $this->db->get_where('users', ['referral_code' => $referral_code])->row();
-            if (!$referrer) {
-                $this->send_response(false, 'Invalid referral code. Referrer not found.', null, 400);
+            $ref_err = null;
+            if (!$this->General_model->isReferrerEligible($referrer, $ref_err)) {
+                $this->send_response(false, $ref_err, null, 400);
             }
         }
 
@@ -629,7 +630,8 @@ class Api extends CI_Controller
         $parent_id = null;
         if (!empty($user_data['referral_code'])) {
             $referrer = $this->General_model->getOne('users', ['referral_code' => $user_data['referral_code']]);
-            if ($referrer) {
+            $ref_err = null;
+            if ($referrer && $this->General_model->isReferrerEligible($referrer, $ref_err)) {
                 $parent_id = (int)$referrer->id;
             }
         }
@@ -885,21 +887,27 @@ class Api extends CI_Controller
 
         // 2. Financial Metrics (Wallet & Revenue)
         $total_commission = $this->db->select_sum('amount', 'total')
-            ->where('receiver_id', $user_id)
-            ->get('order_commissions')
+            ->where('user_id', $user_id)
+            ->where('type', 'credit')
+            ->where('source', 'referral_commission')
+            ->get('wallet_transactions')
             ->row()->total ?? 0.00;
 
         $today_commission = $this->db->select_sum('amount', 'total')
-            ->where('receiver_id', $user_id)
+            ->where('user_id', $user_id)
+            ->where('type', 'credit')
+            ->where('source', 'referral_commission')
             ->where('DATE(created_at)', date('Y-m-d'))
-            ->get('order_commissions')
+            ->get('wallet_transactions')
             ->row()->total ?? 0.00;
 
         $month_commission = $this->db->select_sum('amount', 'total')
-            ->where('receiver_id', $user_id)
+            ->where('user_id', $user_id)
+            ->where('type', 'credit')
+            ->where('source', 'referral_commission')
             ->where('MONTH(created_at)', date('m'))
             ->where('YEAR(created_at)', date('Y'))
-            ->get('order_commissions')
+            ->get('wallet_transactions')
             ->row()->total ?? 0.00;
 
         $total_spent = $this->db->select_sum('amount', 'total')
@@ -1034,10 +1042,12 @@ class Api extends CI_Controller
 
         // 6. Referral & Sharing Info
         $referral_code = $user->referral_code ?? '';
+        $is_referral_active = (!empty($user->is_profile_active) && (int)$user->is_profile_active === 1 && (int)$user->status === 1);
         $referral_info = [
-            'referral_code' => $referral_code,
-            'referral_link' => base_url('register?ref=' . urlencode($referral_code)),
-            'share_message' => "Join Divy Shakti and start your wellness & earning journey! Use my referral code: {$referral_code}"
+            'referral_code'      => $referral_code,
+            'is_referral_active' => $is_referral_active,
+            'referral_link'      => base_url('register?ref=' . urlencode($referral_code)),
+            'share_message'      => "Join Divy Shakti and start your wellness & earning journey! Use my referral code: {$referral_code}"
         ];
 
         // 7. Profile Progression Bar metrics
@@ -3359,11 +3369,7 @@ class Api extends CI_Controller
                 'status'     => $new_status,
                 'updated_at' => date('Y-m-d H:i:s')
             ], ['id' => (int)$order->id]);
-
-            // Distribute MLM referral commissions only when order reaches delivered status!
-            if ($new_status === 'delivered') {
-                $this->General_model->distribute_order_commissions((int)$id);
-            }
+            // Note: MLM commissions are distributed exclusively once upon member account activation
         }
 
         if ($this->db->trans_status() === FALSE) {
@@ -4368,5 +4374,47 @@ class Api extends CI_Controller
         }
 
         $this->response(true, 'Commission migration executed successfully.', $results, 200);
+    }
+
+    /**
+     * GET/POST api/migrate_activation_commission
+     * Ensures is_commission_distributed column exists on users table and member_commissions table exists.
+     */
+    public function migrate_activation_commission()
+    {
+        $results = [];
+        try {
+            // 1. Check is_commission_distributed column on users table
+            $check_col = $this->db->query("SHOW COLUMNS FROM `users` LIKE 'is_commission_distributed'")->row();
+            if (!$check_col) {
+                $this->db->query("ALTER TABLE `users` ADD COLUMN `is_commission_distributed` TINYINT(1) NOT NULL DEFAULT 0 AFTER `is_profile_active`");
+                $results['column'] = "Added 'is_commission_distributed' column to users table.";
+            } else {
+                $results['column'] = "'is_commission_distributed' column already exists in users table.";
+            }
+
+            // 2. Ensure existing active members have is_commission_distributed flag set to 1
+            $this->db->query("UPDATE `users` SET `is_commission_distributed` = 1 WHERE `is_profile_active` = 1");
+            $results['sync'] = "Updated is_commission_distributed flag for active members.";
+
+            // 3. Create member_commissions table
+            $this->db->query("CREATE TABLE IF NOT EXISTS `member_commissions` (
+                `id` int(11) NOT NULL AUTO_INCREMENT,
+                `member_id` int(11) NOT NULL,
+                `receiver_id` int(11) NOT NULL,
+                `level` int(11) NOT NULL,
+                `amount` decimal(10,2) NOT NULL,
+                `created_at` datetime NOT NULL,
+                PRIMARY KEY (`id`),
+                KEY `idx_member_id` (`member_id`),
+                KEY `idx_receiver_id` (`receiver_id`),
+                KEY `idx_level` (`level`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8");
+            $results['table'] = "Ensured 'member_commissions' table exists.";
+        } catch (\Throwable $e) {
+            $results['error'] = $e->getMessage();
+        }
+
+        $this->response(true, 'Activation commission migration executed successfully.', $results, 200);
     }
 }

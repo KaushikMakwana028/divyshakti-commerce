@@ -796,20 +796,20 @@
         // headroom so the "expand to parent" ▲ button always has clear space
         // above the card instead of overlapping/hiding behind it.
         OrgChart.templates.divyShakti = Object.assign({}, OrgChart.templates.ana);
-        OrgChart.templates.divyShakti.size = [240, 124];
+        OrgChart.templates.divyShakti.size = [250, 124];
 
         // Background card shape: white card pop fill, gold border (shifted down 14px to leave room for the parent button above it)
         OrgChart.templates.divyShakti.node =
-            '<rect x="0" y="14" height="110" width="240" fill="#ffffff" stroke="#D4AF37" stroke-width="2" rx="15" ry="15"></rect>' +
-            '<line x1="15" y1="94" x2="225" y2="94" stroke="#F4A6C6" stroke-width="1.5"></line>';
+            '<rect x="0" y="14" height="110" width="250" fill="#ffffff" stroke="#D4AF37" stroke-width="2" rx="15" ry="15"></rect>' +
+            '<line x1="15" y1="94" x2="235" y2="94" stroke="#F4A6C6" stroke-width="1.5"></line>';
 
         // Define parent expand button directly as a template element with dynamic display binding {val}.
         // Click handling is done via chart.on('click', ...) delegation (see below) rather than an
         // inline onclick attribute, since inline handlers on library-templated SVG are unreliable.
         OrgChart.templates.divyShakti.parent_btn =
             '<g class="parent-expand-btn" data-action="expand-parent" style="cursor:pointer; display: {val};">' +
-            '<circle cx="120" cy="12" r="12" fill="#ffffff" stroke="#D4AF37" stroke-width="1.5"></circle>' +
-            '<text x="120" y="16" text-anchor="middle" style="font-size: 12px; font-weight: bold; fill: #E91E8C; font-family:\'Poppins\',sans-serif; pointer-events: none;">▲</text>' +
+            '<circle cx="125" cy="12" r="12" fill="#ffffff" stroke="#D4AF37" stroke-width="1.5"></circle>' +
+            '<text x="125" y="16" text-anchor="middle" style="font-size: 12px; font-weight: bold; fill: #E91E8C; font-family:\'Poppins\',sans-serif; pointer-events: none;">▲</text>' +
             '</g>';
 
         // Circular clipping container for profile images using unique randId (shifted down 14px with the card)
@@ -821,11 +821,11 @@
 
         // Premium typography bindings (shifted down 14px with the card)
         OrgChart.templates.divyShakti.field_0 =
-            '<text width="140" style="font-size: 14px; font-weight: 700; font-family:\'Poppins\',sans-serif;" fill="#2B2B2B" x="85" y="46">{val}</text>'; // Name
+            '<text text-overflow="ellipsis" width="150" style="font-size: 13px; font-weight: 700; font-family:\'Poppins\',sans-serif;" fill="#2B2B2B" x="85" y="46">{val}</text>'; // Name
         OrgChart.templates.divyShakti.field_1 =
-            '<text width="140" style="font-size: 11px; font-family:\'Poppins\',sans-serif;" fill="#E91E9C" x="85" y="64">Code: {val}</text>'; // Referral code
+            '<text text-overflow="ellipsis" width="150" style="font-size: 11px; font-family:\'Poppins\',sans-serif;" fill="#E91E9C" x="85" y="64">Code: {val}</text>'; // Referral code
         OrgChart.templates.divyShakti.field_2 =
-            '<text width="140" style="font-size: 11px; font-weight: 600; font-family:\'Poppins\',sans-serif;" fill="#B8860B" x="85" y="82">Bal: ₹{val}</text>'; // Wallet Balance
+            '<text text-overflow="ellipsis" width="150" style="font-size: 11px; font-weight: 600; font-family:\'Poppins\',sans-serif;" fill="#B8860B" x="85" y="82">Bal: ₹{val}</text>'; // Wallet Balance
 
         // Function to build and format node objects for OrgChart.js.
         // IMPORTANT: `chart` must be null (not a stale/destroyed instance) whenever this
@@ -838,9 +838,14 @@
                 photoUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(userObj.name)}&background=F4A6C6&color=2B2B2B&bold=true&size=128`;
             }
 
+            let displayName = (userObj.name || '').trim();
+            if (displayName.length > 20) {
+                displayName = displayName.substring(0, 19).trim() + '…';
+            }
+
             const node = {
                 id: userObj.id,
-                name: userObj.name,
+                name: displayName,
                 referral_code: userObj.referral_code,
                 wallet_balance: parseFloat(userObj.wallet_balance).toFixed(2),
                 profile_image: photoUrl
@@ -858,9 +863,14 @@
                 node.parent_btn = 'none';
             }
 
-            // OrgChart.js requires a dynamic cids list to enable the expand "+" button on lazy loaded children
-            if (userObj.has_children) {
-                node.cids = [userObj.id + '_dummy_child'];
+            // OrgChart.js displays node.cids.length as the count in the expand (+) badge.
+            // Generate matching number of dummy child IDs so the badge displays the actual children count.
+            const childCount = parseInt(userObj.children_count) || (userObj.has_children ? 1 : 0);
+            if (childCount > 0) {
+                node.cids = [];
+                for (let i = 0; i < childCount; i++) {
+                    node.cids.push(userObj.id + '_dummy_child_' + i);
+                }
             }
 
             return node;

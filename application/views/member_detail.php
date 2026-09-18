@@ -115,13 +115,21 @@ $mpdSourceMap = [
                             <span class="badge bg-danger"><i class="fa-solid fa-clock me-1"></i> Pending Activation</span>
                         <?php endif; ?>
                     </div>
+                    <div class="d-flex justify-content-between align-items-center mt-2 pt-2 border-top">
+                        <span class="small fw-semibold text-muted">Activation Commission</span>
+                        <?php if (!empty($member->is_commission_distributed)): ?>
+                            <span class="badge bg-primary"><i class="fa-solid fa-check me-1"></i> Distributed</span>
+                        <?php else: ?>
+                            <span class="badge bg-secondary"><i class="fa-solid fa-hourglass-start me-1"></i> Not Distributed</span>
+                        <?php endif; ?>
+                    </div>
                 </div>
 
                 <!-- Activate/Deactivate Profile Action -->
                 <a href="<?php echo base_url('admin/members/activate_profile/' . $member->id); ?>"
                    class="mpd-btn w-100 mt-2 text-center"
                    style="<?php echo empty($member->is_profile_active) ? 'background-color: #198754; color: #fff; border-color: #198754;' : 'background-color: #fff; color: #dc3545; border: 1px solid #dc3545;'; ?>"
-                   data-confirm="Are you sure you want to <?php echo (!empty($member->is_profile_active)) ? 'deactivate' : 'activate and approve'; ?> this member profile?"
+                   data-confirm="<?php echo (!empty($member->is_profile_active)) ? 'Are you sure you want to deactivate this member profile?' : 'Are you sure you want to activate & approve this member profile? MLM referral commissions will be distributed once to eligible upline wallets.'; ?>"
                    data-confirm-title="<?php echo (!empty($member->is_profile_active)) ? 'Deactivate Profile?' : 'Activate Profile?'; ?>"
                    data-confirm-btn="<?php echo (!empty($member->is_profile_active)) ? 'Yes, Deactivate' : 'Yes, Activate & Approve'; ?>"
                    data-confirm-icon="<?php echo (!empty($member->is_profile_active)) ? 'warning' : 'question'; ?>"

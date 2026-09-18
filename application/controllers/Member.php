@@ -204,7 +204,12 @@ class Member extends CI_Controller
         ]);
 
         if ($new_status === 1) {
-            $this->session->set_flashdata('success', "Member profile for " . htmlspecialchars($user->name ?? 'Member') . " has been successfully activated and approved.");
+            $comm_distributed = $this->General_model->distribute_activation_commissions((int)$id);
+            if ($comm_distributed) {
+                $this->session->set_flashdata('success', "Member profile for " . htmlspecialchars($user->name ?? 'Member') . " has been successfully activated and referral commissions credited to upline wallets.");
+            } else {
+                $this->session->set_flashdata('success', "Member profile for " . htmlspecialchars($user->name ?? 'Member') . " has been successfully activated and approved.");
+            }
         } else {
             $this->session->set_flashdata('info', "Member profile for " . htmlspecialchars($user->name ?? 'Member') . " has been deactivated.");
         }
@@ -252,6 +257,7 @@ class Member extends CI_Controller
                     'wallet_balance' => (float)$row->wallet_balance,
                     'status'         => (int)$row->status,
                     'created_at'     => $row->created_at,
+                    'children_count' => (int)$row->children_count,
                     'has_children'   => (int)$row->children_count > 0
                 ];
             }
@@ -436,6 +442,13 @@ class Member extends CI_Controller
                 ->set_output(json_encode(['valid' => false, 'message' => 'No member found matching this referral code, custom ID, or phone number.']));
         }
 
+        $ref_err = null;
+        if (!$this->General_model->isReferrerEligible($sponsor, $ref_err)) {
+            return $this->output
+                ->set_content_type('application/json')
+                ->set_output(json_encode(['valid' => false, 'message' => 'Cannot set sponsor to #' . $sponsor->id . ' (' . $sponsor->name . '): ' . $ref_err]));
+        }
+
         if ($sponsor->id == $member_id) {
             return $this->output
                 ->set_content_type('application/json')
@@ -513,6 +526,10 @@ class Member extends CI_Controller
             // Check custom_id uniqueness excluding current user
             $custom_id = $this->input->post('custom_id', TRUE) ?: null;
             if (!empty($custom_id)) {
+                $custom_id = trim((string)$custom_id);
+                if (ctype_digit($custom_id) && strlen($custom_id) <= 7) {
+                    $custom_id = str_pad($custom_id, 7, '0', STR_PAD_LEFT);
+                }
                 $custom_id_check = $this->General_model->getOne('users', ['custom_id' => $custom_id, 'id !=' => $member->id]);
                 if ($custom_id_check) {
                     $this->session->set_flashdata('error', 'The Custom ID is already assigned to another member.');
@@ -559,6 +576,12 @@ class Member extends CI_Controller
 
                     if (!$sponsor) {
                         $this->session->set_flashdata('error', 'Parent Sponsor not found with code/phone/ID: ' . htmlspecialchars($parent_sponsor_input));
+                        redirect('admin/members/edit/' . $member->id);
+                    }
+
+                    $ref_err = null;
+                    if (!$this->General_model->isReferrerEligible($sponsor, $ref_err)) {
+                        $this->session->set_flashdata('error', 'Cannot assign member #' . $sponsor->id . ' (' . htmlspecialchars($sponsor->name) . ') as sponsor: ' . $ref_err);
                         redirect('admin/members/edit/' . $member->id);
                     }
 
@@ -691,6 +714,11 @@ class Member extends CI_Controller
             }
 
             $this->General_model->update('users', ['id' => $member->id], $update_data);
+
+            // Trigger activation commission distribution if member is active (runs once)
+            if ((int)$update_data['is_profile_active'] === 1) {
+                $this->General_model->distribute_activation_commissions((int)$member->id);
+            }
 
             // Recalculate profile completion metrics
             $updated_member = $this->General_model->getOne('users', ['id' => $member->id]);

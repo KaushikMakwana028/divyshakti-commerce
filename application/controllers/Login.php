@@ -124,8 +124,9 @@ class Login extends CI_Controller
 
                 if (!empty($referral_code)) {
                     $referrer = $this->General_model->getOne('users', ['referral_code' => $referral_code]);
-                    if (!$referrer) {
-                        $this->session->set_flashdata('error', 'Invalid referral code. Referrer not found.');
+                    $ref_err = null;
+                    if (!$this->General_model->isReferrerEligible($referrer, $ref_err)) {
+                        $this->session->set_flashdata('error', $ref_err);
                         $referral_valid = FALSE;
                     } else {
                         $parent_id = $referrer->id;

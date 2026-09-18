@@ -71,6 +71,9 @@
             flex-wrap: nowrap;
         }
         .btn-welcome {
+            position: relative;
+            z-index: 2;
+            cursor: pointer;
             padding: 8px 14px;
             border-radius: 10px;
             font-size: 0.82rem;
@@ -413,7 +416,7 @@
                     <a href="<?php echo base_url('admin/orders'); ?>" class="btn-welcome btn-welcome-outline">
                         <i class="fa-solid fa-receipt me-1.5 text-primary"></i>  Orders
                     </a>
-                    <a href="<?php echo base_url('admin/deposit'); ?>" class="btn-welcome btn-welcome-outline position-relative">
+                    <a href="<?php echo base_url('admin/deposits'); ?>" class="btn-welcome btn-welcome-outline position-relative">
                         <i class="fa-solid fa-wallet me-1.5 text-warning"></i>  Deposits
                         <?php if ($pending_deposits_count > 0): ?>
                             <span class="badge rounded-pill bg-danger ms-1" style="font-size: 0.65rem; padding: 2px 6px;">
@@ -547,7 +550,7 @@
                     <?php else: ?>
                         <span class="text-success"><i class="fa-solid fa-circle-check text-success me-1"></i> All requests approved</span>
                     <?php endif; ?>
-                    <a href="<?php echo base_url('admin/deposit'); ?>" class="text-warning text-decoration-none extra-small fw-semibold">Review &rarr;</a>
+                    <a href="<?php echo base_url('admin/deposits'); ?>" class="text-warning text-decoration-none extra-small fw-semibold">Review &rarr;</a>
                 </div>
             </div>
         </div>

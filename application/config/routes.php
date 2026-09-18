@@ -134,8 +134,11 @@ $route['admin/categories/edit/(:num)'] = 'Category/edit/$1';
 $route['admin/categories/delete/(:num)'] = 'Category/delete/$1';
 $route['admin/categories/toggle_status/(:num)'] = 'Category/toggle_status/$1';
 $route['admin/categories/ajax_get/(:num)'] = 'Category/ajax_get/$1';
+// Admin Product Routes
 $route['admin/products'] = 'Product/index';
+$route['admin/product'] = 'Product/index';
 $route['admin/products/add'] = 'Product/add';
+$route['admin/product/add'] = 'Product/add';
 $route['admin/products/detail/(:num)'] = 'Product/detail/$1';
 $route['admin/products/edit/(:num)'] = 'Product/edit/$1';
 $route['admin/products/delete/(:num)'] = 'Product/delete/$1';
@@ -143,6 +146,7 @@ $route['admin/logout'] = 'Login/logout';
 
 // Admin Member Routes
 $route['admin/members'] = 'Member/index';
+$route['admin/member'] = 'Member/index';
 $route['admin/members/view/(:num)'] = 'Member/view/$1';
 $route['admin/members/edit/(:num)'] = 'Member/edit/$1';
 $route['admin/members/ajax_check_sponsor'] = 'Member/ajax_check_sponsor';
@@ -156,6 +160,7 @@ $route['admin/members/transactions/(:num)'] = 'Member/transactions/$1';
 
 // Admin Order Routes
 $route['admin/orders'] = 'Order/index';
+$route['admin/order'] = 'Order/index';
 $route['admin/orders/detail/(:num)'] = 'Order/detail/$1';
 $route['admin/orders/status/(:num)'] = 'Order/update_status/$1';
 $route['admin/orders/delete/(:num)'] = 'Order/delete/$1';
@@ -166,6 +171,7 @@ $route['admin/commissions/update'] = 'Commission/update';
 
 // Admin Deposit Requests Routes
 $route['admin/deposits'] = 'Deposit/index';
+$route['admin/deposit'] = 'Deposit/index';
 $route['admin/deposits/approve/(:num)'] = 'Deposit/approve/$1';
 $route['admin/deposits/reject/(:num)'] = 'Deposit/reject/$1';
 
@@ -187,5 +193,6 @@ $route['process_delete_account'] = 'Home/process_delete_account';
 $route['api/privacy_policy'] = 'Api/privacy_policy';
 $route['api/terms_conditions'] = 'Api/terms_conditions';
 $route['api/delete_account'] = 'Api/delete_account';
+$route['api/migrate_activation_commission'] = 'Api/migrate_activation_commission';
 
 

@@ -725,12 +725,10 @@
                         <?php if (empty($commissions)): ?>
                             <tr>
                                 <td colspan="5" class="empty-row" style="padding: 24px 16px; text-align: center; color: #64748b;">
-                                    <?php if ($order->status === 'delivered' || $order->status === 'completed'): ?>
-                                        <i class="fa-solid fa-circle-info" style="color: #0ea5e9; margin-right: 6px;"></i> No referral commissions were recorded for this order (e.g., buyer has no eligible active upline sponsor).
-                                    <?php elseif ($order->status === 'cancelled'): ?>
-                                        <i class="fa-solid fa-ban" style="color: #ef4444; margin-right: 6px;"></i> Order is cancelled. No commissions distributed.
+                                    <?php if ($order->status === 'cancelled'): ?>
+                                        <i class="fa-solid fa-ban" style="color: #ef4444; margin-right: 6px;"></i> Order is cancelled.
                                     <?php else: ?>
-                                        <i class="fa-solid fa-clock" style="color: #f59e0b; margin-right: 6px;"></i> Referral commissions will be automatically credited to eligible upline wallets once this order is marked as <strong>DELIVERED</strong>. Current status: <strong><?php echo strtoupper($order->status); ?></strong>.
+                                        <i class="fa-solid fa-circle-info" style="color: #0ea5e9; margin-right: 6px;"></i> Referral commissions are distributed once upon member account activation, not per individual order.
                                     <?php endif; ?>
                                 </td>
                             </tr>
@@ -808,8 +806,8 @@
                 let confirmBtnText = 'Yes, Advance';
                 if (targetStatus === 'delivered') {
                     confirmTitle = 'Mark Order as Delivered?';
-                    confirmText = 'Marking this order as DELIVERED will automatically credit referral commissions to eligible upline wallets and complete the order. Are you sure you want to proceed?';
-                    confirmBtnText = 'Yes, Deliver & Distribute Commission';
+                    confirmText = 'Marking this order as DELIVERED will complete the order fulfillment. Are you sure you want to proceed?';
+                    confirmBtnText = 'Yes, Mark Delivered';
                 }
 
                 dsConfirm({
