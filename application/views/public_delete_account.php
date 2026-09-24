@@ -20,8 +20,7 @@
             --brand-pink-dark: #d81b60;
             --brand-gold: #d4af37;
             --brand-gold-dark: #b89428;
-            --brand-dark: #161c2d;
-            --brand-navy: #0f172a;
+            --brand-dark: #0f172a;
             --brand-bg: #f8fafc;
             --brand-card: #ffffff;
             --text-main: #1e293b;
@@ -40,7 +39,7 @@
             font-family: 'Poppins', sans-serif;
             background-color: var(--brand-bg);
             color: var(--text-main);
-            line-height: 1.7;
+            line-height: 1.75;
             min-height: 100vh;
             display: flex;
             flex-direction: column;
@@ -50,9 +49,11 @@
 
         /* Top Brand Navbar */
         .public-navbar {
-            background-color: #ffffff;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
             border-bottom: 1px solid var(--border-color);
-            box-shadow: 0 2px 12px rgba(0,0,0,0.03);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
             padding: 14px 0;
             position: sticky;
             top: 0;
@@ -82,48 +83,67 @@
             margin: 0;
         }
 
-        .nav-btn {
-            border-radius: 8px;
-            font-size: 0.82rem;
-            font-weight: 500;
+        .legal-portal-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            background: #f1f5f9;
+            color: #475569;
+            font-size: 0.78rem;
+            font-weight: 600;
             padding: 6px 14px;
-            transition: all 0.2s ease;
+            border-radius: 50px;
+            letter-spacing: 0.3px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .legal-portal-badge i {
+            color: var(--brand-pink);
+            font-size: 0.85rem;
         }
 
         /* Hero Header */
         .legal-hero {
-            background: linear-gradient(135deg, #111827 0%, #1e1b2e 50%, #1a2234 100%);
+            background: linear-gradient(135deg, #0b1120 0%, #161c2d 50%, #1e1b2e 100%);
             color: #ffffff;
-            padding: 56px 0 48px;
+            padding: 56px 0 68px;
             position: relative;
             overflow: hidden;
+            text-align: center;
             border-bottom: 4px solid var(--brand-gold);
         }
 
         .legal-hero::after {
             content: '';
             position: absolute;
-            top: -50%;
+            top: -40%;
             right: -10%;
-            width: 420px;
-            height: 420px;
-            background: radial-gradient(circle, rgba(236, 64, 122, 0.15) 0%, transparent 70%);
+            width: 450px;
+            height: 450px;
+            background: radial-gradient(circle, rgba(236, 64, 122, 0.16) 0%, transparent 70%);
             pointer-events: none;
         }
 
         .legal-hero::before {
             content: '';
             position: absolute;
-            bottom: -30%;
-            left: -5%;
-            width: 320px;
-            height: 320px;
-            background: radial-gradient(circle, rgba(212, 175, 55, 0.12) 0%, transparent 70%);
+            bottom: -40%;
+            left: -10%;
+            width: 450px;
+            height: 450px;
+            background: radial-gradient(circle, rgba(212, 175, 55, 0.14) 0%, transparent 70%);
             pointer-events: none;
         }
 
+        .hero-content-wrap {
+            max-width: 800px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 2;
+        }
+
         .hero-badge {
-            background: rgba(212, 175, 55, 0.18);
+            background: rgba(212, 175, 55, 0.16);
             color: #fce79a;
             border: 1px solid rgba(212, 175, 55, 0.35);
             font-size: 0.78rem;
@@ -133,33 +153,50 @@
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            margin-bottom: 14px;
+            margin-bottom: 16px;
+            letter-spacing: 0.3px;
         }
 
         .legal-title {
-            font-size: 2.25rem;
+            font-size: 2.35rem;
             font-weight: 800;
             letter-spacing: -0.5px;
-            margin-bottom: 10px;
+            margin-bottom: 12px;
+            color: #ffffff;
         }
 
         .legal-subtitle {
-            color: #cbd5e1;
-            font-size: 1rem;
-            margin-bottom: 0;
-            max-width: 720px;
+            color: #94a3b8;
+            font-size: 0.98rem;
             line-height: 1.6;
+            margin-bottom: 18px;
+        }
+
+        .hero-meta {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            background: rgba(255, 255, 255, 0.07);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 50px;
+            padding: 5px 16px;
+            font-size: 0.78rem;
+            color: #cbd5e1;
+        }
+
+        .meta-dot {
+            color: #64748b;
         }
 
         /* Content Card */
         .legal-card {
             background-color: var(--brand-card);
             border-radius: 20px;
-            border: 1px solid var(--border-color);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.04);
-            padding: 42px 40px;
-            margin-top: -30px;
-            margin-bottom: 60px;
+            border: 1px solid rgba(226, 232, 240, 0.9);
+            box-shadow: 0 12px 35px -8px rgba(15, 23, 42, 0.06), 0 4px 12px -2px rgba(15, 23, 42, 0.03);
+            padding: 48px 52px;
+            margin-top: -36px;
+            margin-bottom: 70px;
             position: relative;
             z-index: 10;
         }
@@ -168,21 +205,21 @@
         .highlights-strip {
             background: #f8fafc;
             border: 1px solid #e2e8f0;
-            border-radius: 14px;
-            padding: 16px 20px;
+            border-radius: 16px;
+            padding: 18px 24px;
             margin-bottom: 36px;
         }
 
         .highlight-item {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 14px;
         }
 
         .highlight-icon-wrap {
-            width: 40px;
-            height: 40px;
-            border-radius: 10px;
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -191,20 +228,20 @@
 
         .highlight-text h6 {
             margin: 0;
-            font-size: 0.88rem;
+            font-size: 0.9rem;
             font-weight: 700;
             color: var(--brand-dark);
         }
 
         .highlight-text p {
             margin: 0;
-            font-size: 0.78rem;
+            font-size: 0.8rem;
             color: var(--text-muted);
         }
 
         /* Section Headings */
         .section-header-wrap {
-            margin-bottom: 24px;
+            margin-bottom: 22px;
         }
 
         .section-eyebrow {
@@ -218,7 +255,7 @@
         }
 
         .section-heading {
-            font-size: 1.45rem;
+            font-size: 1.4rem;
             font-weight: 800;
             color: var(--brand-dark);
             margin: 0;
@@ -228,6 +265,7 @@
             color: var(--text-muted);
             font-size: 0.92rem;
             margin-top: 4px;
+            margin-bottom: 0;
         }
 
         /* Step Card Styling */
@@ -309,20 +347,20 @@
             background: #f8fafc;
             border: 1px solid #e2e8f0;
             border-left: 5px solid #3b82f6;
-            border-radius: 14px;
-            padding: 24px;
-            margin-bottom: 36px;
+            border-radius: 16px;
+            padding: 26px 28px;
+            margin-bottom: 38px;
         }
 
         .alt-request-badge {
             background: #eff6ff;
             color: #2563eb;
             font-weight: 600;
-            font-size: 0.75rem;
-            padding: 3px 10px;
+            font-size: 0.76rem;
+            padding: 4px 12px;
             border-radius: 50px;
             display: inline-block;
-            margin-bottom: 8px;
+            margin-bottom: 10px;
         }
 
         .alt-step-list {
@@ -347,7 +385,7 @@
 
         .policy-box {
             border-radius: 16px;
-            padding: 24px;
+            padding: 26px 24px;
             height: 100%;
         }
 
@@ -371,8 +409,8 @@
         }
 
         .policy-box-icon {
-            width: 36px;
-            height: 36px;
+            width: 38px;
+            height: 38px;
             border-radius: 10px;
             display: flex;
             align-items: center;
@@ -410,7 +448,7 @@
             margin-bottom: 10px;
             font-size: 0.86rem;
             color: #334155;
-            line-height: 1.5;
+            line-height: 1.55;
         }
 
         .policy-list li i {
@@ -424,9 +462,9 @@
             background: #fffbeb;
             border: 1px solid #fef3c7;
             border-left: 5px solid #f59e0b;
-            border-radius: 14px;
-            padding: 22px 24px;
-            margin-bottom: 36px;
+            border-radius: 16px;
+            padding: 24px 26px;
+            margin-bottom: 16px;
         }
 
         .consequences-card h5 {
@@ -447,100 +485,39 @@
             line-height: 1.65;
         }
 
-        /* Support Assistance Box */
-        .helpdesk-card {
-            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-            border-radius: 16px;
-            color: #ffffff;
-            padding: 28px 30px;
-            margin-bottom: 36px;
-            position: relative;
-            overflow: hidden;
+        /* Card Bottom Verification Badge */
+        .legal-card-footer {
+            margin-top: 3.5rem;
+            padding-top: 1.75rem;
+            border-top: 1px dashed #e2e8f0;
+            text-align: center;
         }
 
-        .helpdesk-card::after {
-            content: '';
-            position: absolute;
-            top: -40%;
-            right: -5%;
-            width: 250px;
-            height: 250px;
-            background: radial-gradient(circle, rgba(236, 64, 122, 0.2) 0%, transparent 70%);
-            pointer-events: none;
-        }
-
-        .help-contact-btn {
-            background: #ffffff;
-            color: var(--brand-dark);
-            font-weight: 600;
-            font-size: 0.86rem;
-            padding: 10px 18px;
-            border-radius: 10px;
-            text-decoration: none;
+        .footer-badge {
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            transition: all 0.2s ease;
-        }
-
-        .help-contact-btn:hover {
-            background: #f1f5f9;
-            color: var(--brand-pink);
-            transform: translateY(-1px);
-        }
-
-        /* Accordion */
-        .accordion-item {
+            background: #f8fafc;
             border: 1px solid #e2e8f0;
-            border-radius: 12px !important;
-            margin-bottom: 12px;
-            overflow: hidden;
+            padding: 7px 18px;
+            border-radius: 50px;
+            font-size: 0.84rem;
+            font-weight: 500;
+            color: #334155;
+            margin-bottom: 6px;
         }
 
-        .accordion-button {
-            font-weight: 600;
-            font-size: 0.95rem;
-            color: var(--brand-dark);
-            background-color: #ffffff;
-            padding: 18px 20px;
-            box-shadow: none !important;
-        }
-
-        .accordion-button:not(.collapsed) {
-            background-color: #f8fafc;
-            color: var(--brand-pink);
-        }
-
-        .accordion-body {
-            font-size: 0.88rem;
-            color: #64748b;
-            line-height: 1.65;
-            padding: 16px 20px 20px;
-            background-color: #ffffff;
-        }
-
-        /* Footer */
-        .public-footer {
-            margin-top: auto;
-            background-color: var(--brand-dark);
+        .footer-note {
+            font-size: 0.8rem;
             color: #94a3b8;
-            padding: 34px 0 24px;
-            border-top: 1px solid rgba(255,255,255,0.08);
-            font-size: 0.88rem;
-        }
-
-        .footer-link {
-            color: #cbd5e1;
-            text-decoration: none;
-            transition: color 0.2s;
-        }
-
-        .footer-link:hover {
-            color: var(--brand-gold);
+            margin: 0;
         }
 
         /* Responsive */
         @media (max-width: 992px) {
+            .legal-card {
+                padding: 36px 30px;
+            }
             .steps-container {
                 grid-template-columns: repeat(2, 1fr);
             }
@@ -551,12 +528,13 @@
 
         @media (max-width: 768px) {
             .legal-card {
-                padding: 26px 18px;
+                padding: 26px 20px;
                 border-radius: 16px;
-                margin-top: -20px;
+                margin-top: -24px;
+                margin-bottom: 40px;
             }
             .legal-title {
-                font-size: 1.7rem;
+                font-size: 1.8rem;
             }
             .steps-container {
                 grid-template-columns: 1fr;
@@ -579,13 +557,11 @@
                 <img src="<?php echo base_url('assets/images/logo.png'); ?>" alt="Divy Shakti Logo" class="brand-logo-img">
                 <span class="brand-title">DIVY SHAKTI</span>
             </a>
-            <div class="d-flex align-items-center gap-2">
-                <a href="<?php echo base_url('privacy_policy'); ?>" class="btn btn-outline-secondary nav-btn">
-                    <i class="fa-solid fa-shield-halved me-1"></i> Privacy Policy
-                </a>
-                <a href="<?php echo base_url('terms_conditions'); ?>" class="btn btn-outline-secondary nav-btn">
-                    <i class="fa-solid fa-file-contract me-1"></i> Terms of Use
-                </a>
+            <div class="d-none d-sm-flex align-items-center">
+                <span class="legal-portal-badge">
+                    <i class="fa-solid fa-user-shield"></i>
+                    <span>Account &amp; Data Portal</span>
+                </span>
             </div>
         </div>
     </header>
@@ -593,15 +569,18 @@
     <!-- Hero Banner -->
     <div class="legal-hero">
         <div class="container">
-            <div class="row align-items-center">
-                <div class="col-lg-10">
-                    <span class="hero-badge">
-                        <i class="fa-solid fa-shield-check"></i> Google Play &amp; App Store Compliance &bull; Data Erasure Guidelines
-                    </span>
-                    <h1 class="legal-title">Account Deletion &amp; Data Erasure Guide</h1>
-                    <p class="legal-subtitle">
-                        Clear, step-by-step instructions on how to permanently delete your Divy Shakti account, understand what data is erased, and review statutory data retention policies.
-                    </p>
+            <div class="hero-content-wrap">
+                <span class="hero-badge">
+                    <i class="fa-solid fa-shield-check"></i> Google Play &amp; App Store Compliance &bull; Data Erasure Guidelines
+                </span>
+                <h1 class="legal-title">Account Deletion &amp; Data Erasure Guide</h1>
+                <p class="legal-subtitle">
+                    Clear, step-by-step instructions on how to permanently delete your Divy Shakti account, understand what data is erased, and review statutory data retention policies.
+                </p>
+                <div class="hero-meta">
+                    <span><i class="fa-solid fa-shield-halved me-1"></i> Data Erasure Compliance</span>
+                    <span class="meta-dot">&bull;</span>
+                    <span><i class="fa-solid fa-building-shield me-1"></i> Divy Shakti Commerce</span>
                 </div>
             </div>
         </div>
@@ -610,7 +589,7 @@
     <!-- Main Content Container -->
     <main class="container">
         <div class="row justify-content-center">
-            <div class="col-lg-11">
+            <div class="col-lg-10 col-xl-9">
                 <div class="legal-card">
 
                     <!-- Quick Highlights Strip -->
@@ -831,114 +810,19 @@
                         </ul>
                     </div>
 
-                    <!-- Support Assistance Card -->
-                    <div class="helpdesk-card">
-                        <div class="row align-items-center">
-                            <div class="col-lg-8 mb-3 mb-lg-0">
-                                <h4 class="fw-bold mb-1" style="font-size: 1.2rem;">Have Questions or Need Help?</h4>
-                                <p class="mb-0 text-white-50 small">
-                                    Our data privacy and member support team is here to assist you Monday to Saturday (9:30 AM – 6:30 PM IST).
-                                </p>
-                            </div>
-                            <div class="col-lg-4 text-lg-end">
-                                <div class="d-flex flex-wrap gap-2 justify-content-lg-end">
-                                    <a href="mailto:support@divyshakti.com" class="help-contact-btn">
-                                        <i class="fa-solid fa-envelope text-primary"></i> Email Support
-                                    </a>
-                                    <a href="tel:+918160348894" class="help-contact-btn">
-                                        <i class="fa-solid fa-phone text-success"></i> Call Helpline
-                                    </a>
-                                </div>
-                            </div>
+                    <!-- Verified Official Badge (No buttons, no redirection links) -->
+                    <div class="legal-card-footer">
+                        <div class="footer-badge">
+                            <i class="fa-solid fa-shield-check text-primary"></i>
+                            <span>Official Google Play &amp; Apple Compliance Document &bull; <strong>Divy Shakti</strong></span>
                         </div>
-                    </div>
-
-                    <!-- Frequently Asked Questions -->
-                    <div class="section-header-wrap">
-                        <span class="section-eyebrow">Common Inquiries</span>
-                        <h2 class="section-heading">Frequently Asked Questions</h2>
-                    </div>
-
-                    <div class="accordion" id="faqAccordion">
-                        <div class="accordion-item">
-                            <h2 class="accordion-header" id="faqOne">
-                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">
-                                    Can I recover my account or wallet balance after deletion?
-                                </button>
-                            </h2>
-                            <div id="collapseOne" class="accordion-collapse collapse" aria-labelledby="faqOne" data-bs-parent="#faqAccordion">
-                                <div class="accordion-body">
-                                    No. Account deletion is permanent and cannot be reversed. Any remaining digital wallet balances, referral bonuses, commission points, and downline affiliations are permanently cancelled and forfeited upon deletion.
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="accordion-item">
-                            <h2 class="accordion-header" id="faqTwo">
-                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
-                                    What happens to orders that are currently being shipped?
-                                </button>
-                            </h2>
-                            <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="faqTwo" data-bs-parent="#faqAccordion">
-                                <div class="accordion-body">
-                                    Orders that have already been confirmed or shipped prior to deleting your account will proceed as scheduled. Delivery partners will complete delivery to your shipping address. Invoices for these orders are preserved in read-only archives for statutory taxation compliance.
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="accordion-item">
-                            <h2 class="accordion-header" id="faqThree">
-                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
-                                    Can I register again with the same mobile number in the future?
-                                </button>
-                            </h2>
-                            <div id="collapseThree" class="accordion-collapse collapse" aria-labelledby="faqThree" data-bs-parent="#faqAccordion">
-                                <div class="accordion-body">
-                                    Yes. Once your account data has been completely purged, your mobile number is released. You are welcome to create a brand-new account in the future as a new user.
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="accordion-item">
-                            <h2 class="accordion-header" id="faqFour">
-                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFour" aria-expanded="false" aria-controls="collapseFour">
-                                    How long does the complete data erasure process take?
-                                </button>
-                            </h2>
-                            <div id="collapseFour" class="accordion-collapse collapse" aria-labelledby="faqFour" data-bs-parent="#faqAccordion">
-                                <div class="accordion-body">
-                                    When initiated in the mobile app, your account is deactivated immediately and access credentials are terminated instantaneously. Active production data records are purged within 24 to 48 hours, and rotating server backup cycles are fully cleared within 30 days.
-                                </div>
-                            </div>
-                        </div>
+                        <p class="footer-note">Published by Divy Shakti Compliance Team &bull; All rights reserved</p>
                     </div>
 
                 </div>
             </div>
         </div>
     </main>
-
-    <!-- Footer -->
-    <footer class="public-footer">
-        <div class="container">
-            <div class="row gy-3 align-items-center">
-                <div class="col-md-6 text-center text-md-start">
-                    <p class="mb-0">&copy; <?php echo date('Y'); ?> <strong>Divy Shakti</strong>. All rights reserved.</p>
-                </div>
-                <div class="col-md-6 text-center text-md-end">
-                    <div class="d-inline-flex gap-3">
-                        <a href="<?php echo base_url('privacy_policy'); ?>" class="footer-link">Privacy Policy</a>
-                        <span>&bull;</span>
-                        <a href="<?php echo base_url('terms_conditions'); ?>" class="footer-link">Terms &amp; Conditions</a>
-                        <span>&bull;</span>
-                        <a href="<?php echo base_url('delete_account'); ?>" class="footer-link text-warning">Account Deletion Guide</a>
-                        <span>&bull;</span>
-                        <a href="<?php echo base_url('admin/login'); ?>" class="footer-link">Admin Portal</a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </footer>
 
     <!-- Bootstrap 5 JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>

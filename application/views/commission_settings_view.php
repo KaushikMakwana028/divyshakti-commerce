@@ -361,9 +361,36 @@
         </div>
 
         <div class="cms-body">
+            <?php
+            // Ensure all 12 levels are guaranteed to render even if DB was wiped/empty
+            $existing_levels = [];
+            if (!empty($settings) && (is_array($settings) || is_object($settings))) {
+                foreach ($settings as $setting) {
+                    $existing_levels[(int)$setting->level] = $setting;
+                }
+            }
+
+            $default_amounts_map = [
+                1 => '50.00', 2 => '35.00', 3 => '25.00', 4 => '20.00',
+                5 => '15.00', 6 => '12.00', 7 => '10.00', 8 => '8.00',
+                9 => '6.00',  10 => '4.00', 11 => '3.00', 12 => '2.00'
+            ];
+
+            $render_settings = [];
+            for ($lvl = 1; $lvl <= 12; $lvl++) {
+                if (isset($existing_levels[$lvl])) {
+                    $render_settings[] = $existing_levels[$lvl];
+                } else {
+                    $render_settings[] = (object)[
+                        'level'  => $lvl,
+                        'amount' => $default_amounts_map[$lvl] ?? '0.00'
+                    ];
+                }
+            }
+            ?>
             <form action="<?php echo base_url('admin/commissions/update'); ?>" method="POST" id="commissionForm">
                 <div class="cms-level-grid">
-                    <?php foreach ($settings as $setting): ?>
+                    <?php foreach ($render_settings as $setting): ?>
                         <div class="cms-level-card">
                             <label for="amt_<?php echo $setting->level; ?>" class="cms-level-label">
                                 <i class="fa-solid fa-layer-group"></i> Level <?php echo $setting->level; ?>

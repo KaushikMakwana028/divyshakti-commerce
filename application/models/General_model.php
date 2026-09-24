@@ -231,12 +231,19 @@ class General_model extends CI_Model
         $member_display = !empty($member->name) ? $member->name : ('Member #' . $member->id);
         $member_custom_id = !empty($member->custom_id) ? " ({$member->custom_id})" : "";
 
+        // Default fallbacks in case commission_settings is empty/truncated
+        $default_fallbacks = [
+            1 => 50.00, 2 => 35.00, 3 => 25.00, 4 => 20.00,
+            5 => 15.00, 6 => 12.00, 7 => 10.00, 8 => 8.00,
+            9 => 6.00,  10 => 4.00, 11 => 3.00, 12 => 2.00
+        ];
+
         for ($level = 1; $level <= 12; $level++) {
             if (empty($ancestor_id)) {
                 break;
             }
 
-            $fixed_amount = isset($levels_amount[$level]) ? $levels_amount[$level] : 0.00;
+            $fixed_amount = isset($levels_amount[$level]) ? $levels_amount[$level] : ($default_fallbacks[$level] ?? 0.00);
             $ancestor = $this->getOne('users', ['id' => (int)$ancestor_id]);
             if (!$ancestor) {
                 break;

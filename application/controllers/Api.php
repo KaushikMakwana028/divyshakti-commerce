@@ -100,7 +100,8 @@ class Api extends CI_Controller
                         ];
                     }
                 }
-            } catch (\Exception $ex) {}
+            } catch (\Exception $ex) {
+            }
             $this->response(false, 'Unauthorized: ' . $e->getMessage(), null, 401);
         } catch (\Exception $e) {
             $this->response(false, 'Unauthorized: ' . $e->getMessage(), null, 401);
@@ -551,10 +552,10 @@ class Api extends CI_Controller
         }
 
         // Default OTP for development as requested:
-        $otp = '123456';
+        // $otp = '123456';
         // When going live, uncomment live random OTP generation and SMS sending:
-        // $otp = (string) random_int(100000, 999999);
-        // $this->send_otp_via_sms($mobile, $otp);
+        $otp = (string) random_int(100000, 999999);
+        $this->send_otp_via_sms($mobile, $otp);
 
         $user_data = json_encode([
             'name'          => $name,
@@ -717,10 +718,10 @@ class Api extends CI_Controller
 
         // Generate OTP
         // Default OTP for development as requested:
-        $otp = '123456';
+        // $otp = '123456';
         // When going live, uncomment live random OTP generation and SMS sending:
-        // $otp = (string) random_int(100000, 999999);
-        // $this->send_otp_via_sms($mobile, $otp);
+        $otp = (string) random_int(100000, 999999);
+        $this->send_otp_via_sms($mobile, $otp);
 
         // Clear old OTPs for this user_id
         $this->db->where('user_id', (int) $user->id)->delete('user_login_otps');
@@ -1090,6 +1091,80 @@ class Api extends CI_Controller
 
         $this->response(true, 'Profile retrieved successfully', $user_data, 200);
     }
+    public function delete_account_user()
+{
+     if ($this->input->method() !== 'delete') {
+        $this->response(false, 'Invalid request method. Use DELETE method.', null, 405);
+        return;
+    }
+    $auth = $this->check_auth();
+    $user_id = $auth['decoded']->user_id;
+
+    $user = $this->General_model->getOne('users', ['id' => $user_id]);
+
+    if (!$user) {
+        $this->response(false, 'User not found', null, 404);
+    }
+
+    // Start transaction for data integrity
+    $this->db->trans_start();
+
+    try {
+        // 1. Delete from cart
+        $this->db->delete('cart', ['user_id' => $user_id]);
+
+        // 2. Delete from user_addresses
+        $this->db->delete('user_addresses', ['user_id' => $user_id]);
+
+        // 3. Delete from user_login_otps
+        $this->db->delete('user_login_otps', ['user_id' => $user_id]);
+
+        // 4. Delete from wallet_transactions
+        $this->db->delete('wallet_transactions', ['user_id' => $user_id]);
+
+        // 5. Delete from wallet_deposit_requests
+        $this->db->delete('wallet_deposit_requests', ['user_id' => $user_id]);
+
+        // 6. Delete from wallet_withdraw_requests
+        $this->db->delete('wallet_withdraw_requests', ['user_id' => $user_id]);
+
+        // 7. Delete from order_commissions (as receiver and buyer)
+        $this->db->delete('order_commissions', ['receiver_id' => $user_id]);
+        $this->db->delete('order_commissions', ['buyer_id' => $user_id]);
+
+        // 8. Delete from orders
+        $this->db->delete('orders', ['user_id' => $user_id]);
+
+        // 9. Delete from member_commissions (as receiver and member)
+        $this->db->delete('member_commissions', ['receiver_id' => $user_id]);
+        $this->db->delete('member_commissions', ['member_id' => $user_id]);
+
+        // 10. Update any users who have this user as parent (set parent_id to NULL)
+        $this->db->where('parent_id', $user_id);
+        $this->db->update('users', ['parent_id' => NULL]);
+
+        // 11. Delete from token_blacklist
+        $this->db->delete('token_blacklist', ['user_id' => $user_id]);
+
+        // 12. Finally, delete the user record
+        $this->db->delete('users', ['id' => $user_id]);
+
+        $this->db->trans_complete();
+
+        if ($this->db->trans_status() === FALSE) {
+            $this->response(false, 'Failed to delete account. Please try again.', null, 500);
+            return;
+        }
+
+        $this->response(true, 'Account deleted successfully. All your data has been permanently removed.', null, 200);
+
+    } catch (Exception $e) {
+        $this->db->trans_rollback();
+        $this->response(false, 'An error occurred while deleting your account.', null, 500);
+    }
+}
+
+
 
     /**
      * POST api/update_profile
@@ -3207,7 +3282,8 @@ class Api extends CI_Controller
         ];
         try {
             $cancel_data['commission_distributed'] = 0;
-        } catch (\Throwable $e) {}
+        } catch (\Throwable $e) {
+        }
         $this->db->update('orders', $cancel_data, ['id' => (int)$order->id]);
 
         if ($this->db->trans_status() === FALSE) {
@@ -3402,7 +3478,8 @@ class Api extends CI_Controller
             ];
             try {
                 $cancel_data['commission_distributed'] = 0;
-            } catch (\Throwable $e) {}
+            } catch (\Throwable $e) {
+            }
             $this->db->update('orders', $cancel_data, ['id' => (int)$order->id]);
         } else {
             // Forward transition
@@ -4336,6 +4413,12 @@ class Api extends CI_Controller
      * GET api/get_referrals
      * Authenticated endpoint to fetch the user's direct referrals list
      */
+    /**
+     * GET api/get_referrals
+     * Authenticated endpoint to fetch the user's downline referrals and personal network tree only.
+     * Strictly isolates data: User only sees themselves and downline members (A under Kaushik, B under A).
+     * Downline members (A) cannot see parent (Kaushik), and B cannot see A or Kaushik.
+     */
     public function get_referrals()
     {
         if ($this->input->method(TRUE) !== 'GET') {
@@ -4345,60 +4428,172 @@ class Api extends CI_Controller
         $auth = $this->check_auth();
         $user_id = (int)$auth['decoded']->user_id;
 
-        // Fetch users who registered using the current user's referral code (parent_id = current user's ID)
-        $this->db->select('id, custom_id, name, email, phone, gender, profile_image, referral_code, wallet_balance, is_profile_active, is_profile_completed, status, created_at');
-        $this->db->from('users');
-        $this->db->where('parent_id', $user_id);
-        $this->db->where('role', 0);
-        $this->db->order_by('id', 'DESC');
-        $query = $this->db->get();
-        $rows = $query->result();
+        // Fetch all members (role = 0) to build parent-child links in memory
+        $all_members_query = $this->db->select('id, custom_id, name, email, phone, gender, profile_image, referral_code, wallet_balance, is_profile_active, is_profile_completed, status, created_at, parent_id')
+            ->from('users')
+            ->order_by('id', 'ASC')
+            ->get();
+        $all_rows = $all_members_query->result();
 
-        $referrals = [];
-        $active_count = 0;
+        $color_palette = ['#E64A78', '#C89738', '#7B61C4', '#4A7CE6', '#0E9F6E', '#3F83F8'];
+        $nodes_by_id = [];
+        $children_by_parent = [];
 
-        foreach ($rows as $row) {
+        foreach ($all_rows as $idx => $row) {
+            $node_id = (int)$row->id;
+            $parent_key = ($row->parent_id !== null && $row->parent_id !== '' && (int)$row->parent_id > 0) ? (int)$row->parent_id : 0;
             $is_active = ((int)$row->status === 1 && !empty($row->is_profile_active));
-            if ($is_active) {
-                $active_count++;
+            $wallet_val = (float)($row->wallet_balance ?? 0.00);
+
+            // Initials calculation
+            $parts = array_filter(explode(' ', trim($row->name)));
+            $initials = '';
+            foreach ($parts as $p) {
+                $initials .= strtoupper($p[0]);
+                if (strlen($initials) >= 2) break;
+            }
+            if (empty($initials)) {
+                $initials = 'DS';
             }
 
-            // Order metrics for this referral
-            $ord_stat = $this->db->select('COUNT(*) as cnt, SUM(amount) as total')
-                ->where('user_id', (int)$row->id)
-                ->where_in('status', ['placed', 'confirmed', 'packed', 'out_for_delivery', 'delivered'])
-                ->get('orders')
-                ->row();
+            $img = $this->get_user_image_url($row->profile_image ?? '');
 
-            $referrals[] = [
-                'id'                   => (int)$row->id,
-                'custom_id'            => $row->custom_id ?: str_pad($row->id, 7, '0', STR_PAD_LEFT),
+            $nodes_by_id[$node_id] = [
+                'id'                   => (string)$node_id,
+                'user_id'              => $node_id,
+                'parent_id'            => $parent_key > 0 ? $parent_key : null,
+                'custom_id'            => $row->custom_id ?: str_pad($node_id, 7, '0', STR_PAD_LEFT),
                 'name'                 => $row->name,
-                'email'                => $row->email ?: '',
-                'phone'                => $row->phone ?: '',
-                'gender'               => $row->gender ?: null,
-                'profile_image'        => $this->get_user_image_url($row->profile_image ?? ''),
+                'code'                 => $row->referral_code,
                 'referral_code'        => $row->referral_code,
-                'wallet_balance'       => (float)($row->wallet_balance ?? 0.00),
-                'is_profile_active'    => (bool)($row->is_profile_active ?? 0),
-                'is_profile_completed' => (bool)($row->is_profile_completed ?? 0),
-                'status'               => (int)$row->status,
-                'status_label'         => ((int)$row->status === 1) ? ($is_active ? 'Active' : 'Pending KYC') : 'Blocked',
-                'total_orders'         => (int)($ord_stat->cnt ?? 0),
-                'total_spent'          => (float)($ord_stat->total ?? 0.00),
-                'created_at'           => $row->created_at,
-                'joined_formatted'     => date('M d, Y', strtotime($row->created_at))
+                'slot'                 => '₹' . number_format($wallet_val, 2),
+                'slot_amount'          => $wallet_val,
+                'wallet_balance'       => $wallet_val,
+                'avatar'               => $img,
+                'profile_image'        => $img,
+                'initials'             => $initials,
+                'badgeColor'           => $color_palette[$idx % count($color_palette)],
+                'status'               => $is_active ? 'Active' : ((int)$row->status === 1 ? 'Pending KYC' : 'Inactive'),
+                'is_active'            => $is_active,
+                'phone'                => $row->phone ?: '',
+                'email'                => $row->email ?: '',
+                'gender'               => $row->gender ?: null,
+                'joined'               => date('d M Y', strtotime($row->created_at)),
+                'children'             => []
             ];
+
+            if (!isset($children_by_parent[$parent_key])) {
+                $children_by_parent[$parent_key] = [];
+            }
+            $children_by_parent[$parent_key][] = $node_id;
         }
 
-        $total = count($referrals);
+        // Ensure the current user exists in nodes
+        if (!isset($nodes_by_id[$user_id])) {
+            $user_row = $this->db->get_where('users', ['id' => $user_id])->row();
+            if ($user_row) {
+                $is_active = ((int)$user_row->status === 1 && !empty($user_row->is_profile_active));
+                $wallet_val = (float)($user_row->wallet_balance ?? 0.00);
+                $parts = array_filter(explode(' ', trim($user_row->name)));
+                $initials = '';
+                foreach ($parts as $p) {
+                    $initials .= strtoupper($p[0]);
+                    if (strlen($initials) >= 2) break;
+                }
+                if (empty($initials)) $initials = 'DS';
+                $img = $this->get_user_image_url($user_row->profile_image ?? '');
 
-        $this->response(true, 'Direct referrals retrieved successfully', [
-            'referrals'        => $referrals,
-            'total'            => $total,
-            'total_referrals'  => $total,
-            'active_referrals' => $active_count,
-            'levels'           => 1,
+                $nodes_by_id[$user_id] = [
+                    'id'                   => (string)$user_id,
+                    'user_id'              => $user_id,
+                    'parent_id'            => $user_row->parent_id ? (int)$user_row->parent_id : null,
+                    'custom_id'            => $user_row->custom_id ?: str_pad($user_id, 7, '0', STR_PAD_LEFT),
+                    'name'                 => $user_row->name,
+                    'code'                 => $user_row->referral_code,
+                    'referral_code'        => $user_row->referral_code,
+                    'slot'                 => '₹' . number_format($wallet_val, 2),
+                    'slot_amount'          => $wallet_val,
+                    'wallet_balance'       => $wallet_val,
+                    'avatar'               => $img,
+                    'profile_image'        => $img,
+                    'initials'             => $initials,
+                    'badgeColor'           => '#C89738',
+                    'status'               => $is_active ? 'Active' : ((int)$user_row->status === 1 ? 'Pending KYC' : 'Inactive'),
+                    'is_active'            => $is_active,
+                    'phone'                => $user_row->phone ?: '',
+                    'email'                => $user_row->email ?: '',
+                    'gender'               => $user_row->gender ?: null,
+                    'joined'               => date('d M Y', strtotime($user_row->created_at)),
+                    'children'             => []
+                ];
+            }
+        }
+
+        // Strictly traverse DOWNLINE only from the current user
+        $downline_members = [];
+        $downline_stats = [
+            'total'     => 0,
+            'active'    => 0,
+            'max_depth' => 0
+        ];
+        $visited = [$user_id]; // Prevent cycles & ensure parent/ancestor cannot be re-visited
+
+        $build_downline_tree = function ($parent_id, $relative_level) use (
+            &$build_downline_tree,
+            &$nodes_by_id,
+            &$children_by_parent,
+            &$downline_members,
+            &$downline_stats,
+            &$visited
+        ) {
+            $child_ids = $children_by_parent[$parent_id] ?? [];
+            $branch = [];
+
+            foreach ($child_ids as $c_id) {
+                if (!isset($nodes_by_id[$c_id])) continue;
+                if (in_array($c_id, $visited)) continue;
+                $visited[] = $c_id;
+
+                $node = $nodes_by_id[$c_id];
+                $node['level'] = $relative_level;
+
+                $downline_stats['total']++;
+                if ($node['is_active']) {
+                    $downline_stats['active']++;
+                }
+                if ($relative_level - 1 > $downline_stats['max_depth']) {
+                    $downline_stats['max_depth'] = $relative_level - 1;
+                }
+
+                // Recursively attach children
+                $node['children'] = $build_downline_tree($c_id, $relative_level + 1);
+                $node['children_count'] = count($node['children']);
+
+                $downline_members[] = $node;
+                $branch[] = $node;
+            }
+
+            return $branch;
+        };
+
+        // Construct user's downline tree: User is Root (Level 1), direct referrals are Level 2, etc.
+        $user_downline_tree = [];
+        if (isset($nodes_by_id[$user_id])) {
+            $root_node = $nodes_by_id[$user_id];
+            $root_node['level'] = 1;
+            $root_node['children'] = $build_downline_tree($user_id, 2);
+            $root_node['children_count'] = count($root_node['children']);
+            $user_downline_tree = [$root_node];
+        }
+
+        $this->response(true, 'Downline network tree retrieved successfully', [
+            'tree'             => $user_downline_tree,
+            'my_tree'          => $user_downline_tree,
+            'referrals'        => $downline_members,
+            'total'            => $downline_stats['total'],
+            'total_referrals'  => $downline_stats['total'],
+            'active_referrals' => $downline_stats['active'],
+            'levels'           => max($downline_stats['max_depth'], 1),
         ], 200);
     }
 
@@ -4609,9 +4804,18 @@ class Api extends CI_Controller
 
             // Seed default amounts if 0
             $defaults = [
-                1 => 50.00, 2 => 35.00, 3 => 25.00, 4 => 20.00,
-                5 => 15.00, 6 => 12.00, 7 => 10.00, 8 => 8.00,
-                9 => 6.00,  10 => 4.00, 11 => 3.00, 12 => 2.00
+                1 => 50.00,
+                2 => 35.00,
+                3 => 25.00,
+                4 => 20.00,
+                5 => 15.00,
+                6 => 12.00,
+                7 => 10.00,
+                8 => 8.00,
+                9 => 6.00,
+                10 => 4.00,
+                11 => 3.00,
+                12 => 2.00
             ];
             foreach ($defaults as $lvl => $amt) {
                 $this->db->query("UPDATE `commission_settings` SET `amount` = {$amt} WHERE `level` = {$lvl} AND (`amount` = 0.00 OR `amount` IS NULL)");
@@ -4673,7 +4877,9 @@ class Api extends CI_Controller
                 try {
                     $check = $this->db->query("SHOW INDEX FROM `{$table}` WHERE Key_name = '{$idx_name}'")->row();
                     if (!$check) {
-                        $col_str = implode(', ', array_map(function($c) { return "`$c`"; }, $cols));
+                        $col_str = implode(', ', array_map(function ($c) {
+                            return "`$c`";
+                        }, $cols));
                         $this->db->query("ALTER TABLE `{$table}` ADD INDEX `{$idx_name}` ({$col_str})");
                         $results[] = "Added index {$idx_name} on {$table}";
                     } else {
