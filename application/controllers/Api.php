@@ -1043,7 +1043,8 @@ class Api extends CI_Controller
 
         // 6. Referral & Sharing Info
         $referral_code = $user->referral_code ?? '';
-        $is_referral_active = (!empty($user->is_profile_active) && (int)$user->is_profile_active === 1 && (int)$user->status === 1);
+        // Referral code is active and shareable even if profile is not yet 100% complete
+        $is_referral_active = ((int)$user->status === 1);
         $referral_info = [
             'referral_code'      => $referral_code,
             'is_referral_active' => $is_referral_active,
@@ -3852,6 +3853,8 @@ class Api extends CI_Controller
 
         $has_bank_details = !empty($user->account_number) && !empty($user->ifsc_code);
 
+        $completion = $this->calculate_profile_completion($user);
+
         // Fetch pending withdrawal count & sum
         $pending = $this->db->select('COUNT(*) as count, COALESCE(SUM(amount), 0) as total')
             ->where(['user_id' => $user_id, 'status' => 'pending'])
@@ -3861,7 +3864,10 @@ class Api extends CI_Controller
         $can_withdraw = true;
         $ineligibility_reason = null;
 
-        if (!$has_bank_details) {
+        if (!$completion['is_completed']) {
+            $can_withdraw = false;
+            $ineligibility_reason = 'Your profile is ' . $completion['percentage'] . '% complete. You must complete 100% of your profile (Aadhar, PAN, and Bank details) before requesting a withdrawal.';
+        } elseif (!$has_bank_details) {
             $can_withdraw = false;
             $ineligibility_reason = 'Please complete your bank details in profile before withdrawing.';
         } elseif ($wallet_balance < $min_withdraw_amount) {
@@ -3870,16 +3876,19 @@ class Api extends CI_Controller
         }
 
         $this->response(true, 'Withdrawal information retrieved successfully', [
-            'wallet_balance'       => $wallet_balance,
-            'formatted_balance'    => '₹' . number_format($wallet_balance, 2),
-            'min_withdraw_amount'  => $min_withdraw_amount,
-            'formatted_min_amount' => '₹' . number_format($min_withdraw_amount, 2),
-            'bank_details'         => $bank_details,
-            'has_bank_details'     => $has_bank_details,
-            'pending_count'        => (int)($pending->count ?? 0),
-            'pending_amount'       => (float)($pending->total ?? 0),
-            'can_withdraw'         => $can_withdraw,
-            'ineligibility_reason' => $ineligibility_reason
+            'wallet_balance'                => $wallet_balance,
+            'formatted_balance'             => '₹' . number_format($wallet_balance, 2),
+            'min_withdraw_amount'           => $min_withdraw_amount,
+            'formatted_min_amount'          => '₹' . number_format($min_withdraw_amount, 2),
+            'bank_details'                  => $bank_details,
+            'has_bank_details'              => $has_bank_details,
+            'pending_count'                 => (int)($pending->count ?? 0),
+            'pending_amount'                => (float)($pending->total ?? 0),
+            'can_withdraw'                  => $can_withdraw,
+            'ineligibility_reason'          => $ineligibility_reason,
+            'is_profile_completed'          => (bool)$completion['is_completed'],
+            'profile_completion_percentage' => (int)$completion['percentage'],
+            'missing_fields'                => $completion['missing_fields']
         ], 200);
     }
 
@@ -3912,6 +3921,21 @@ class Api extends CI_Controller
 
         if ((int)$user->status === 0) {
             $this->response(false, 'Your account is suspended. Please contact support.', null, 403);
+        }
+
+        // Enforce 100% profile completion before allowing withdrawal
+        $completion = $this->calculate_profile_completion($user);
+        if (!$completion['is_completed']) {
+            $this->response(
+                false,
+                "Your profile is " . $completion['percentage'] . "% complete. You cannot withdraw funds until your profile is 100% complete. Please complete all required profile details (Aadhar, PAN, and Bank details) to request a withdrawal.",
+                [
+                    'profile_completion_percentage' => (int)$completion['percentage'],
+                    'is_profile_completed'          => false,
+                    'missing_fields'                => $completion['missing_fields']
+                ],
+                400
+            );
         }
 
         $this->load->library('form_validation');

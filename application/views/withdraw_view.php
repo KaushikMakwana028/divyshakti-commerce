@@ -2,7 +2,7 @@
     /* =======================================================
        Wallet Withdrawal Requests — Luxury Scoped Styles (.wd-)
        ======================================================= */
-    .wd-wrap {
+    :root, .wd-wrap, .wd-modal {
         --wd-gold: #c89738;
         --wd-gold-dark: #a97c26;
         --wd-pink: #ec407a;
@@ -14,8 +14,27 @@
         --wd-radius: 16px;
         --wd-radius-sm: 12px;
         --wd-shadow: 0 2px 8px rgba(17, 24, 39, .05);
+    }
+
+    .wd-wrap {
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
         color: var(--wd-text);
+    }
+
+    .wd-btn-gold {
+        background: linear-gradient(135deg, #c89738, #a97c26) !important;
+        border: none !important;
+        color: #ffffff !important;
+        font-weight: 600 !important;
+        box-shadow: 0 4px 12px rgba(200, 151, 56, .28) !important;
+        transition: all .2s ease !important;
+    }
+
+    .wd-btn-gold:hover {
+        background: linear-gradient(135deg, #a97c26, #8c641b) !important;
+        color: #ffffff !important;
+        transform: translateY(-1px);
+        box-shadow: 0 6px 16px rgba(200, 151, 56, .38) !important;
     }
 
     .wd-wrap * {
@@ -805,6 +824,15 @@
                                         <?php if (!empty($req->user_custom_id)): ?>
                                             <span class="wd-custom-id-pill"><?php echo htmlspecialchars($req->user_custom_id); ?></span>
                                         <?php endif; ?>
+                                        <?php if ((int)($req->user_profile_completed ?? 0) === 1 || (int)($req->user_profile_pct ?? 0) >= 100): ?>
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size:.65rem; border-radius:999px;">
+                                                <i class="fa-solid fa-circle-check"></i> 100% KYC
+                                            </span>
+                                        <?php else: ?>
+                                            <span class="badge bg-warning-subtle text-dark border border-warning-subtle" style="font-size:.65rem; border-radius:999px;" title="Profile must be 100% complete before withdrawal">
+                                                <i class="fa-solid fa-triangle-exclamation text-warning"></i> <?php echo (int)($req->user_profile_pct ?? 0); ?>% KYC
+                                            </span>
+                                        <?php endif; ?>
                                     </div>
                                     <div class="wd-member-sub">
                                         <i class="fa-solid fa-phone fa-xs me-1 text-muted"></i><?php echo htmlspecialchars($req->user_phone ?? '-'); ?>
@@ -892,6 +920,8 @@
                                                 data-raw-balance="<?php echo (float)$req->user_wallet_balance; ?>"
                                                 data-bank-name="<?php echo htmlspecialchars($req->bank_name ?? ''); ?>"
                                                 data-account-no="<?php echo htmlspecialchars($req->account_number ?? ''); ?>"
+                                                data-profile-completed="<?php echo ((int)($req->user_profile_completed ?? 0) === 1 || (int)($req->user_profile_pct ?? 0) >= 100) ? '1' : '0'; ?>"
+                                                data-profile-pct="<?php echo (int)($req->user_profile_pct ?? 0); ?>"
                                                 data-action-url="<?php echo base_url('admin/withdrawals/approve/' . $req->id); ?>">
                                                 <i class="fa-solid fa-check"></i>
                                             </button>
@@ -1062,6 +1092,11 @@
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
+                    <div id="apprProfileWarning" class="alert alert-danger py-2 px-3 small mb-3 rounded-3" style="display:none;">
+                        <i class="fa-solid fa-ban me-1"></i>
+                        <strong>Cannot Approve:</strong> This member's profile is only <span id="apprProfilePct" class="fw-bold">0</span>% complete. Profile must be 100% complete before withdrawal can be approved.
+                    </div>
+
                     <div class="wd-warning-box">
                         <i class="fa-solid fa-triangle-exclamation"></i>
                         <p>
@@ -1184,7 +1219,7 @@
                 </div>
                 <div class="modal-footer bg-light border-0">
                     <button type="button" class="btn btn-outline-secondary px-4 py-2 rounded-3" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary px-4 py-2 rounded-3 fw-bold" style="background:var(--wd-gold); border-color:var(--wd-gold);">
+                    <button type="submit" class="btn wd-btn-gold px-4 py-2 rounded-3">
                         <i class="fa-solid fa-floppy-disk me-1"></i> Save Minimum Limit
                     </button>
                 </div>
@@ -1253,16 +1288,33 @@ document.addEventListener('DOMContentLoaded', function() {
             const remainingEl = document.getElementById('apprRemainingBalance');
             const confirmBtn = document.getElementById('confirmApproveBtn');
 
+            const isProfileCompleted = (this.dataset.profileCompleted === '1');
+            const profilePct = this.dataset.profilePct || '0';
+            const profileWarn = document.getElementById('apprProfileWarning');
+            const profilePctEl = document.getElementById('apprProfilePct');
+
             if (remaining < 0) {
                 remainingEl.textContent = '₹' + remaining.toFixed(2) + ' (Insufficient Balance!)';
                 remainingEl.className = 'text-danger fw-bold';
                 confirmBtn.disabled = true;
                 confirmBtn.title = 'Cannot approve: Insufficient member balance';
+            } else if (!isProfileCompleted) {
+                remainingEl.textContent = '₹' + remaining.toFixed(2);
+                remainingEl.className = 'text-primary fw-bold';
+                confirmBtn.disabled = true;
+                confirmBtn.title = 'Cannot approve: Member profile is only ' + profilePct + '% complete';
             } else {
                 remainingEl.textContent = '₹' + remaining.toFixed(2);
                 remainingEl.className = 'text-primary fw-bold';
                 confirmBtn.disabled = false;
                 confirmBtn.title = '';
+            }
+
+            if (!isProfileCompleted) {
+                if (profileWarn) profileWarn.style.display = 'block';
+                if (profilePctEl) profilePctEl.textContent = profilePct;
+            } else {
+                if (profileWarn) profileWarn.style.display = 'none';
             }
 
             const bankSummary = (this.dataset.bankName || 'Bank') + ' - A/C: ' + (this.dataset.accountNo || 'N/A');

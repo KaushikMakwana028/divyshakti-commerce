@@ -154,6 +154,9 @@ $route['admin/products/edit/(:num)'] = 'Product/edit/$1';
 $route['admin/products/delete/(:num)'] = 'Product/delete/$1';
 $route['admin/products/set_default_image/(:num)/(:num)'] = 'Product/set_default_image/$1/$2';
 $route['admin/products/delete_gallery_image/(:num)/(:num)'] = 'Product/delete_gallery_image/$1/$2';
+$route['admin/products/ajax_upload_gallery/(:num)'] = 'Product/ajax_upload_gallery/$1';
+$route['admin/products/ajax_set_default/(:num)/(:num)'] = 'Product/ajax_set_default/$1/$2';
+$route['admin/products/ajax_delete_gallery/(:num)/(:num)'] = 'Product/ajax_delete_gallery/$1/$2';
 $route['admin/logout'] = 'Login/logout';
 
 // Admin Member Routes
@@ -213,5 +216,5 @@ $route['api/privacy_policy'] = 'Api/privacy_policy';
 $route['api/terms_conditions'] = 'Api/terms_conditions';
 $route['api/delete_account'] = 'Api/delete_account';
 $route['api/migrate_activation_commission'] = 'Api/migrate_activation_commission';
-
-
+$route['api/migrate_db_slug'] = 'Api/migrate_db_slug';
+$route['api/migrate_gender_and_commission'] = 'Api/migrate_gender_and_commission';

@@ -347,11 +347,7 @@ class General_model extends CI_Model
             return false;
         }
 
-        if (empty($referrer->is_profile_active) || (int)$referrer->is_profile_active !== 1) {
-            $error_message = 'This referral code cannot be used because the referrer\'s profile is not active yet.';
-            return false;
-        }
-
+        // Referral code is active and usable even if profile is not yet 100% complete
         return true;
     }
 

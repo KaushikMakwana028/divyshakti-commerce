@@ -65,6 +65,8 @@ class Withdraw extends CI_Controller
             users.email as user_email, 
             users.phone as user_phone,
             users.wallet_balance as user_wallet_balance,
+            users.is_profile_completed as user_profile_completed,
+            users.profile_completion_percentage as user_profile_pct,
             admin_users.name as action_by_name');
         $this->db->join('users as admin_users', 'admin_users.id = wallet_withdraw_requests.action_by', 'left');
         $this->db->order_by('wallet_withdraw_requests.id', 'DESC');
@@ -144,6 +146,16 @@ class Withdraw extends CI_Controller
             $this->session->set_flashdata(
                 'error',
                 "Cannot approve request #{$id}: Member's current wallet balance (₹" . number_format($current_balance, 2) . ") is lower than requested withdrawal amount (₹" . number_format($withdraw_amount, 2) . ")."
+            );
+            redirect('admin/withdrawals');
+        }
+
+        // Enforce 100% profile completion before allowing withdrawal approval
+        $completion = $this->General_model->calculateProfileCompletion($user);
+        if (!$completion['is_completed']) {
+            $this->session->set_flashdata(
+                'error',
+                "Cannot approve request #{$id}: Member's profile is only {$completion['percentage']}% complete. Profile must be 100% complete before withdrawal."
             );
             redirect('admin/withdrawals');
         }
