@@ -187,8 +187,8 @@ class General_model extends CI_Model
             return false;
         }
 
-        // Must be active
-        if ((int)($member->is_profile_active ?? 0) !== 1) {
+        // Must be a valid non-suspended member
+        if (isset($member->status) && (int)$member->status === 0) {
             return false;
         }
 
@@ -197,11 +197,14 @@ class General_model extends CI_Model
             return false;
         }
 
-        // Idempotency check 2: Check existing wallet_transactions for this member activation
+        // Idempotency check 2: Check existing wallet_transactions for this member activation/registration
         $has_txns = $this->db->where([
             'reference_id' => $user_id,
             'source'       => 'referral_commission'
-        ])->like('remark', 'member activation')->count_all_results('wallet_transactions') > 0;
+        ])->group_start()
+            ->like('remark', 'member')
+        ->group_end()
+        ->count_all_results('wallet_transactions') > 0;
 
         if ($has_txns) {
             try {
@@ -238,10 +241,17 @@ class General_model extends CI_Model
             9 => 6.00,  10 => 4.00, 11 => 3.00, 12 => 2.00
         ];
 
+        $visited_ancestors = [(int)$user_id];
+
         for ($level = 1; $level <= 12; $level++) {
             if (empty($ancestor_id)) {
                 break;
             }
+
+            if (in_array((int)$ancestor_id, $visited_ancestors)) {
+                break; // prevent circular upline loops
+            }
+            $visited_ancestors[] = (int)$ancestor_id;
 
             $fixed_amount = isset($levels_amount[$level]) ? $levels_amount[$level] : ($default_fallbacks[$level] ?? 0.00);
             $ancestor = $this->getOne('users', ['id' => (int)$ancestor_id]);
@@ -276,7 +286,7 @@ class General_model extends CI_Model
                     'amount'       => $level_comm,
                     'source'       => 'referral_commission',
                     'reference_id' => $user_id,
-                    'remark'       => "Referral commission (₹" . number_format($level_comm, 2) . ") from Level {$level} member activation ({$member_display}{$member_custom_id})",
+                    'remark'       => "Referral commission (₹" . number_format($level_comm, 2) . ") from Level {$level} member referral ({$member_display}{$member_custom_id})",
                     'created_at'   => date('Y-m-d H:i:s')
                 ]);
 

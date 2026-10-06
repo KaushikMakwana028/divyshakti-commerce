@@ -156,6 +156,9 @@ class Login extends CI_Controller
                     $insert_id = $this->General_model->insert('users', $insert_data);
 
                     if ($insert_id) {
+                        if (!empty($parent_id)) {
+                            $this->General_model->distribute_activation_commissions($insert_id);
+                        }
                         $this->session->set_flashdata('success', 'Registration successful! Please login.');
                         redirect('admin/login');
                     } else {

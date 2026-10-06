@@ -289,8 +289,13 @@ class Member extends CI_Controller
 
             // Fetch all ancestors of the user up to the root (parent_id is null)
             $ancestors = [];
+            $visited_anc = [(int)$id];
             $current_parent_id = $user['parent_id'];
             while ($current_parent_id !== null) {
+                if (in_array((int)$current_parent_id, $visited_anc)) {
+                    break;
+                }
+                $visited_anc[] = (int)$current_parent_id;
                 $parent_list = $fetch_users(['u.id' => $current_parent_id, 'u.role' => 0]);
                 if (empty($parent_list)) {
                     break;

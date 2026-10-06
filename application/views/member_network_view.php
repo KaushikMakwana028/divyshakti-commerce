@@ -1012,8 +1012,7 @@
 
         // Fetch and load initial tree (No ID = topmost roots)
         function loadInitialTree(specificUserId = null) {
-            // Drop any previous chart *before* building new node data, so formatNode()
-            // never evaluates parent_btn visibility against a stale/destroyed chart.
+            // Drop any previous chart before building new node data
             if (chart) {
                 chart.destroy();
                 chart = null;
@@ -1030,9 +1029,28 @@
                     if (res.status) {
                         let nodes = [];
                         if (specificUserId && res.user) {
-                            // User is set as the only node initially. Pass null as parentId to prevent rendering a broken link
-                            const rootNode = formatNode(res.user, null);
-                            nodes.push(rootNode);
+                            // 1. Add all ancestors from topmost root down to the user's immediate parent
+                            if (res.ancestors && res.ancestors.length > 0) {
+                                // res.ancestors is returned as [parent, grandparent, ... root]
+                                // Reverse so the topmost root ancestor is first
+                                const reversedAncestors = [...res.ancestors].reverse();
+                                reversedAncestors.forEach((anc, idx) => {
+                                    // Topmost root ancestor has null pid; others link to their actual parent_id
+                                    const ancPid = idx === 0 ? null : (anc.parent_id !== null ? anc.parent_id : null);
+                                    nodes.push(formatNode(anc, ancPid));
+                                });
+                            }
+
+                            // 2. Add the selected user, linked to their parent
+                            const userPid = (res.ancestors && res.ancestors.length > 0) ? res.user.parent_id : null;
+                            nodes.push(formatNode(res.user, userPid));
+
+                            // 3. Add any direct children of this user
+                            if (res.children && res.children.length > 0) {
+                                res.children.forEach(child => {
+                                    nodes.push(formatNode(child, res.user.id));
+                                });
+                            }
                         } else {
                             // Render list of topmost root users (parent_id = NULL)
                             res.children.forEach(child => {
@@ -1041,6 +1059,20 @@
                         }
 
                         initChart(nodes);
+
+                        // If a specific user was requested, smoothly center & highlight their card
+                        if (specificUserId && res.user) {
+                            requestAnimationFrame(() => {
+                                try {
+                                    chart.center(res.user.id);
+                                } catch(e) {}
+                                const userEl = document.querySelector('.node[node-id="' + res.user.id + '"]');
+                                if (userEl) {
+                                    userEl.classList.add('rtx-node-highlight');
+                                    setTimeout(() => userEl.classList.remove('rtx-node-highlight'), 1800);
+                                }
+                            });
+                        }
                     } else {
                         initChart([]);
                         showToast(res.message || "Member not found.", true);
@@ -1054,7 +1086,7 @@
                 .finally(() => setChartLoading(false));
         }
 
-        // Expand parent node action
+        // Expand parent node action: smoothly re-centers the tree on the parent's full branch top-down
         function expandParentNodeById(nodeId, buttonEl) {
             if (pendingParentLoads.has(nodeId)) return; // already fetching, ignore repeat clicks
             pendingParentLoads.add(nodeId);
@@ -1064,37 +1096,7 @@
                 .then(res => {
                     if (res.status && res.ancestors && res.ancestors.length > 0) {
                         const parentUser = res.ancestors[0];
-                        if (chart.get(parentUser.id)) return;
-
-                        // Format parent node. Pass null as parentId to prevent rendering a broken link up to parent's parent
-                        const parentNode = formatNode(parentUser, null);
-
-                        // Update current node's pid and hide its top button since the parent is now visible
-                        const currentNode = chart.get(nodeId);
-                        currentNode.pid = parentUser.id;
-                        currentNode.parent_btn = 'none';
-
-                        // Add parent node to chart and update current node
-                        chart.addNodes(null, [parentNode], function() {
-                            chart.updateNode(currentNode);
-
-                            // Smoothly pan/zoom so the newly revealed ancestor is actually
-                            // visible instead of sitting off-screen above the viewport.
-                            try {
-                                chart.center(parentUser.id);
-                            } catch (e) {
-                                /* center() unsupported on this build — safe to ignore */
-                            }
-
-                            // Brief highlight pulse on the new node so it's obvious where it landed.
-                            requestAnimationFrame(() => {
-                                const newNodeEl = document.querySelector('.node[node-id="' + parentUser.id + '"]');
-                                if (newNodeEl) {
-                                    newNodeEl.classList.add('rtx-node-highlight');
-                                    setTimeout(() => newNodeEl.classList.remove('rtx-node-highlight'), 1200);
-                                }
-                            });
-                        });
+                        loadInitialTree(parentUser.id);
                     } else if (!res.status) {
                         showToast(res.message || "Couldn't find this member's referrer.", true);
                     }
