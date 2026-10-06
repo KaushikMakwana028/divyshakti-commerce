@@ -414,6 +414,16 @@ class Product extends CI_Controller
                     }
                 }
 
+                $sizes_input = $this->input->post('sizes');
+                $sizes_str = null;
+                if (is_array($sizes_input)) {
+                    $valid_sizes = ['S', 'M', 'L', 'XL', 'XXL', '3XL', '4XL', '5XL', 'Free size'];
+                    $selected_sizes = array_values(array_intersect($valid_sizes, $sizes_input));
+                    $sizes_str = !empty($selected_sizes) ? implode(',', $selected_sizes) : null;
+                } elseif (is_string($sizes_input)) {
+                    $sizes_str = trim($sizes_input) ?: null;
+                }
+
                 if ($upload_success) {
                     $insert_data = [
                         'category_id'    => $category_id,
@@ -423,6 +433,7 @@ class Product extends CI_Controller
                         'price'          => $price,
                         'image'          => $image_path,
                         'stock'          => $stock,
+                        'sizes'          => $sizes_str,
                         'status'         => $status,
                         'created_at'     => date('Y-m-d H:i:s'),
                         'updated_at'     => date('Y-m-d H:i:s')
@@ -584,6 +595,16 @@ class Product extends CI_Controller
                     }
                 }
 
+                $sizes_input = $this->input->post('sizes');
+                $sizes_str = null;
+                if (is_array($sizes_input)) {
+                    $valid_sizes = ['S', 'M', 'L', 'XL', 'XXL', '3XL', '4XL', '5XL', 'Free size'];
+                    $selected_sizes = array_values(array_intersect($valid_sizes, $sizes_input));
+                    $sizes_str = !empty($selected_sizes) ? implode(',', $selected_sizes) : null;
+                } elseif (is_string($sizes_input)) {
+                    $sizes_str = trim($sizes_input) ?: null;
+                }
+
                 if ($upload_success) {
                     $update_data = [
                         'category_id'    => $category_id,
@@ -593,6 +614,7 @@ class Product extends CI_Controller
                         'price'          => $price,
                         'image'          => $image_path,
                         'stock'          => $stock,
+                        'sizes'          => $sizes_str,
                         'status'         => $status,
                         'updated_at'     => date('Y-m-d H:i:s')
                     ];
@@ -613,12 +635,12 @@ class Product extends CI_Controller
                             'status'     => true,
                             'message'    => $msg,
                             'product_id' => (int)$id,
-                            'redirect'   => base_url('admin/products/edit/' . $id)
+                            'redirect'   => base_url('admin/products')
                         ]));
                     }
 
                     $this->session->set_flashdata('success', $msg);
-                    redirect('admin/products/edit/' . $id);
+                    redirect('admin/products');
                 }
             } else {
                 if ($this->input->is_ajax_request()) {

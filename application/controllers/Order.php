@@ -38,7 +38,7 @@ class Order extends CI_Controller
 
         $this->db->from('orders');
         $this->db->join('users', 'users.id = orders.user_id', 'inner');
-        $this->db->join('products', 'products.id = orders.product_id', 'inner');
+        $this->db->join('products', 'products.id = orders.product_id', 'left');
 
         if (!empty($search)) {
             $clean_search = trim($search);
@@ -68,6 +68,18 @@ class Order extends CI_Controller
         $this->db->order_by('orders.id', 'DESC');
         $this->db->limit($limit, $offset);
         $data['orders'] = $this->db->get()->result();
+
+        // Attach order items for each order
+        foreach ($data['orders'] as &$ord) {
+            $ord_items = $this->db->select('order_items.*, products.name as product_name, products.image as product_image')
+                ->from('order_items')
+                ->join('products', 'products.id = order_items.product_id', 'left')
+                ->where('order_items.order_id', (int)$ord->id)
+                ->get()->result();
+            $ord->items = $ord_items;
+            $ord->items_count = count($ord_items);
+        }
+        unset($ord);
 
         $data['total_pages'] = ceil($total_rows / $limit);
         $data['current_page'] = $page;
@@ -125,7 +137,7 @@ class Order extends CI_Controller
         $this->db->select('orders.*, users.name as buyer_name, users.email as buyer_email, users.phone as buyer_phone, users.referral_code as buyer_ref, products.name as product_name, products.price as product_price, products.image as product_image');
         $this->db->from('orders');
         $this->db->join('users', 'users.id = orders.user_id', 'inner');
-        $this->db->join('products', 'products.id = orders.product_id', 'inner');
+        $this->db->join('products', 'products.id = orders.product_id', 'left');
         $this->db->where('orders.id', (int)$id);
         $order = $this->db->get()->row();
 
@@ -134,6 +146,13 @@ class Order extends CI_Controller
         }
 
         $data['order'] = $order;
+
+        // Fetch line items from order_items table
+        $data['order_items'] = $this->db->select('order_items.*, products.name as product_name, products.price as product_price, products.image as product_image')
+            ->from('order_items')
+            ->join('products', 'products.id = order_items.product_id', 'left')
+            ->where('order_items.order_id', (int)$id)
+            ->get()->result();
 
         $data['shipping_address'] = null;
         if (!empty($order->address_id)) {
@@ -258,10 +277,19 @@ class Order extends CI_Controller
                 }
 
                 // 2. Restore product stock
-                $current_prod = $this->General_model->getOne('products', ['id' => (int)$order->product_id]);
-                if ($current_prod) {
-                    $new_stock = (int)$current_prod->stock + (int)$order->quantity;
-                    $this->db->update('products', ['stock' => $new_stock], ['id' => (int)$order->product_id]);
+                $order_item_rows = $this->db->get_where('order_items', ['order_id' => (int)$id])->result();
+                if (!empty($order_item_rows)) {
+                    foreach ($order_item_rows as $it) {
+                        $this->db->set('stock', 'stock + ' . (int)$it->quantity, FALSE);
+                        $this->db->where('id', (int)$it->product_id);
+                        $this->db->update('products');
+                    }
+                } else {
+                    $current_prod = $this->General_model->getOne('products', ['id' => (int)$order->product_id]);
+                    if ($current_prod) {
+                        $new_stock = (int)$current_prod->stock + (int)$order->quantity;
+                        $this->db->update('products', ['stock' => $new_stock], ['id' => (int)$order->product_id]);
+                    }
                 }
 
                 // 3. Reverse MLM level commissions

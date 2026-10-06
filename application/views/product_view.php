@@ -78,17 +78,17 @@
                                     </td>
                                 </tr>
                             <?php else: ?>
-                                <?php 
+                                <?php
                                 $index_num = ($current_page - 1) * 10 + 1;
-                                foreach ($products as $prod): 
+                                foreach ($products as $prod):
                                 ?>
                                     <tr class="border-bottom">
                                         <td class="ps-4 fw-semibold text-muted"><?php echo $index_num++; ?></td>
                                         <td>
-                                            <img src="<?php echo $prod->image ? base_url($prod->image) : 'https://placehold.co/80x80/1f2937/d4af37?text=' . urlencode(substr($prod->name, 0, 1)); ?>" 
-                                                 alt="<?php echo htmlspecialchars($prod->name); ?>" 
-                                                 class="rounded border" 
-                                                 style="width: 50px; height: 50px; object-fit: cover; border: 2px solid var(--primary-gold) !important;">
+                                            <img src="<?php echo $prod->image ? base_url($prod->image) : 'https://placehold.co/80x80/1f2937/d4af37?text=' . urlencode(substr($prod->name, 0, 1)); ?>"
+                                                alt="<?php echo htmlspecialchars($prod->name); ?>"
+                                                class="rounded border"
+                                                style="width: 50px; height: 50px; object-fit: cover; border: 2px solid var(--primary-gold) !important;">
                                         </td>
                                         <td>
                                             <h6 class="fw-bold m-0" style="color: var(--dark-sidebar);"><?php echo htmlspecialchars($prod->name); ?></h6>
@@ -123,9 +123,13 @@
                                             <a href="<?php echo base_url('admin/products/detail/' . $prod->id); ?>" class="btn btn-sm btn-outline-info px-2 py-1 me-1" title="View Details" style="border-radius: 6px;">
                                                 <i class="fa-solid fa-eye"></i>
                                             </a>
-                                            <a href="<?php echo base_url('admin/products/edit/' . $prod->id); ?>" class="btn btn-sm btn-outline-warning px-2 py-1 me-1" title="Edit Product" style="border-radius: 6px; border-color: var(--primary-gold); color: var(--primary-gold);">
+                                            <a href="<?php echo base_url('admin/products/edit/' . $prod->id); ?>"
+                                                class="btn btn-sm btn-outline-warning px-2 py-1 me-1 edit-product-btn"
+                                                title="Edit Product"
+                                                style="border-radius: 6px; border-color: var(--primary-gold); color: var(--primary-gold);">
                                                 <i class="fa-solid fa-pen-to-square"></i>
                                             </a>
+
                                             <a href="<?php echo base_url('admin/products/delete/' . $prod->id); ?>" class="btn btn-sm btn-outline-danger px-2 py-1 btn-delete-product" title="Delete Product" style="border-radius: 6px;">
                                                 <i class="fa-solid fa-trash"></i>
                                             </a>
@@ -138,7 +142,7 @@
                 </div>
 
                 <!-- Pagination footer inside container -->
-                <?php if (!empty($total_rows) && $total_rows > 0): 
+                <?php if (!empty($total_rows) && $total_rows > 0):
                     $start_record = ($current_page - 1) * 10 + 1;
                     $end_record = min($current_page * 10, $total_rows);
                 ?>
@@ -147,21 +151,21 @@
                             Showing <strong><?php echo $start_record; ?></strong> to <strong><?php echo $end_record; ?></strong> of <strong><?php echo number_format($total_rows); ?></strong> available products
                         </div>
                         <?php if ($total_pages > 1): ?>
-                        <nav aria-label="Product Page Navigation">
-                            <ul class="pagination pagination-sm justify-content-center mb-0">
-                                <li class="page-item <?php echo ($current_page <= 1) ? 'disabled' : ''; ?>">
-                                    <a class="page-link" href="#" data-page="<?php echo $current_page - 1; ?>">&laquo; Prev</a>
-                                </li>
-                                <?php for ($i = 1; $i <= $total_pages; $i++): ?>
-                                    <li class="page-item <?php echo ($current_page == $i) ? 'active' : ''; ?>">
-                                        <a class="page-link" href="#" data-page="<?php echo $i; ?>"><?php echo $i; ?></a>
+                            <nav aria-label="Product Page Navigation">
+                                <ul class="pagination pagination-sm justify-content-center mb-0">
+                                    <li class="page-item <?php echo ($current_page <= 1) ? 'disabled' : ''; ?>">
+                                        <a class="page-link" href="#" data-page="<?php echo $current_page - 1; ?>">&laquo; Prev</a>
                                     </li>
-                                <?php endfor; ?>
-                                <li class="page-item <?php echo ($current_page >= $total_pages) ? 'disabled' : ''; ?>">
-                                    <a class="page-link" href="#" data-page="<?php echo $current_page + 1; ?>">Next &raquo;</a>
-                                </li>
-                            </ul>
-                        </nav>
+                                    <?php for ($i = 1; $i <= $total_pages; $i++): ?>
+                                        <li class="page-item <?php echo ($current_page == $i) ? 'active' : ''; ?>">
+                                            <a class="page-link" href="#" data-page="<?php echo $i; ?>"><?php echo $i; ?></a>
+                                        </li>
+                                    <?php endfor; ?>
+                                    <li class="page-item <?php echo ($current_page >= $total_pages) ? 'disabled' : ''; ?>">
+                                        <a class="page-link" href="#" data-page="<?php echo $current_page + 1; ?>">Next &raquo;</a>
+                                    </li>
+                                </ul>
+                            </nav>
                         <?php endif; ?>
                     </div>
                 <?php endif; ?>
@@ -172,100 +176,111 @@
 
 <!-- AJAX Swapper and Action Binds -->
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const searchInput = document.getElementById('searchInput');
-    const categoryFilter = document.getElementById('categoryFilter');
-    const statusFilter = document.getElementById('statusFilter');
-    const resetBtn = document.getElementById('resetBtn');
-    let debounceTimer;
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchInput = document.getElementById('searchInput');
+        const categoryFilter = document.getElementById('categoryFilter');
+        const statusFilter = document.getElementById('statusFilter');
+        const resetBtn = document.getElementById('resetBtn');
+        let debounceTimer;
 
-    function loadTable(page = 1) {
-        const search = searchInput.value;
-        const category_id = categoryFilter.value;
-        const status = statusFilter.value;
-        const url = new URL(window.location.href);
+        function loadTable(page = 1) {
+            const search = searchInput.value;
+            const category_id = categoryFilter.value;
+            const status = statusFilter.value;
+            const url = new URL(window.location.href);
 
-        url.searchParams.set('search', search);
-        url.searchParams.set('category_id', category_id);
-        url.searchParams.set('status', status);
-        url.searchParams.set('page', page);
+            url.searchParams.set('search', search);
+            url.searchParams.set('category_id', category_id);
+            url.searchParams.set('status', status);
+            url.searchParams.set('page', page);
 
-        window.history.pushState({}, '', url.toString());
+            window.history.pushState({}, '', url.toString());
 
-        fetch(url.toString(), {
-            headers: { 'X-Requested-With': 'XMLHttpRequest' }
-        })
-        .then(response => response.text())
-        .then(html => {
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(html, 'text/html');
-            const newTable = doc.getElementById('table-container');
-            if (newTable) {
-                document.getElementById('table-container').innerHTML = newTable.innerHTML;
-                bindActionListeners();
-            }
-        })
-        .catch(err => console.error('Error fetching table data: ', err));
-    }
-
-    searchInput.addEventListener('input', function() {
-        clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(() => {
-            loadTable(1);
-        }, 300);
-    });
-
-    categoryFilter.addEventListener('change', function() {
-        loadTable(1);
-    });
-
-    statusFilter.addEventListener('change', function() {
-        loadTable(1);
-    });
-
-    resetBtn.addEventListener('click', function() {
-        searchInput.value = '';
-        categoryFilter.value = '';
-        statusFilter.value = '';
-        loadTable(1);
-    });
-
-    document.addEventListener('click', function(e) {
-        const pageLink = e.target.closest('#table-container .pagination .page-link');
-        if (pageLink) {
-            e.preventDefault();
-            const page = pageLink.getAttribute('data-page');
-            if (page) {
-                loadTable(page);
-            }
-        }
-    });
-
-    function bindActionListeners() {
-        const deleteButtons = document.querySelectorAll('.btn-delete-product');
-        deleteButtons.forEach(button => {
-            const newBtn = button.cloneNode(true);
-            button.parentNode.replaceChild(newBtn, button);
-
-            newBtn.addEventListener('click', function(e) {
-                e.preventDefault();
-                const deleteUrl = this.getAttribute('href');
-                
-                dsConfirm({
-                    title: 'Delete Product?',
-                    text: 'You are about to delete this product catalog item! This action cannot be undone.',
-                    icon: 'warning',
-                    confirmText: 'Yes, Delete',
-                    cancelText: 'Cancel',
-                    isDangerous: true,
-                    onConfirm: function() {
-                        window.location.href = deleteUrl;
+            fetch(url.toString(), {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
                     }
+                })
+                .then(response => response.text())
+                .then(html => {
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    const newTable = doc.getElementById('table-container');
+                    if (newTable) {
+                        document.getElementById('table-container').innerHTML = newTable.innerHTML;
+                        bindActionListeners();
+                    }
+                })
+                .catch(err => console.error('Error fetching table data: ', err));
+        }
+
+        searchInput.addEventListener('input', function() {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                loadTable(1);
+            }, 300);
+        });
+
+        categoryFilter.addEventListener('change', function() {
+            loadTable(1);
+        });
+
+        statusFilter.addEventListener('change', function() {
+            loadTable(1);
+        });
+
+        resetBtn.addEventListener('click', function() {
+            searchInput.value = '';
+            categoryFilter.value = '';
+            statusFilter.value = '';
+            loadTable(1);
+        });
+
+        document.addEventListener('click', function(e) {
+            const pageLink = e.target.closest('#table-container .pagination .page-link');
+            if (pageLink) {
+                e.preventDefault();
+                const page = pageLink.getAttribute('data-page');
+                if (page) {
+                    loadTable(page);
+                }
+            }
+        });
+
+        function bindActionListeners() {
+            const deleteButtons = document.querySelectorAll('.btn-delete-product');
+            deleteButtons.forEach(button => {
+                const newBtn = button.cloneNode(true);
+                button.parentNode.replaceChild(newBtn, button);
+
+                newBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const deleteUrl = this.getAttribute('href');
+
+                    dsConfirm({
+                        title: 'Delete Product?',
+                        text: 'You are about to delete this product catalog item! This action cannot be undone.',
+                        icon: 'warning',
+                        confirmText: 'Yes, Delete',
+                        cancelText: 'Cancel',
+                        isDangerous: true,
+                        onConfirm: function() {
+                            window.location.href = deleteUrl;
+                        }
+                    });
                 });
             });
-        });
-    }
+        }
 
-    bindActionListeners();
-});
+        bindActionListeners();
+    });
 </script>
+
+
+
+<style>
+    .edit-product-btn:hover {
+        color: #ffffff !important;
+        border-color: var(--primary-gold) !important;
+    }
+</style>

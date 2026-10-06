@@ -356,6 +356,60 @@
         box-shadow: inset 0 -2px 0 #ef4444;
     }
 
+    /* Size Checkbox Tiles */
+    .ep-sizes-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .ep-size-checkbox-tile {
+        cursor: pointer;
+        user-select: none;
+        margin: 0;
+    }
+
+    .ep-size-checkbox-tile input[type="checkbox"] {
+        display: none;
+    }
+
+    .ep-size-tile-content {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 7px 14px;
+        background: #f8fafc;
+        border: 1.5px solid #e2e8f0;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 0.84rem;
+        color: #334155;
+        transition: all 0.18s ease;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+    }
+
+    .ep-size-check-icon {
+        font-size: 0.85rem;
+        color: #cbd5e1;
+        transition: color 0.18s ease;
+    }
+
+    .ep-size-checkbox-tile:hover .ep-size-tile-content {
+        border-color: #cbd5e1;
+        background: #f1f5f9;
+    }
+
+    .ep-size-checkbox-tile input[type="checkbox"]:checked + .ep-size-tile-content {
+        background: linear-gradient(135deg, rgba(236, 64, 122, 0.08), rgba(212, 175, 55, 0.12));
+        border-color: var(--primary-pink, #ec407a);
+        color: #1f2937;
+        box-shadow: 0 2px 8px rgba(236, 64, 122, 0.18);
+    }
+
+    .ep-size-checkbox-tile input[type="checkbox"]:checked + .ep-size-tile-content .ep-size-check-icon {
+        color: var(--primary-pink, #ec407a);
+    }
+
     /* Sticky action bar */
     .ep-action-bar {
         display: flex;
@@ -591,15 +645,48 @@
                             <span class="input-group-text align-items-start pt-2"><i class="fa-solid fa-align-left"></i></span>
                             <textarea name="description" id="description" class="form-control" rows="4" placeholder="Enter product description..."><?php echo set_value('description'); ?></textarea>
                         </div>
+                    <div class="mb-3 ep-field">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <label class="mb-0">
+                                <i class="fa-solid fa-shirt me-1 text-warning"></i> Available Sizes <span class="text-muted fw-normal" style="font-size:0.78rem;">(Optional - select as many as you want)</span>
+                            </label>
+                            <div class="d-flex gap-2" style="font-size:0.75rem;">
+                                <a href="javascript:void(0)" class="text-decoration-none fw-semibold text-primary" id="btnSelectAllSizes">Select All</a>
+                                <span class="text-muted">•</span>
+                                <a href="javascript:void(0)" class="text-decoration-none fw-semibold text-muted" id="btnClearAllSizes">Clear All</a>
+                            </div>
+                        </div>
+                        <div class="ep-sizes-grid">
+                            <?php 
+                                $all_sizes = ['S', 'M', 'L', 'XL', 'XXL', '3XL', '4XL', '5XL', 'Free size'];
+                                $posted_sizes = (array)$this->input->post('sizes');
+                                foreach ($all_sizes as $sz):
+                                    $is_checked = in_array($sz, $posted_sizes);
+                            ?>
+                                <label class="ep-size-checkbox-tile">
+                                    <input type="checkbox" name="sizes[]" value="<?php echo htmlspecialchars($sz); ?>" class="size-checkbox" <?php echo $is_checked ? 'checked' : ''; ?>>
+                                    <span class="ep-size-tile-content">
+                                        <span class="ep-size-text"><?php echo htmlspecialchars($sz); ?></span>
+                                        <i class="fa-solid fa-circle-check ep-size-check-icon"></i>
+                                    </span>
+                                </label>
+                            <?php endforeach; ?>
+                        </div>
+                        <small class="text-muted d-block mt-2" style="font-size:0.75rem;">
+                            <i class="fa-solid fa-circle-info me-1"></i> If selected, users will choose their size on the mobile app before purchasing. If no sizes are selected, the product will be saved without size options.
+                        </small>
                     </div>
 
                     <div class="mb-1 ep-field" style="max-width:280px;">
                         <label>Status</label>
                         <div class="ep-status-toggle">
-                            <input type="radio" name="status" id="statusActive" value="1" <?php echo set_select('status', '1', true); ?>>
+                            <?php 
+                                $add_status = ($this->input->post('status') !== null) ? (string)$this->input->post('status') : '1'; 
+                            ?>
+                            <input type="radio" name="status" id="statusActive" value="1" <?php echo ($add_status === '1') ? 'checked' : ''; ?>>
                             <label for="statusActive" class="on"><i class="fa-solid fa-toggle-on me-1"></i> Active</label>
 
-                            <input type="radio" name="status" id="statusInactive" value="0" <?php echo set_select('status', '0'); ?>>
+                            <input type="radio" name="status" id="statusInactive" value="0" <?php echo ($add_status === '0') ? 'checked' : ''; ?>>
                             <label for="statusInactive" class="off"><i class="fa-solid fa-toggle-off me-1"></i> Inactive</label>
                         </div>
                     </div>
@@ -900,6 +987,16 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         renderPreviewGrid();
     }
+
+    // Sizes Select All / Clear All helpers
+    document.getElementById('btnSelectAllSizes')?.addEventListener('click', function(e) {
+        e.preventDefault();
+        document.querySelectorAll('.size-checkbox').forEach(cb => cb.checked = true);
+    });
+    document.getElementById('btnClearAllSizes')?.addEventListener('click', function(e) {
+        e.preventDefault();
+        document.querySelectorAll('.size-checkbox').forEach(cb => cb.checked = false);
+    });
 
     /**
      * Submit Form with Progressive Chunk Upload

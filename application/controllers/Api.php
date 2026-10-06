@@ -109,6 +109,64 @@ class Api extends CI_Controller
     }
 
     /**
+     * Optional authentication helper: returns decoded JWT object or null without erroring
+     */
+    private function check_auth_optional()
+    {
+        $auth_header = $this->input->get_request_header('Authorization', TRUE);
+        if (!$auth_header) {
+            if (isset($_SERVER['HTTP_AUTHORIZATION'])) {
+                $auth_header = $_SERVER['HTTP_AUTHORIZATION'];
+            } elseif (isset($_SERVER['REDIRECT_HTTP_AUTHORIZATION'])) {
+                $auth_header = $_SERVER['REDIRECT_HTTP_AUTHORIZATION'];
+            }
+        }
+
+        if (!$auth_header) {
+            if ($this->session->userdata('logged_in') && $this->session->userdata('user_id')) {
+                $session_user_id = (int)$this->session->userdata('user_id');
+                $session_user = $this->General_model->getOne('users', ['id' => $session_user_id]);
+                if ($session_user) {
+                    return (object)[
+                        'user_id' => (int)$session_user->id,
+                        'role'    => (int)$session_user->role,
+                        'email'   => $session_user->email
+                    ];
+                }
+            }
+            return null;
+        }
+
+        if (!preg_match('/Bearer\s(\S+)/', $auth_header, $matches)) {
+            return null;
+        }
+
+        $token = $matches[1];
+        $blacklisted = $this->General_model->getOne('token_blacklist', ['token' => $token]);
+        if ($blacklisted) {
+            return null;
+        }
+
+        try {
+            $jwt_secret = $this->config->item('jwt_secret') ?: 'DivyShaktiSecretJWTKey2026SuperSecureAndLongKey';
+            return \Firebase\JWT\JWT::decode($token, new \Firebase\JWT\Key($jwt_secret, 'HS256'));
+        } catch (\Firebase\JWT\ExpiredException $e) {
+            try {
+                $parts = explode('.', $token);
+                if (count($parts) === 3) {
+                    $payload = json_decode(\Firebase\JWT\JWT::urlsafeB64Decode($parts[1]));
+                    if ($payload && isset($payload->user_id)) {
+                        return $payload;
+                    }
+                }
+            } catch (\Exception $ex) {}
+            return null;
+        } catch (\Exception $e) {
+            return null;
+        }
+    }
+
+    /**
      * Generate unique 8-character alphanumeric referral code
      */
     private function generate_unique_referral_code()
@@ -1520,6 +1578,7 @@ class Api extends CI_Controller
 
         $products = [];
         foreach ($products_raw as $prod) {
+            $sizes_array = !empty($prod->sizes) ? array_values(array_filter(array_map('trim', explode(',', $prod->sizes)))) : [];
             $products[] = [
                 'id'             => (int)$prod->id,
                 'category_id'    => (int)$prod->category_id,
@@ -1530,6 +1589,8 @@ class Api extends CI_Controller
                 'price'          => (float)$prod->price,
                 'image'          => $prod->image ? base_url($prod->image) : null,
                 'stock'          => (int)$prod->stock,
+                'sizes'          => $sizes_array,
+                'sizes_string'   => $prod->sizes ?? '',
                 'status'         => (int)$prod->status,
                 'created_at'     => $prod->created_at,
                 'updated_at'     => $prod->updated_at
@@ -1616,6 +1677,7 @@ class Api extends CI_Controller
 
         $products = [];
         foreach ($products_raw as $prod) {
+            $sizes_array = !empty($prod->sizes) ? array_values(array_filter(array_map('trim', explode(',', $prod->sizes)))) : [];
             $products[] = [
                 'id'             => (int)$prod->id,
                 'category_id'    => (int)$prod->category_id,
@@ -1626,6 +1688,8 @@ class Api extends CI_Controller
                 'price'          => (float)$prod->price,
                 'image'          => $prod->image ? base_url($prod->image) : null,
                 'stock'          => (int)$prod->stock,
+                'sizes'          => $sizes_array,
+                'sizes_string'   => $prod->sizes ?? '',
                 'status'         => (int)$prod->status,
                 'created_at'     => $prod->created_at,
                 'updated_at'     => $prod->updated_at
@@ -1648,8 +1712,17 @@ class Api extends CI_Controller
      */
     public function get_product_detail($id = null)
     {
-        if ($this->input->method(TRUE) !== 'GET') {
+        if ($this->input->method(TRUE) !== 'GET' && $this->input->method(TRUE) !== 'POST') {
             $this->response(false, 'Method Not Allowed', null, 405);
+        }
+
+        // Parse JSON request body if present
+        $raw_input = file_get_contents('php://input');
+        if (!empty($raw_input)) {
+            $json = json_decode($raw_input, true);
+            if (is_array($json)) {
+                $_POST = array_merge($_POST, $json);
+            }
         }
 
         $id = $id ?: ($this->input->get('id') ?: $this->input->post('id'));
@@ -1669,6 +1742,36 @@ class Api extends CI_Controller
         if (!$prod) {
             $this->response(false, 'Product not found', null, 404);
         }
+
+        // Requested quantity (defaults to 1, minimum 1)
+        $quantity = (int)($this->input->get('quantity') ?: ($this->input->post('quantity') ?: 1));
+        if ($quantity < 1) {
+            $quantity = 1;
+        }
+
+        $stock = (int)$prod->stock;
+        $unit_price = (float)$prod->price;
+        $subtotal = round($unit_price * $quantity, 2);
+        $in_stock = ($stock > 0);
+        $can_order_quantity = ($in_stock && $stock >= $quantity);
+
+        // Optional authenticated user cart check
+        $auth = $this->check_auth_optional();
+        $in_cart = false;
+        $cart_quantity = 0;
+        $cart_id = null;
+        if ($auth && !empty($auth->user_id)) {
+            $cart_item = $this->General_model->getOne('cart', [
+                'user_id'    => (int)$auth->user_id,
+                'product_id' => (int)$prod->id
+            ]);
+            if ($cart_item) {
+                $in_cart = true;
+                $cart_quantity = (int)$cart_item->quantity;
+                $cart_id = (int)$cart_item->id;
+            }
+        }
+        $remaining_stock = max(0, $stock - $cart_quantity);
 
         // Fetch product gallery images (default image first)
         $gallery_rows = $this->db->order_by('is_default DESC, sort_order ASC, id ASC')
@@ -1710,20 +1813,36 @@ class Api extends CI_Controller
         $default_img_url = !empty($images) ? $images[0] : ($prod->image ? base_url($prod->image) : null);
 
         $product_data = [
-            'id'             => (int)$prod->id,
-            'category_id'    => (int)$prod->category_id,
-            'category_name'  => $prod->category_name,
-            'name'           => $prod->name,
-            'slug'           => null,
-            'description'    => $prod->description,
-            'price'          => (float)$prod->price,
-            'image'          => $default_img_url,
-            'images'         => $images,
-            'gallery'        => $gallery,
-            'stock'          => (int)$prod->stock,
-            'status'         => (int)$prod->status,
-            'created_at'     => $prod->created_at,
-            'updated_at'     => $prod->updated_at
+            'id'                       => (int)$prod->id,
+            'category_id'              => (int)$prod->category_id,
+            'category_name'            => $prod->category_name,
+            'name'                     => $prod->name,
+            'slug'                     => null,
+            'description'              => $prod->description,
+            'price'                    => $unit_price,
+            'unit_price'               => $unit_price,
+            'quantity'                 => $quantity,
+            'selected_quantity'        => $quantity,
+            'subtotal'                 => $subtotal,
+            'total_price'              => $subtotal,
+            'image'                    => $default_img_url,
+            'images'                   => $images,
+            'gallery'                  => $gallery,
+            'stock'                    => $stock,
+            'available_stock'          => $stock,
+            'in_stock'                 => $in_stock,
+            'can_order_quantity'       => $can_order_quantity,
+            'max_allowed_quantity'     => $stock,
+            'sizes'                    => !empty($prod->sizes) ? array_values(array_filter(array_map('trim', explode(',', $prod->sizes)))) : [],
+            'sizes_string'             => $prod->sizes ?? '',
+            'has_sizes'                => !empty($prod->sizes),
+            'in_cart'                  => $in_cart,
+            'cart_quantity'            => $cart_quantity,
+            'cart_id'                  => $cart_id,
+            'remaining_stock_for_user' => $remaining_stock,
+            'status'                   => (int)$prod->status,
+            'created_at'               => $prod->created_at,
+            'updated_at'               => $prod->updated_at
         ];
 
         $this->response(true, 'Product details retrieved successfully', $product_data, 200);
@@ -1905,12 +2024,17 @@ class Api extends CI_Controller
         }
 
         // Parse JSON request body if present
-        $content_type = $this->input->server('CONTENT_TYPE');
-        if ($content_type && (strpos($content_type, 'application/json') !== false)) {
-            $json = json_decode(file_get_contents('php://input'), true);
+        $raw_input = file_get_contents('php://input');
+        if (!empty($raw_input)) {
+            $json = json_decode($raw_input, true);
             if (is_array($json)) {
                 $_POST = array_merge($_POST, $json);
             }
+        }
+
+        // Default quantity to 1 if missing or non-positive
+        if (!isset($_POST['quantity']) || !is_numeric($_POST['quantity']) || (int)$_POST['quantity'] < 1) {
+            $_POST['quantity'] = 1;
         }
 
         $auth = $this->check_auth();
@@ -1934,6 +2058,8 @@ class Api extends CI_Controller
 
         $product_id = (int)$this->input->post('product_id');
         $quantity = (int)$this->input->post('quantity');
+        $size = trim((string)($this->input->post('size', TRUE) ?: ''));
+        $size = !empty($size) ? $size : null;
 
         // Check if product exists, is active and has sufficient stock
         $product = $this->General_model->getOne('products', ['id' => $product_id, 'status' => 1]);
@@ -1945,8 +2071,17 @@ class Api extends CI_Controller
             $this->response(false, 'Insufficient stock available. Only ' . $product->stock . ' units left.', null, 400);
         }
 
-        // Check if already in user's cart
-        $existing = $this->General_model->getOne('cart', ['user_id' => $user_id, 'product_id' => $product_id]);
+        // Check if already in user's cart (matching product and size)
+        $where_cart = ['user_id' => $user_id, 'product_id' => $product_id];
+        if (!empty($size)) {
+            $where_cart['size'] = $size;
+        } else {
+            $where_cart['size'] = null;
+        }
+        $existing = $this->General_model->getOne('cart', $where_cart);
+        if (!$existing && empty($size)) {
+            $existing = $this->General_model->getOne('cart', ['user_id' => $user_id, 'product_id' => $product_id, 'size' => '']);
+        }
 
         if ($existing) {
             $new_quantity = (int)$existing->quantity + $quantity;
@@ -1963,6 +2098,7 @@ class Api extends CI_Controller
                 'user_id'    => $user_id,
                 'product_id' => $product_id,
                 'quantity'   => $quantity,
+                'size'       => $size,
                 'created_at' => date('Y-m-d H:i:s'),
                 'updated_at' => date('Y-m-d H:i:s')
             ];
@@ -1973,7 +2109,7 @@ class Api extends CI_Controller
         }
 
         // Fetch full details of the cart row
-        $this->db->select('cart.id, cart.product_id, cart.quantity, products.name as product_name, products.price as product_price, products.image as product_image');
+        $this->db->select('cart.id, cart.product_id, cart.quantity, cart.size, products.name as product_name, products.price as product_price, products.image as product_image');
         $this->db->from('cart');
         $this->db->join('products', 'products.id = cart.product_id', 'inner');
         $this->db->where('cart.id', $cart_row_id);
@@ -1983,12 +2119,32 @@ class Api extends CI_Controller
             $full_cart_item->id = (int)$full_cart_item->id;
             $full_cart_item->product_id = (int)$full_cart_item->product_id;
             $full_cart_item->quantity = (int)$full_cart_item->quantity;
+            $full_cart_item->size = $full_cart_item->size ?: null;
             $full_cart_item->product_price = (float)$full_cart_item->product_price;
             $full_cart_item->product_image = $full_cart_item->product_image ? base_url($full_cart_item->product_image) : null;
             $full_cart_item->subtotal = (float)($full_cart_item->product_price * $full_cart_item->quantity);
         }
 
-        $this->response(true, $msg, $full_cart_item, $status_code);
+        // Fetch total cart metrics
+        $this->db->select('COUNT(*) as total_items, SUM(quantity) as total_quantity, SUM(cart.quantity * products.price) as subtotal');
+        $this->db->from('cart');
+        $this->db->join('products', 'products.id = cart.product_id', 'inner');
+        $this->db->where('cart.user_id', $user_id);
+        $cart_sum = $this->db->get()->row();
+
+        $response_payload = (array)$full_cart_item;
+        $response_payload['item']                   = $full_cart_item;
+        $response_payload['cart_item']              = $full_cart_item;
+        $response_payload['quantity_added']         = $quantity;
+        $response_payload['size']                   = $size;
+        $response_payload['total_quantity_in_cart'] = isset($new_quantity) ? (int)$new_quantity : (int)$quantity;
+        $response_payload['unit_price']             = (float)$product->price;
+        $response_payload['subtotal']               = (float)($full_cart_item ? $full_cart_item->subtotal : 0);
+        $response_payload['cart_total_items']       = (int)($cart_sum ? $cart_sum->total_items : 1);
+        $response_payload['cart_total_quantity']    = (int)($cart_sum ? $cart_sum->total_quantity : $quantity);
+        $response_payload['cart_subtotal']          = (float)($cart_sum ? $cart_sum->subtotal : 0);
+
+        $this->response(true, $msg, $response_payload, $status_code);
     }
 
     /**
@@ -2004,7 +2160,7 @@ class Api extends CI_Controller
         $auth = $this->check_auth();
         $user_id = (int)$auth['decoded']->user_id;
 
-        $this->db->select('cart.id as cart_id, cart.quantity, products.id as product_id, products.name as product_name, products.price, products.image, products.stock as product_stock');
+        $this->db->select('cart.id as cart_id, cart.quantity, cart.size, products.id as product_id, products.name as product_name, products.price, products.image, products.stock as product_stock');
         $this->db->from('cart');
         $this->db->join('products', 'products.id = cart.product_id', 'inner');
         $this->db->where('cart.user_id', $user_id);
@@ -2021,6 +2177,7 @@ class Api extends CI_Controller
                 'product_slug'  => null,
                 'price'         => (float)$row->price,
                 'quantity'      => (int)$row->quantity,
+                'size'          => !empty($row->size) ? $row->size : null,
                 'product_stock' => (int)$row->product_stock,
                 'image'         => $row->image ? base_url($row->image) : null,
                 'total_price'   => (float)$row->price * (int)$row->quantity
@@ -2260,9 +2417,9 @@ class Api extends CI_Controller
         }
 
         // Parse JSON request body if present
-        $content_type = $this->input->server('CONTENT_TYPE');
-        if ($content_type && (strpos($content_type, 'application/json') !== false)) {
-            $json = json_decode(file_get_contents('php://input'), true);
+        $raw_input = file_get_contents('php://input');
+        if (!empty($raw_input)) {
+            $json = json_decode($raw_input, true);
             if (is_array($json)) {
                 $_POST = array_merge($_POST, $json);
             }
@@ -2283,9 +2440,9 @@ class Api extends CI_Controller
             $this->response(false, 'Buyer user not found', null, 404);
         }
 
-        $product_id       = $this->input->post('product_id');
-        $quantity         = $this->input->post('quantity');
-        $input_address_id = $this->input->post('address_id');
+        $product_id       = $this->input->post('product_id') ?: $this->input->get('product_id');
+        $quantity         = $this->input->post('quantity') ?: $this->input->get('quantity');
+        $input_address_id = $this->input->post('address_id') ?: $this->input->get('address_id');
         $is_preview       = !empty($this->input->post('preview')) || !empty($this->input->get('preview'));
 
         // Resolve shipping address
@@ -2352,7 +2509,8 @@ class Api extends CI_Controller
             }
             $items_to_order[] = [
                 'product'  => $prod,
-                'quantity' => $qty
+                'quantity' => $qty,
+                'size'     => !empty($this->input->post('size')) ? trim($this->input->post('size')) : null
             ];
         } else {
             // Full-Cart Checkout
@@ -2371,7 +2529,8 @@ class Api extends CI_Controller
                 }
                 $items_to_order[] = [
                     'product'  => $prod,
-                    'quantity' => $qty
+                    'quantity' => $qty,
+                    'size'     => !empty($row->size) ? trim($row->size) : null
                 ];
             }
         }
@@ -2416,6 +2575,7 @@ class Api extends CI_Controller
                     'product_image'   => !empty($prod->image) ? base_url($prod->image) : null,
                     'unit_price'      => $unit_price,
                     'quantity'        => $qty,
+                    'size'            => $entry['size'] ?? null,
                     'line_total'      => $line_total,
                     'available_stock' => (int)$prod->stock,
                     'is_in_stock'     => ((int)$prod->stock >= $qty)
@@ -2433,6 +2593,7 @@ class Api extends CI_Controller
                     'total_quantity'       => (int)$total_quantity,
                     'subtotal'             => (float)$subtotal,
                     'delivery_charge'      => (float)$delivery_charge,
+                    'delivery_charge_text' => 'As per order',
                     'discount'             => (float)$discount,
                     'total_payable_amount' => (float)$total_payable
                 ],
@@ -2487,48 +2648,60 @@ class Api extends CI_Controller
         $buyer_new_balance = round($current_wallet_balance - $total_payable, 2);
         $this->db->update('users', ['wallet_balance' => $buyer_new_balance], ['id' => $user_id]);
 
-        $order_ids = [];
-        $created_orders = [];
-        $line_items = [];
+        $primary_prod = $items_to_order[0]['product'];
+        $primary_size = $items_to_order[0]['size'] ?? null;
 
+        // Create single order row for the full cart / purchase
+        $order_data = [
+            'user_id'    => $user_id,
+            'product_id' => (int)$primary_prod->id,
+            'quantity'   => (int)$total_quantity,
+            'size'       => $primary_size,
+            'amount'     => (float)$total_payable,
+            'status'     => 'placed',
+            'address_id' => $resolved_address_id,
+            'created_at' => date('Y-m-d H:i:s'),
+            'updated_at' => date('Y-m-d H:i:s')
+        ];
+
+        $order_id = $this->General_model->insert('orders', $order_data);
+        $order_ids = [(int)$order_id];
+
+        // Single debit transaction log for buyer covering the full order amount
+        $this->db->insert('wallet_transactions', [
+            'user_id'      => $user_id,
+            'type'         => 'debit',
+            'amount'       => (float)$total_payable,
+            'source'       => 'purchase',
+            'reference_id' => (int)$order_id,
+            'remark'       => "Debited for product order purchase (Order ID: #{$order_id})",
+            'created_at'   => date('Y-m-d H:i:s')
+        ]);
+
+        $line_items = [];
         foreach ($items_to_order as $entry) {
             $prod = $entry['product'];
             $qty = $entry['quantity'];
+            $entry_size = $entry['size'] ?? null;
             $unit_price = (float)$prod->price;
             $line_total = round($unit_price * $qty, 2);
 
-            // Create placed order row directly
-            $order_data = [
-                'user_id'    => $user_id,
+            // Record line item in order_items table
+            $this->db->insert('order_items', [
+                'order_id'   => (int)$order_id,
                 'product_id' => (int)$prod->id,
                 'quantity'   => $qty,
-                'amount'     => $line_total,
-                'status'     => 'placed',
-                'address_id' => $resolved_address_id,
+                'size'       => $entry_size,
+                'price'      => $unit_price,
+                'subtotal'   => $line_total,
                 'created_at' => date('Y-m-d H:i:s'),
                 'updated_at' => date('Y-m-d H:i:s')
-            ];
-
-            $order_id = $this->General_model->insert('orders', $order_data);
-            $order_ids[] = (int)$order_id;
-
-            // Debit transaction log for buyer
-            $this->db->insert('wallet_transactions', [
-                'user_id'      => $user_id,
-                'type'         => 'debit',
-                'amount'       => $line_total,
-                'source'       => 'purchase',
-                'reference_id' => (int)$order_id,
-                'remark'       => "Debited for product order purchase (Order ID: #{$order_id})",
-                'created_at'   => date('Y-m-d H:i:s')
             ]);
 
             // DEDUCT PRODUCT STOCK
             $current_prod = $this->General_model->getOne('products', ['id' => (int)$prod->id]);
             $new_stock = max(0, (int)($current_prod->stock ?? $prod->stock) - $qty);
             $this->db->update('products', ['stock' => $new_stock], ['id' => (int)$prod->id]);
-
-            // Note: MLM referral commissions are distributed exclusively upon order delivery!
 
             // Clear purchased item from cart
             $this->db->delete('cart', [
@@ -2544,30 +2717,35 @@ class Api extends CI_Controller
                 'product_image'   => !empty($prod->image) ? base_url($prod->image) : null,
                 'unit_price'      => $unit_price,
                 'quantity'        => $qty,
+                'size'            => $entry_size,
                 'line_total'      => $line_total,
                 'available_stock' => (int)$new_stock,
                 'is_in_stock'     => ((int)$new_stock >= $qty)
             ];
-
-            $created_orders[] = [
-                'id'               => (int)$order_id,
-                'buyer_id'         => $user_id,
-                'product_id'       => (int)$prod->id,
-                'product_name'     => $prod->name,
-                'product_slug'     => null,
-                'product_price'    => $unit_price,
-                'product_image'    => !empty($prod->image) ? base_url($prod->image) : null,
-                'quantity'         => $qty,
-                'amount'           => $line_total,
-                'status'           => 'placed',
-                'status_label'     => 'Placed',
-                'is_paid'          => true,
-                'address_id'       => $resolved_address_id,
-                'shipping_address' => $selected_address,
-                'created_at'       => date('Y-m-d H:i:s'),
-                'updated_at'       => date('Y-m-d H:i:s')
-            ];
         }
+
+        $created_order = [
+            'id'               => (int)$order_id,
+            'buyer_id'         => $user_id,
+            'product_id'       => (int)$primary_prod->id,
+            'product_name'     => $primary_prod->name,
+            'product_slug'     => null,
+            'product_price'    => (float)$primary_prod->price,
+            'product_image'    => !empty($primary_prod->image) ? base_url($primary_prod->image) : null,
+            'quantity'         => (int)$total_quantity,
+            'size'             => $primary_size,
+            'amount'           => (float)$total_payable,
+            'status'           => 'placed',
+            'status_label'     => 'Placed',
+            'is_paid'          => true,
+            'address_id'       => $resolved_address_id,
+            'shipping_address' => $selected_address,
+            'items'            => $line_items,
+            'items_count'      => count($line_items),
+            'created_at'       => date('Y-m-d H:i:s'),
+            'updated_at'       => date('Y-m-d H:i:s')
+        ];
+        $created_orders = [$created_order];
 
         if ($this->db->trans_status() === FALSE) {
             $this->db->trans_rollback();
@@ -2591,6 +2769,7 @@ class Api extends CI_Controller
                     'total_quantity'       => (int)$total_quantity,
                     'subtotal'             => (float)$subtotal,
                     'delivery_charge'      => (float)$delivery_charge,
+                    'delivery_charge_text' => 'As per order',
                     'discount'             => (float)$discount,
                     'total_payable_amount' => (float)$total_payable
                 ],
@@ -2819,24 +2998,35 @@ class Api extends CI_Controller
                 'created_at'   => date('Y-m-d H:i:s')
             ]);
 
-            // Deduct stock safely
-            $current_prod = $this->General_model->getOne('products', ['id' => $product_id]);
-            $new_stock = max(0, (int)($current_prod->stock ?? 0) - $qty);
-            $this->db->update('products', ['stock' => $new_stock], ['id' => $product_id]);
+            // Deduct stock safely & clear cart
+            $order_item_rows = $this->db->get_where('order_items', ['order_id' => $order_id])->result();
+            if (!empty($order_item_rows)) {
+                foreach ($order_item_rows as $it) {
+                    $c_prod = $this->General_model->getOne('products', ['id' => (int)$it->product_id]);
+                    $n_stock = max(0, (int)($c_prod->stock ?? 0) - (int)$it->quantity);
+                    $this->db->update('products', ['stock' => $n_stock], ['id' => (int)$it->product_id]);
+                    $this->db->delete('cart', [
+                        'user_id'    => $user_id,
+                        'product_id' => (int)$it->product_id
+                    ]);
+                }
+            } else {
+                $current_prod = $this->General_model->getOne('products', ['id' => $product_id]);
+                $new_stock = max(0, (int)($current_prod->stock ?? 0) - $qty);
+                $this->db->update('products', ['stock' => $new_stock], ['id' => $product_id]);
+
+                // Clear purchased item from cart
+                $this->db->delete('cart', [
+                    'user_id'    => $user_id,
+                    'product_id' => $product_id
+                ]);
+            }
 
             // Set order status to placed
             $this->db->update('orders', [
                 'status'     => 'placed',
                 'updated_at' => date('Y-m-d H:i:s')
             ], ['id' => $order_id]);
-
-            // Note: MLM referral commissions are distributed exclusively upon order delivery!
-
-            // Clear purchased item from cart
-            $this->db->delete('cart', [
-                'user_id'    => $user_id,
-                'product_id' => $product_id
-            ]);
         }
 
         if ($this->db->trans_status() === FALSE) {
@@ -2942,7 +3132,7 @@ class Api extends CI_Controller
         // Fetch paginated order rows joining with products
         $this->db->select('orders.*, products.name as product_name, products.image as product_image');
         $this->db->from('orders');
-        $this->db->join('products', 'products.id = orders.product_id', 'inner');
+        $this->db->join('products', 'products.id = orders.product_id', 'left');
         $this->db->where('orders.user_id', $user_id);
         if ($status !== '' && $status !== null) {
             $this->db->where('orders.status', $status);
@@ -2968,6 +3158,44 @@ class Api extends CI_Controller
                 $status_label = 'Placed';
             }
 
+            // Fetch order items if present
+            $item_rows = $this->db->select('order_items.*, products.name as product_name, products.image as product_image')
+                ->from('order_items')
+                ->join('products', 'products.id = order_items.product_id', 'left')
+                ->where('order_items.order_id', (int)$row->id)
+                ->get()->result();
+
+            $order_items = [];
+            foreach ($item_rows as $it) {
+                $order_items[] = [
+                    'id'            => (int)$it->id,
+                    'order_id'      => (int)$it->order_id,
+                    'product_id'    => (int)$it->product_id,
+                    'product_name'  => $it->product_name ?: $row->product_name,
+                    'product_image' => !empty($it->product_image) ? base_url($it->product_image) : (!empty($row->product_image) ? base_url($row->product_image) : null),
+                    'quantity'      => (int)$it->quantity,
+                    'size'          => $it->size ?? null,
+                    'price'         => (float)$it->price,
+                    'subtotal'      => (float)$it->subtotal,
+                ];
+            }
+
+            $items_count = count($order_items);
+            if ($items_count === 0 && !empty($row->product_id)) {
+                $items_count = 1;
+                $order_items[] = [
+                    'id'            => 0,
+                    'order_id'      => (int)$row->id,
+                    'product_id'    => (int)$row->product_id,
+                    'product_name'  => $row->product_name,
+                    'product_image' => !empty($row->product_image) ? base_url($row->product_image) : null,
+                    'quantity'      => (int)$row->quantity,
+                    'size'          => $row->size ?? null,
+                    'price'         => round((float)$row->amount / max(1, (int)$row->quantity), 2),
+                    'subtotal'      => (float)$row->amount
+                ];
+            }
+
             $orders[] = [
                 'id'            => (int)$row->id,
                 'product_id'    => (int)$row->product_id,
@@ -2975,10 +3203,13 @@ class Api extends CI_Controller
                 'product_slug'  => null,
                 'product_image' => !empty($row->product_image) ? base_url($row->product_image) : null,
                 'quantity'      => (int)$row->quantity,
+                'size'          => $row->size ?? null,
                 'amount'        => (float)$row->amount,
                 'status'        => $row->status,
                 'status_label'  => $status_label,
                 'is_paid'       => $is_paid,
+                'items_count'   => $items_count,
+                'items'         => $order_items,
                 'created_at'    => $row->created_at,
                 'updated_at'    => $row->updated_at
             ];
@@ -3015,7 +3246,7 @@ class Api extends CI_Controller
 
         $this->db->select('orders.*, products.name as product_name, products.image as product_image, products.price as product_price, categories.name as category_name, users.name as buyer_name, users.email as buyer_email, users.phone as buyer_phone, users.referral_code as buyer_ref');
         $this->db->from('orders');
-        $this->db->join('products', 'products.id = orders.product_id', 'inner');
+        $this->db->join('products', 'products.id = orders.product_id', 'left');
         $this->db->join('categories', 'categories.id = products.category_id', 'left');
         $this->db->join('users', 'users.id = orders.user_id', 'inner');
         $this->db->where('orders.id', (int)$id);
@@ -3061,6 +3292,45 @@ class Api extends CI_Controller
             $status_label = 'Awaiting Payment';
         } elseif ($order->status === 'placed') {
             $status_label = 'Placed';
+        }
+
+        // Fetch line items from order_items table
+        $item_rows = $this->db->select('order_items.*, products.name as product_name, products.image as product_image, categories.name as category_name')
+            ->from('order_items')
+            ->join('products', 'products.id = order_items.product_id', 'left')
+            ->join('categories', 'categories.id = products.category_id', 'left')
+            ->where('order_items.order_id', (int)$id)
+            ->get()->result();
+
+        $line_items = [];
+        foreach ($item_rows as $it) {
+            $line_items[] = [
+                'id'            => (int)$it->id,
+                'order_id'      => (int)$it->order_id,
+                'product_id'    => (int)$it->product_id,
+                'product_name'  => $it->product_name ?: $order->product_name,
+                'product_image' => !empty($it->product_image) ? base_url($it->product_image) : (!empty($order->product_image) ? base_url($order->product_image) : null),
+                'category_name' => $it->category_name ?: 'Product',
+                'quantity'      => (int)$it->quantity,
+                'size'          => $it->size ?? null,
+                'price'         => (float)$it->price,
+                'subtotal'      => (float)$it->subtotal,
+            ];
+        }
+
+        if (empty($line_items) && !empty($order->product_id)) {
+            $line_items[] = [
+                'id'            => 0,
+                'order_id'      => (int)$order->id,
+                'product_id'    => (int)$order->product_id,
+                'product_name'  => $order->product_name,
+                'product_image' => !empty($order->product_image) ? base_url($order->product_image) : null,
+                'category_name' => $order->category_name ?: 'Product',
+                'quantity'      => (int)$order->quantity,
+                'size'          => $order->size ?? null,
+                'price'         => (float)$order->product_price,
+                'subtotal'      => (float)$order->amount,
+            ];
         }
 
         // Fetch MLM referral commissions audit trail
@@ -3133,12 +3403,15 @@ class Api extends CI_Controller
             'product_image'    => !empty($order->product_image) ? base_url($order->product_image) : null,
             'category_name'    => $order->category_name ?: 'Uncategorized',
             'quantity'         => (int)$order->quantity,
+            'size'             => $order->size ?? null,
             'amount'           => (float)$order->amount,
             'status'           => $order->status,
             'status_label'     => $status_label,
             'is_paid'          => $is_paid,
             'address_id'       => $order->address_id ? (int)$order->address_id : null,
             'shipping_address' => $shipping_address,
+            'items'            => $line_items,
+            'items_count'      => count($line_items),
             'commissions'      => $commissions,
             'created_at'       => $order->created_at,
             'updated_at'       => $order->updated_at
@@ -3231,10 +3504,19 @@ class Api extends CI_Controller
             }
 
             // 2. Restore product stock
-            $current_prod = $this->General_model->getOne('products', ['id' => (int)$order->product_id]);
-            if ($current_prod) {
-                $new_stock = (int)$current_prod->stock + (int)$order->quantity;
-                $this->db->update('products', ['stock' => $new_stock], ['id' => (int)$order->product_id]);
+            $order_item_rows = $this->db->get_where('order_items', ['order_id' => (int)$id])->result();
+            if (!empty($order_item_rows)) {
+                foreach ($order_item_rows as $it) {
+                    $this->db->set('stock', 'stock + ' . (int)$it->quantity, FALSE);
+                    $this->db->where('id', (int)$it->product_id);
+                    $this->db->update('products');
+                }
+            } else {
+                $current_prod = $this->General_model->getOne('products', ['id' => (int)$order->product_id]);
+                if ($current_prod) {
+                    $new_stock = (int)$current_prod->stock + (int)$order->quantity;
+                    $this->db->update('products', ['stock' => $new_stock], ['id' => (int)$order->product_id]);
+                }
             }
 
             // 3. Reverse MLM level commissions
@@ -3428,10 +3710,19 @@ class Api extends CI_Controller
                 }
 
                 // 2. Restore product stock
-                $current_prod = $this->General_model->getOne('products', ['id' => (int)$order->product_id]);
-                if ($current_prod) {
-                    $new_stock = (int)$current_prod->stock + (int)$order->quantity;
-                    $this->db->update('products', ['stock' => $new_stock], ['id' => (int)$order->product_id]);
+                $order_item_rows = $this->db->get_where('order_items', ['order_id' => (int)$id])->result();
+                if (!empty($order_item_rows)) {
+                    foreach ($order_item_rows as $it) {
+                        $this->db->set('stock', 'stock + ' . (int)$it->quantity, FALSE);
+                        $this->db->where('id', (int)$it->product_id);
+                        $this->db->update('products');
+                    }
+                } else {
+                    $current_prod = $this->General_model->getOne('products', ['id' => (int)$order->product_id]);
+                    if ($current_prod) {
+                        $new_stock = (int)$current_prod->stock + (int)$order->quantity;
+                        $this->db->update('products', ['stock' => $new_stock], ['id' => (int)$order->product_id]);
+                    }
                 }
 
                 // 3. Reverse MLM level referral commissions

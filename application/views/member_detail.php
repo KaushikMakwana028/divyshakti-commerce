@@ -21,9 +21,14 @@ $mpdSourceMap = [
                 <h1 class="mpd-title">Member Profile Details</h1>
                 <p class="mpd-subtitle">Detailed audit view of the selected member's registration properties.</p>
             </div>
-            <a href="<?php echo base_url('admin/members'); ?>" class="mpd-back-btn">
-                <i class="fa-solid fa-arrow-left"></i> Back to Members
-            </a>
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <button type="button" class="btn btn-outline-danger btn-sm px-3 py-2 fw-semibold d-inline-flex align-items-center gap-2 mpd-delete-btn" style="border-radius: 10px; font-size: 0.84rem;" data-id="<?php echo $member->id; ?>" data-name="<?php echo htmlspecialchars($member->name ?? 'Member'); ?>">
+                    <i class="fa-solid fa-trash-can"></i> Delete Member
+                </button>
+                <a href="<?php echo base_url('admin/members'); ?>" class="mpd-back-btn">
+                    <i class="fa-solid fa-arrow-left"></i> Back to Members
+                </a>
+            </div>
         </div>
     <?php endif; ?>
 
@@ -138,11 +143,17 @@ $mpdSourceMap = [
                     <?php echo (!empty($member->is_profile_active)) ? 'Deactivate Profile' : 'Activate Profile'; ?>
                 </a>
 
-                <!-- Add funds directly inside detail page -->
+                <!-- Add & Reduce funds directly inside detail page -->
                 <button type="button" class="mpd-btn mpd-btn-primary"
                     data-bs-toggle="modal"
-                    data-bs-target="#loadWalletModal">
+                    data-bs-target="#loadWalletModal"
+                    data-mode="credit">
                     <i class="fa-solid fa-plus"></i> Load Wallet Funds
+                </button>
+                <button type="button" class="mpd-btn mpd-btn-danger"
+                    data-bs-toggle="modal"
+                    data-bs-target="#reduceWalletModal">
+                    <i class="fa-solid fa-minus"></i> Reduce Wallet Funds
                 </button>
                 <a href="<?php echo base_url('admin/members/edit/' . $member->id); ?>"
                     class="mpd-btn mpd-btn-edit">
@@ -423,17 +434,20 @@ $mpdSourceMap = [
         <div class="mpd-pagination-footer" id="mpdTxnPagination"></div>
     </div>
 
-    <!-- Load Wallet Modal (reused inside details page) -->
+    <!-- ============================================================== -->
+    <!-- 1. LOAD WALLET FUNDS MODAL (CREDIT) -->
+    <!-- ============================================================== -->
     <div class="modal fade" id="loadWalletModal" tabindex="-1" aria-labelledby="loadWalletModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow mpd-modal-content">
-                <div class="modal-header text-white p-4 mpd-modal-header">
+                <div class="modal-header text-white p-4 mpd-modal-header" style="background: linear-gradient(135deg, #1f2937, #111827);">
                     <h5 class="modal-title fw-bold" id="loadWalletModalLabel">
                         <i class="fa-solid fa-coins me-2 text-warning"></i> Load Wallet Funds
                     </h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <form method="POST" action="<?php echo base_url('admin/members/wallet/' . $member->id); ?>">
+                    <input type="hidden" name="type" value="credit">
                     <div class="modal-body p-4">
                         <div class="mb-3">
                             <label class="form-label text-muted fw-semibold mb-1">Member Account</label>
@@ -444,21 +458,81 @@ $mpdSourceMap = [
                             <input type="text" class="form-control bg-light text-success fw-bold" value="₹<?php echo number_format($member->wallet_balance, 2); ?>" readonly>
                         </div>
                         <div class="mb-3">
-                            <label for="amount" class="form-label fw-semibold text-dark">Amount to Add (₹)</label>
+                            <label for="creditAmount" class="form-label fw-semibold text-dark">Amount to Add (₹)</label>
                             <div class="input-group">
                                 <span class="input-group-text"><i class="fa-solid fa-indian-rupee-sign"></i></span>
-                                <input type="number" step="0.01" name="amount" class="form-control" placeholder="0.00" min="0.01" required>
+                                <input type="number" step="0.01" name="amount" id="creditAmount" class="form-control" placeholder="0.00" min="0.01" required>
                             </div>
+                            <small class="text-success mt-1 d-block fw-semibold" id="creditBalancePreview"></small>
                         </div>
                         <div class="mb-3">
-                            <label for="remark" class="form-label fw-semibold text-dark">Transaction Remark</label>
-                            <input type="text" name="remark" class="form-control" placeholder="e.g. Approved loading bonus" required>
+                            <label for="creditRemark" class="form-label fw-semibold text-dark">Transaction Remark</label>
+                            <input type="text" name="remark" id="creditRemark" class="form-control" placeholder="e.g. Approved loading bonus" required>
                         </div>
                     </div>
                     <div class="modal-footer bg-light p-3 border-0 justify-content-end gap-2">
                         <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn fw-semibold text-white px-4 mpd-modal-submit">
-                            Credit Wallet
+                        <button type="submit" class="btn fw-semibold text-white px-4 mpd-modal-submit" style="background: linear-gradient(45deg, var(--mpd-pink), var(--mpd-gold)); border: none;">
+                            <i class="fa-solid fa-check me-1"></i> Credit Wallet
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================== -->
+    <!-- 2. BRAND NEW REDUCE WALLET FUNDS MODAL (DEBIT) -->
+    <!-- ============================================================== -->
+    <div class="modal fade" id="reduceWalletModal" tabindex="-1" aria-labelledby="reduceWalletModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow mpd-modal-content">
+                <div class="modal-header text-white p-4" style="background: linear-gradient(135deg, #7f1d1d, #991b1b, #111827); border-top-left-radius: 14px; border-top-right-radius: 14px;">
+                    <div class="d-flex align-items-center">
+                        <span style="display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; background:rgba(255,255,255,0.15); border-radius:10px; margin-right:12px;">
+                            <i class="fa-solid fa-arrow-down-short-wide text-white fs-5"></i>
+                        </span>
+                        <div>
+                            <h5 class="modal-title fw-bold text-white mb-0" id="reduceWalletModalLabel">Reduce Member Wallet</h5>
+                            <small class="text-white-50" style="font-size:0.75rem;">Deduct balance from member's wallet with reason</small>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form method="POST" action="<?php echo base_url('admin/members/reduce_wallet/' . $member->id); ?>" id="reduceWalletForm">
+                    <input type="hidden" name="type" value="debit">
+                    <div class="modal-body p-4">
+                        <div class="mb-3">
+                            <label class="form-label text-muted fw-semibold mb-1">Member Account</label>
+                            <input type="text" class="form-control bg-light" value="<?php echo htmlspecialchars($member->name); ?>" readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-muted fw-semibold mb-1">Available Wallet Balance</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light text-muted"><i class="fa-solid fa-wallet"></i></span>
+                                <input type="text" id="rmCurrentBalance" class="form-control bg-light text-danger fw-bold" value="₹<?php echo number_format($member->wallet_balance, 2); ?>" data-balance="<?php echo (float)$member->wallet_balance; ?>" readonly>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="reduceAmount" class="form-label fw-semibold text-dark">Amount to Deduct / Reduce (₹) <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fa-solid fa-indian-rupee-sign"></i></span>
+                                <input type="number" step="0.01" name="amount" id="reduceAmount" class="form-control" placeholder="0.00" min="0.01" max="<?php echo (float)$member->wallet_balance; ?>" required>
+                            </div>
+                            <small class="mt-1 d-block fw-semibold" id="reduceBalancePreview"></small>
+                        </div>
+                        <div class="mb-3">
+                            <label for="reduceRemark" class="form-label fw-semibold text-dark">Reason / Note for Reduction <span class="text-danger">*</span></label>
+                            <textarea name="remark" id="reduceRemark" class="form-control" rows="2" placeholder="e.g. Penalty for order cancellation / Manual deduction adjustment" required minlength="3"></textarea>
+                            <small class="text-danger mt-1 d-block" style="font-size:0.76rem;">
+                                <i class="fa-solid fa-circle-exclamation me-1"></i>This note will be shown to the user in their mobile app transaction history.
+                            </small>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light p-3 border-0 justify-content-end gap-2">
+                        <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" id="reduceSubmitBtn" class="btn btn-danger fw-semibold px-4" style="background:#dc2626; border-color:#dc2626; box-shadow: 0 4px 12px rgba(220, 38, 38, 0.25);">
+                            <i class="fa-solid fa-minus-circle me-1"></i> Deduct from Wallet
                         </button>
                     </div>
                 </form>
@@ -549,6 +623,35 @@ $mpdSourceMap = [
         }
 
         .mpd-back-btn:active {
+            transform: translateY(1px);
+        }
+
+        .mpd-delete-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            background: #ffffff;
+            color: #dc2626;
+            border: 1.5px solid #dc2626;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.85rem;
+            padding: 0.6rem 1.1rem;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .mpd-delete-btn:hover {
+            background: #dc2626;
+            color: #ffffff;
+            border-color: #dc2626;
+            box-shadow: 0 6px 16px rgba(220, 38, 38, 0.25);
+            transform: translateY(-1px);
+        }
+
+        .mpd-delete-btn:active {
             transform: translateY(1px);
         }
 
@@ -665,6 +768,19 @@ $mpdSourceMap = [
         .mpd-btn-primary:hover {
             color: #fff;
             box-shadow: 0 8px 20px rgba(233, 30, 140, 0.26);
+        }
+
+        .mpd-btn-danger {
+            background: #fff5f5;
+            border-color: #fecaca;
+            color: #dc2626;
+        }
+
+        .mpd-btn-danger:hover {
+            background: #dc2626;
+            border-color: #dc2626;
+            color: #fff;
+            box-shadow: 0 8px 20px rgba(220, 38, 38, 0.25);
         }
 
         .mpd-btn-edit {
@@ -1282,5 +1398,68 @@ $mpdSourceMap = [
             }
 
             loadTransactions(1);
+
+            // Delete member confirmation handler
+            const deleteBtn = document.querySelector('.mpd-delete-btn');
+            if (deleteBtn) {
+                deleteBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const mId = this.getAttribute('data-id');
+                    const mName = this.getAttribute('data-name') || 'this member';
+                    
+                    if (typeof dsConfirm === 'function') {
+                        dsConfirm({
+                            title: 'Delete Member?',
+                            html: `Are you sure you want to delete <strong>${mName}</strong>?<br><br><span class="text-danger small"><i class="fa-solid fa-triangle-exclamation me-1"></i> All direct referrals under this member will become independent root members, while preserving their downline networks. This action cannot be undone.</span>`,
+                            isDangerous: true,
+                            confirmText: '<i class="fa-solid fa-trash-can me-1"></i> Yes, Delete Member',
+                            cancelText: 'Cancel',
+                            onConfirm: function() {
+                                window.location.href = `<?php echo base_url('admin/members/delete/'); ?>${mId}`;
+                            }
+                        });
+                    } else if (confirm(`Are you sure you want to delete ${mName}? All direct referrals under this member will become independent root members.`)) {
+                        window.location.href = `<?php echo base_url('admin/members/delete/'); ?>${mId}`;
+                    }
+                });
+            }
+
+            // Live preview for Load Wallet Funds Modal
+            const creditAmount = document.getElementById('creditAmount');
+            const creditPreview = document.getElementById('creditBalancePreview');
+            const currentWalletBal = <?php echo (float)$member->wallet_balance; ?>;
+            if (creditAmount && creditPreview) {
+                creditAmount.addEventListener('input', function() {
+                    const val = parseFloat(this.value) || 0;
+                    if (val > 0) {
+                        creditPreview.innerHTML = `<i class="fa-solid fa-calculator me-1"></i>New balance after credit: ₹${(currentWalletBal + val).toFixed(2)}`;
+                    } else {
+                        creditPreview.innerHTML = '';
+                    }
+                });
+            }
+
+            // Live preview for Reduce Wallet Funds Modal
+            const reduceAmount = document.getElementById('reduceAmount');
+            const reducePreview = document.getElementById('reduceBalancePreview');
+            const reduceSubmitBtn = document.getElementById('reduceSubmitBtn');
+            if (reduceAmount && reducePreview) {
+                reduceAmount.addEventListener('input', function() {
+                    const val = parseFloat(this.value) || 0;
+                    if (val > 0) {
+                        if (val > currentWalletBal) {
+                            reducePreview.innerHTML = `<span class="text-danger"><i class="fa-solid fa-circle-xmark me-1"></i>Amount exceeds available balance (₹${currentWalletBal.toFixed(2)})</span>`;
+                            if (reduceSubmitBtn) reduceSubmitBtn.disabled = true;
+                        } else {
+                            const rem = currentWalletBal - val;
+                            reducePreview.innerHTML = `<span class="text-info"><i class="fa-solid fa-calculator me-1"></i>Remaining balance after deduction: ₹${rem.toFixed(2)}</span>`;
+                            if (reduceSubmitBtn) reduceSubmitBtn.disabled = false;
+                        }
+                    } else {
+                        reducePreview.innerHTML = '';
+                        if (reduceSubmitBtn) reduceSubmitBtn.disabled = false;
+                    }
+                });
+            }
         });
     </script>

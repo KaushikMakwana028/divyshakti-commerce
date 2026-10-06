@@ -1,106 +1,3 @@
-<div class="rtx-page">
-
-    <!-- Hero header -->
-    <header class="rtx-hero">
-        <div class="rtx-hero-text">
-            <span class="rtx-eyebrow"><i class="fa-solid fa-diagram-project"></i> Network Explorer</span>
-            <h1 class="rtx-title">Referral Tree Network</h1>
-            <p class="rtx-subtitle">Trace every member's upline and downline, level by level.</p>
-        </div>
-        <div class="rtx-hero-actions">
-            <button id="resetRootBtn" class="rtx-action rtx-action-ghost" title="Reset to Root">
-                <i class="fa-solid fa-house-user"></i><span>Reset to Root</span>
-            </button>
-            <a href="<?php echo base_url('admin/members'); ?>" class="rtx-action rtx-action-outline" title="Back to Members list">
-                <i class="fa-solid fa-users"></i><span>Back to Members</span>
-            </a>
-        </div>
-    </header>
-
-    <!-- Toolbar: search + hint -->
-    <div class="rtx-toolbar">
-        <div class="rtx-search">
-            <label class="rtx-search-label" for="networkSearch">
-                <i class="fa-solid fa-magnifying-glass"></i> Search Member
-            </label>
-            <div class="rtx-search-field">
-                <i class="fa-solid fa-magnifying-glass rtx-search-icon"></i>
-                <input type="text" id="networkSearch" class="rtx-search-input" placeholder="Search by User ID, name, email, or referral code…" autocomplete="off">
-                <button type="button" id="networkSearchClear" class="rtx-search-clear" style="display:none;" aria-label="Clear search">
-                    <i class="fa-solid fa-xmark"></i>
-                </button>
-            </div>
-            <div id="autocompleteResults" class="rtx-autocomplete"></div>
-        </div>
-
-        <div class="rtx-hint">
-            <i class="fa-solid fa-circle-info"></i>
-            <span>Tap a node to view the audit profile</span>
-        </div>
-    </div>
-
-    <!-- Chart -->
-    <div class="rtx-chart-shell">
-
-        <!-- Decorative brand ornament (non-interactive) -->
-        <svg class="rtx-ornament" viewBox="0 0 200 200" aria-hidden="true" focusable="false">
-            <circle cx="200" cy="0" r="60" fill="none" stroke="var(--border-gold)" stroke-width="1" opacity="0.35"></circle>
-            <circle cx="200" cy="0" r="90" fill="none" stroke="var(--border-gold)" stroke-width="1" stroke-dasharray="2 6" opacity="0.3"></circle>
-            <circle cx="200" cy="0" r="120" fill="none" stroke="var(--text-pink)" stroke-width="1" stroke-dasharray="1 8" opacity="0.22"></circle>
-        </svg>
-
-        <div id="tree" class="rtx-chart"></div>
-
-        <div class="rtx-empty" id="rtnChartEmpty" style="display:none;">
-            <div class="rtx-empty-badge"><i class="fa-solid fa-users-slash"></i></div>
-            <p>No members found for this view.</p>
-        </div>
-
-        <!-- Loading overlay shown while a tree fetch is in-flight -->
-        <div class="rtx-loading-overlay" id="rtnChartLoading" style="display:none;">
-            <div class="rtx-loading-spinner"></div>
-        </div>
-
-        <!-- Toast for non-blocking errors -->
-        <div class="rtx-toast" id="rtnToast" role="status" aria-live="polite"></div>
-
-        <!-- Zoom controls -->
-        <div class="rtx-zoom-island">
-            <button id="zoomInBtn" class="rtx-zoom-btn" title="Zoom In" aria-label="Zoom in">
-                <i class="fa-solid fa-plus"></i>
-            </button>
-            <span class="rtx-zoom-divider" aria-hidden="true"></span>
-            <button id="zoomOutBtn" class="rtx-zoom-btn" title="Zoom Out" aria-label="Zoom out">
-                <i class="fa-solid fa-minus"></i>
-            </button>
-            <span class="rtx-zoom-divider" aria-hidden="true"></span>
-            <button id="zoomFitBtn" class="rtx-zoom-btn" title="Fit to Screen" aria-label="Fit to screen">
-                <i class="fa-solid fa-expand"></i>
-            </button>
-        </div>
-    </div>
-</div>
-
-<!-- Member Details View Modal (reuses existing member details controller output) -->
-<div class="modal fade" id="memberDetailModal" tabindex="-1" aria-labelledby="memberDetailModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable rtx-modal-dialog">
-        <div class="modal-content border-0 shadow-lg rtx-modal-content">
-            <div class="modal-header text-white p-3 rtx-modal-header">
-                <h5 class="modal-title fw-bold" id="memberDetailModalLabel">
-                    <i class="fa-solid fa-user-gear me-2 text-warning"></i> Member Audit Profile
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body p-4 bg-light" id="memberDetailModalBody" style="min-height: 350px;">
-                <!-- Content will load dynamically here -->
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Load Balkangraph OrgChart JS (deferred to prevent blocking parser/styles) -->
-<script defer src="https://balkangraph.com/js/orgchart.js"></script>
-
 <style>
     /* ---------- Brand tokens (unchanged) ---------- */
     :root {
@@ -750,19 +647,143 @@
     }
 </style>
 
+<div class="rtx-page">
+
+    <!-- Hero header -->
+    <header class="rtx-hero">
+        <div class="rtx-hero-text">
+            <span class="rtx-eyebrow"><i class="fa-solid fa-diagram-project"></i> Network Explorer</span>
+            <h1 class="rtx-title">Referral Tree Network</h1>
+            <p class="rtx-subtitle">Trace every member's upline and downline, level by level.</p>
+        </div>
+        <div class="rtx-hero-actions">
+            <button id="resetRootBtn" class="rtx-action rtx-action-ghost" title="Reset to Root">
+                <i class="fa-solid fa-house-user"></i><span>Reset to Root</span>
+            </button>
+            <a href="<?php echo base_url('admin/members'); ?>" class="rtx-action rtx-action-outline" title="Back to Members list">
+                <i class="fa-solid fa-users"></i><span>Back to Members</span>
+            </a>
+        </div>
+    </header>
+
+    <!-- Toolbar: search + hint -->
+    <div class="rtx-toolbar">
+        <div class="rtx-search">
+            <label class="rtx-search-label" for="networkSearch">
+                <i class="fa-solid fa-magnifying-glass"></i> Search Member
+            </label>
+            <div class="rtx-search-field">
+                <i class="fa-solid fa-magnifying-glass rtx-search-icon"></i>
+                <input type="text" id="networkSearch" class="rtx-search-input" placeholder="Search by User ID, name, email, or referral code…" autocomplete="off">
+                <button type="button" id="networkSearchClear" class="rtx-search-clear" style="display:none;" aria-label="Clear search">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div id="autocompleteResults" class="rtx-autocomplete"></div>
+        </div>
+
+        <div class="rtx-hint">
+            <i class="fa-solid fa-circle-info"></i>
+            <span>Tap a node to view the audit profile</span>
+        </div>
+    </div>
+
+    <!-- Chart -->
+    <div class="rtx-chart-shell">
+
+        <!-- Decorative brand ornament (non-interactive) -->
+        <svg class="rtx-ornament" viewBox="0 0 200 200" aria-hidden="true" focusable="false">
+            <circle cx="200" cy="0" r="60" fill="none" stroke="var(--border-gold)" stroke-width="1" opacity="0.35"></circle>
+            <circle cx="200" cy="0" r="90" fill="none" stroke="var(--border-gold)" stroke-width="1" stroke-dasharray="2 6" opacity="0.3"></circle>
+            <circle cx="200" cy="0" r="120" fill="none" stroke="var(--text-pink)" stroke-width="1" stroke-dasharray="1 8" opacity="0.22"></circle>
+        </svg>
+
+        <div id="tree" class="rtx-chart"></div>
+
+        <div class="rtx-empty" id="rtnChartEmpty" style="display:none;">
+            <div class="rtx-empty-badge"><i class="fa-solid fa-users-slash"></i></div>
+            <p>No members found for this view.</p>
+        </div>
+
+        <!-- Loading overlay shown while a tree fetch is in-flight -->
+        <div class="rtx-loading-overlay" id="rtnChartLoading" style="display:none;">
+            <div class="rtx-loading-spinner"></div>
+        </div>
+
+        <!-- Toast for non-blocking errors -->
+        <div class="rtx-toast" id="rtnToast" role="status" aria-live="polite"></div>
+
+        <!-- Zoom controls -->
+        <div class="rtx-zoom-island">
+            <button id="zoomInBtn" class="rtx-zoom-btn" title="Zoom In" aria-label="Zoom in">
+                <i class="fa-solid fa-plus"></i>
+            </button>
+            <span class="rtx-zoom-divider" aria-hidden="true"></span>
+            <button id="zoomOutBtn" class="rtx-zoom-btn" title="Zoom Out" aria-label="Zoom out">
+                <i class="fa-solid fa-minus"></i>
+            </button>
+            <span class="rtx-zoom-divider" aria-hidden="true"></span>
+            <button id="zoomFitBtn" class="rtx-zoom-btn" title="Fit to Screen" aria-label="Fit to screen">
+                <i class="fa-solid fa-expand"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Member Details View Modal (reuses existing member details controller output) -->
+<div class="modal fade" id="memberDetailModal" tabindex="-1" aria-labelledby="memberDetailModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable rtx-modal-dialog">
+        <div class="modal-content border-0 shadow-lg rtx-modal-content">
+            <div class="modal-header text-white p-3 rtx-modal-header">
+                <h5 class="modal-title fw-bold" id="memberDetailModalLabel">
+                    <i class="fa-solid fa-user-gear me-2 text-warning"></i> Member Audit Profile
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 bg-light" id="memberDetailModalBody" style="min-height: 350px;">
+                <!-- Content will load dynamically here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Load Balkangraph OrgChart with Dual Fallback (Official CDN + Local Server) -->
+<script src="https://balkan.app/js/OrgChart.js"></script>
+<script>
+    if (typeof OrgChart === 'undefined') {
+        document.write('<script src="<?php echo base_url("assets/js/orgchart.js"); ?>"><\/script>');
+    }
+</script>
+
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const initialUserId = <?php echo json_encode($initial_user_id); ?>;
-
-        // ---- State ----
-        let chart = null; // current live OrgChart instance (nulled out between tree switches)
-        let loadedNodesMap = {}; // tracks nodes whose children have already been fetched
-        const pendingChildLoads = new Set(); // node ids currently mid-fetch for children (guards double-click)
-        const pendingParentLoads = new Set(); // node ids currently mid-fetch for their parent
-
         const chartEmptyEl = document.getElementById('rtnChartEmpty');
         const chartLoadingEl = document.getElementById('rtnChartLoading');
         const toastEl = document.getElementById('rtnToast');
+
+        // Verify OrgChart library is loaded
+        if (typeof OrgChart === 'undefined') {
+            console.error('OrgChart library failed to load from both CDN and local server.');
+            if (chartEmptyEl) {
+                chartEmptyEl.innerHTML = `
+                    <div class="rtx-empty-badge" style="background:rgba(239,68,68,0.12);color:#ef4444;">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                    </div>
+                    <p style="font-weight:600;color:#dc2626;margin-bottom:4px;">OrgChart Library Not Available</p>
+                    <p style="color:#64748b;font-size:0.85rem;">Please check your internet connection or verify <code>assets/js/orgchart.js</code> is uploaded to the server.</p>
+                `;
+                chartEmptyEl.style.display = 'flex';
+            }
+            return;
+        }
+
+        // ---- State ----
+        let chart = null; // current live OrgChart instance
+        let currentNodes = []; // complete tracker of nodes currently rendered in chart
+        let loadedNodesMap = {}; // tracks nodes whose children have already been fetched
+        const pendingChildLoads = new Set(); // node ids currently mid-fetch for children (guards double-click)
+        const pendingParentLoads = new Set(); // node ids currently mid-fetch for their parent
 
         let toastTimer = null;
 
@@ -780,8 +801,6 @@
             chartLoadingEl.style.display = isLoading ? 'flex' : 'none';
         }
 
-        // Wrapper around fetch() that rejects on non-OK responses so failures
-        // surface instead of silently doing nothing.
         function fetchJSON(url, options) {
             return fetch(url, options).then(res => {
                 if (!res.ok) {
@@ -791,10 +810,14 @@
             });
         }
 
+        // Generate instant inline SVG avatar with member's first initial (0ms latency, zero external network dependency)
+        function getAvatarDataUri(name) {
+            const initial = (name || 'M').trim().charAt(0).toUpperCase();
+            const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128"><rect width="128" height="128" rx="64" fill="#F4A6C6"/><text x="50%" y="54%" font-family="'Poppins', sans-serif" font-weight="700" font-size="52" fill="#2B2B2B" text-anchor="middle" dominant-baseline="middle">${initial}</text></svg>`;
+            return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+        }
+
         // Define circular clipping and premium theme card SVG for nodes
-        // Node height is 124 (was 110): the extra 14px at the top is reserved
-        // headroom so the "expand to parent" ▲ button always has clear space
-        // above the card instead of overlapping/hiding behind it.
         OrgChart.templates.divyShakti = Object.assign({}, OrgChart.templates.ana);
         OrgChart.templates.divyShakti.size = [250, 124];
 
@@ -803,23 +826,21 @@
             '<rect x="0" y="14" height="110" width="250" fill="#ffffff" stroke="#D4AF37" stroke-width="2" rx="15" ry="15"></rect>' +
             '<line x1="15" y1="94" x2="235" y2="94" stroke="#F4A6C6" stroke-width="1.5"></line>';
 
-        // Define parent expand button directly as a template element with dynamic display binding {val}.
-        // Click handling is done via chart.on('click', ...) delegation (see below) rather than an
-        // inline onclick attribute, since inline handlers on library-templated SVG are unreliable.
+        // Parent expand button (▲): displayed above card when member has an upline sponsor not yet rendered
         OrgChart.templates.divyShakti.parent_btn =
             '<g class="parent-expand-btn" data-action="expand-parent" style="cursor:pointer; display: {val};">' +
             '<circle cx="125" cy="12" r="12" fill="#ffffff" stroke="#D4AF37" stroke-width="1.5"></circle>' +
             '<text x="125" y="16" text-anchor="middle" style="font-size: 12px; font-weight: bold; fill: #E91E8C; font-family:\'Poppins\',sans-serif; pointer-events: none;">▲</text>' +
             '</g>';
 
-        // Circular clipping container for profile images using unique randId (shifted down 14px with the card)
+        // Circular clipping container for profile images using unique randId
         OrgChart.templates.divyShakti.img_0 =
             '<clipPath id="{randId}">' +
             '<circle cx="45" cy="54" r="30"></circle>' +
             '</clipPath>' +
             '<image preserveAspectRatio="xMidYMid slice" clip-path="url(#{randId})" xlink:href="{val}" x="15" y="24" width="60" height="60"></image>';
 
-        // Premium typography bindings (shifted down 14px with the card)
+        // Typography bindings
         OrgChart.templates.divyShakti.field_0 =
             '<text text-overflow="ellipsis" width="150" style="font-size: 13px; font-weight: 700; font-family:\'Poppins\',sans-serif;" fill="#2B2B2B" x="85" y="46">{val}</text>'; // Name
         OrgChart.templates.divyShakti.field_1 =
@@ -827,15 +848,11 @@
         OrgChart.templates.divyShakti.field_2 =
             '<text text-overflow="ellipsis" width="150" style="font-size: 11px; font-weight: 600; font-family:\'Poppins\',sans-serif;" fill="#B8860B" x="85" y="82">Bal: ₹{val}</text>'; // Wallet Balance
 
-        // Function to build and format node objects for OrgChart.js.
-        // IMPORTANT: `chart` must be null (not a stale/destroyed instance) whenever this
-        // is used to build a brand-new root node set, otherwise parent_btn visibility
-        // can be computed against leftover data from a previously-viewed tree.
+        // Format a user object into OrgChart node structure
         function formatNode(userObj, parentId) {
             let photoUrl = userObj.profile_image;
             if (!photoUrl) {
-                // If profile image is empty, construct a beautiful SVG avatar dynamically
-                photoUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(userObj.name)}&background=F4A6C6&color=2B2B2B&bold=true&size=128`;
+                photoUrl = getAvatarDataUri(userObj.name);
             }
 
             let displayName = (userObj.name || '').trim();
@@ -843,28 +860,30 @@
                 displayName = displayName.substring(0, 19).trim() + '…';
             }
 
+            const rawParentId = userObj.parent_id !== null ? parseInt(userObj.parent_id) : null;
+
             const node = {
-                id: userObj.id,
+                id: parseInt(userObj.id),
+                _raw_parent_id: rawParentId,
                 name: displayName,
                 referral_code: userObj.referral_code,
-                wallet_balance: parseFloat(userObj.wallet_balance).toFixed(2),
+                wallet_balance: parseFloat(userObj.wallet_balance || 0).toFixed(2),
                 profile_image: photoUrl
             };
 
-            if (parentId) {
-                node.pid = parentId;
+            if (parentId !== undefined && parentId !== null) {
+                node.pid = parseInt(parentId);
             }
 
-            // Set parent expand button visibility to either 'block' or 'none'
-            const parentInChart = chart ? chart.get(userObj.parent_id) : false;
-            if (userObj.parent_id && !parentInChart) {
+            // If the member has an upline sponsor in DB that is not yet visible in currentNodes, show ▲ button
+            const parentInChart = rawParentId ? currentNodes.some(n => n.id === rawParentId) : false;
+            if (rawParentId && !parentInChart) {
                 node.parent_btn = 'block';
             } else {
                 node.parent_btn = 'none';
             }
 
-            // OrgChart.js displays node.cids.length as the count in the expand (+) badge.
-            // Generate matching number of dummy child IDs so the badge displays the actual children count.
+            // Set dummy child IDs to render OrgChart's down/expand badge with the exact child count
             const childCount = parseInt(userObj.children_count) || (userObj.has_children ? 1 : 0);
             if (childCount > 0) {
                 node.cids = [];
@@ -876,24 +895,33 @@
             return node;
         }
 
-        // Initialize Tree chart
+        // Initialize OrgChart instance
         function initChart(nodesArray) {
+            currentNodes = [...nodesArray];
             loadedNodesMap = {};
             pendingChildLoads.clear();
             pendingParentLoads.clear();
 
             chartEmptyEl.style.display = nodesArray.length === 0 ? 'flex' : 'none';
             if (nodesArray.length === 0) {
-                chart = null;
+                if (chart) {
+                    chart.destroy();
+                    chart = null;
+                }
                 return;
+            }
+
+            if (chart) {
+                chart.destroy();
+                chart = null;
             }
 
             chart = new OrgChart(document.getElementById("tree"), {
                 template: "divyShakti",
-                mouseScroller: OrgChart.action.zoom, // Enable scroll-to-zoom
-                enableDragDrop: false, // Prevent modifications
-                enableSearch: false, // Use our custom autocomplete
-                nodeMouseClick: OrgChart.action.none, // Prevent default action so we handle profile loading
+                mouseScroller: OrgChart.action.zoom,
+                enableDragDrop: false,
+                enableSearch: false,
+                nodeMouseClick: OrgChart.action.none,
                 nodeBinding: {
                     field_0: "name",
                     field_1: "referral_code",
@@ -904,11 +932,10 @@
                 nodes: nodesArray
             });
 
-            // Handle Expand load-on-demand
+            // Handle Expand load-on-demand: triggered when user clicks the down button / [count] badge
             chart.onDemand(function(args) {
-                const parentId = args.id;
+                const parentId = parseInt(args.id);
 
-                // Already loaded, or a fetch for this node is already in flight — skip.
                 if (loadedNodesMap[parentId] || pendingChildLoads.has(parentId)) return;
                 pendingChildLoads.add(parentId);
 
@@ -916,24 +943,27 @@
                     .then(res => {
                         if (res.status && res.children) {
                             const newNodes = res.children
-                                .filter(child => !chart.get(child.id))
+                                .filter(child => !currentNodes.some(n => n.id === parseInt(child.id)))
                                 .map(child => formatNode(child, parentId));
 
-                            // Remove dummy expand nodes from layout
                             const filteredCids = args.ids.filter(id => !id.toString().includes('_dummy_child'));
 
                             chart.addNodes(parentId, newNodes, function() {
                                 loadedNodesMap[parentId] = true;
                                 pendingChildLoads.delete(parentId);
 
-                                // Clear the lazy-load placeholder on the parent now that real
-                                // children exist, so future clicks on the +/- button toggle
-                                // (collapse/expand) locally instead of re-triggering onDemand
-                                // (which would otherwise silently no-op once already loaded).
+                                // Append new child nodes to currentNodes tracker
+                                newNodes.forEach(n => currentNodes.push(n));
+
+                                // Remove dummy placeholder cids from parent node
                                 const parentNode = chart.get(parentId);
                                 if (parentNode && parentNode.cids) {
                                     delete parentNode.cids;
                                     chart.updateNode(parentNode);
+                                }
+                                const parentInArr = currentNodes.find(n => n.id === parentId);
+                                if (parentInArr && parentInArr.cids) {
+                                    delete parentInArr.cids;
                                 }
 
                                 if (newNodes.length > 0) {
@@ -946,27 +976,27 @@
                     })
                     .catch(err => {
                         pendingChildLoads.delete(parentId);
-                        console.error("Error lazy loading referral tree node: ", err);
+                        console.error("Error lazy loading downline: ", err);
                         showToast("Couldn't load this member's downline. Please try again.", true);
                     });
             });
 
-            // Bind click event on nodes to fetch and open profile details modal
+            // Bind click event on nodes
             chart.on('click', function(sender, args) {
-                // Parent-expand (▲) button: detected via its data-action marker, using
-                // OrgChart's own reliably-resolved args.node.id rather than manual DOM traversal.
+                // Parent-expand (▲) button click
                 const expandBtn = args.event.target.closest('[data-action="expand-parent"]');
                 if (expandBtn) {
                     expandParentNodeById(args.node.id, expandBtn);
                     return;
                 }
 
-                // Exclude clicks on the built-in +/- children toggle
+                // Exclude clicks on the built-in +/- children toggle badge
                 if (args.event.target.tagName === 'circle' ||
                     (args.event.target.tagName === 'text' && args.event.target.closest('g[transform]'))) {
                     return;
                 }
 
+                // Show Member Audit Profile modal
                 showMemberProfileModal(args.node.id);
             });
         }
@@ -986,7 +1016,6 @@
             const detailModal = new bootstrap.Modal(document.getElementById('memberDetailModal'));
             detailModal.show();
 
-            // Fetch AJAX details view content (using existing view code condition without header/footer)
             fetch(`<?php echo base_url('admin/members/view/'); ?>${memberId}`, {
                     headers: {
                         'X-Requested-With': 'XMLHttpRequest'
@@ -1010,14 +1039,10 @@
                 });
         }
 
-        // Fetch and load initial tree (No ID = topmost roots)
+        // Load referral tree:
+        // - When specificUserId is given (search): SHOW ONLY THAT USER'S CARD (no ancestors above, no children below)
+        // - When specificUserId is null (reset): SHOW TOPMOST ROOT MEMBERS
         function loadInitialTree(specificUserId = null) {
-            // Drop any previous chart before building new node data
-            if (chart) {
-                chart.destroy();
-                chart = null;
-            }
-
             setChartLoading(true);
 
             const url = specificUserId ?
@@ -1028,39 +1053,23 @@
                 .then(res => {
                     if (res.status) {
                         let nodes = [];
+                        currentNodes = [];
+
                         if (specificUserId && res.user) {
-                            // 1. Add all ancestors from topmost root down to the user's immediate parent
-                            if (res.ancestors && res.ancestors.length > 0) {
-                                // res.ancestors is returned as [parent, grandparent, ... root]
-                                // Reverse so the topmost root ancestor is first
-                                const reversedAncestors = [...res.ancestors].reverse();
-                                reversedAncestors.forEach((anc, idx) => {
-                                    // Topmost root ancestor has null pid; others link to their actual parent_id
-                                    const ancPid = idx === 0 ? null : (anc.parent_id !== null ? anc.parent_id : null);
-                                    nodes.push(formatNode(anc, ancPid));
-                                });
-                            }
-
-                            // 2. Add the selected user, linked to their parent
-                            const userPid = (res.ancestors && res.ancestors.length > 0) ? res.user.parent_id : null;
-                            nodes.push(formatNode(res.user, userPid));
-
-                            // 3. Add any direct children of this user
-                            if (res.children && res.children.length > 0) {
-                                res.children.forEach(child => {
-                                    nodes.push(formatNode(child, res.user.id));
-                                });
-                            }
-                        } else {
-                            // Render list of topmost root users (parent_id = NULL)
-                            res.children.forEach(child => {
-                                nodes.push(formatNode(child, null));
+                            // SHOW ONLY THE SEARCHED MEMBER'S CARD!
+                            // Do not show ancestors above or children below automatically.
+                            // User clicks ▲ to reveal parent, or ▼ (count badge) to reveal children.
+                            nodes.push(formatNode(res.user, null));
+                        } else if (res.children && res.children.length > 0) {
+                            // Root view: render root members (parent_id = NULL)
+                            res.children.forEach(rootMember => {
+                                nodes.push(formatNode(rootMember, null));
                             });
                         }
 
                         initChart(nodes);
 
-                        // If a specific user was requested, smoothly center & highlight their card
+                        // If a specific user was searched, smoothly center & highlight their card
                         if (specificUserId && res.user) {
                             requestAnimationFrame(() => {
                                 try {
@@ -1079,26 +1088,96 @@
                     }
                 })
                 .catch(err => {
-                    console.error("Error loading initial tree: ", err);
+                    console.error("Error loading referral tree: ", err);
                     initChart([]);
                     showToast("Couldn't load the network. Please check your connection and try again.", true);
                 })
                 .finally(() => setChartLoading(false));
         }
 
-        // Expand parent node action: smoothly re-centers the tree on the parent's full branch top-down
+        // Expand parent node action (▲): reveals the upline parent member card directly above this member
         function expandParentNodeById(nodeId, buttonEl) {
-            if (pendingParentLoads.has(nodeId)) return; // already fetching, ignore repeat clicks
-            pendingParentLoads.add(nodeId);
+            const childId = parseInt(nodeId);
+            if (pendingParentLoads.has(childId)) return;
+            pendingParentLoads.add(childId);
             if (buttonEl) buttonEl.setAttribute('data-loading', 'true');
 
-            fetchJSON(`<?php echo base_url('admin/members/getReferralTree/'); ?>${nodeId}`)
+            // Find child node from currentNodes tracker
+            const childNode = currentNodes.find(n => n.id === childId);
+            const rawParentId = childNode ? childNode._raw_parent_id : null;
+
+            if (!rawParentId) {
+                showToast("This member does not have an upline sponsor.", false);
+                pendingParentLoads.delete(childId);
+                if (buttonEl) buttonEl.removeAttribute('data-loading');
+                return;
+            }
+
+            // If parent is already rendered in the chart, hide ▲ and re-center
+            if (currentNodes.some(n => n.id === rawParentId)) {
+                if (childNode) {
+                    childNode.pid = rawParentId;
+                    childNode.parent_btn = 'none';
+                    if (chart) chart.updateNode(childNode);
+                }
+                pendingParentLoads.delete(childId);
+                if (buttonEl) buttonEl.removeAttribute('data-loading');
+                try { chart.center(rawParentId); } catch(e) {}
+                return;
+            }
+
+            // Fetch upline parent details
+            fetchJSON(`<?php echo base_url('admin/members/getReferralTree/'); ?>${rawParentId}`)
                 .then(res => {
-                    if (res.status && res.ancestors && res.ancestors.length > 0) {
-                        const parentUser = res.ancestors[0];
-                        loadInitialTree(parentUser.id);
-                    } else if (!res.status) {
-                        showToast(res.message || "Couldn't find this member's referrer.", true);
+                    if (res.status && res.user) {
+                        const parentUser = res.user;
+
+                        // 1. Update the child node: link its pid to parentUser.id and hide parent button
+                        if (childNode) {
+                            childNode.pid = parseInt(parentUser.id);
+                            childNode.parent_btn = 'none';
+                        }
+
+                        // 2. Format the new parent node
+                        const parentPid = (parentUser.parent_id && currentNodes.some(n => n.id === parseInt(parentUser.parent_id))) 
+                            ? parseInt(parentUser.parent_id) 
+                            : null;
+                        const parentNode = formatNode(parentUser, parentPid);
+
+                        // Adjust dummy cids on parent: this child is already in the chart,
+                        // so remaining unexpanded children count = Math.max(0, total - 1)
+                        const totalParentChildren = parseInt(parentUser.children_count) || (parentUser.has_children ? 1 : 0);
+                        const otherChildrenCount = Math.max(0, totalParentChildren - 1);
+                        if (otherChildrenCount > 0) {
+                            parentNode.cids = [];
+                            for (let i = 0; i < otherChildrenCount; i++) {
+                                parentNode.cids.push(parentUser.id + '_dummy_child_' + i);
+                            }
+                        } else {
+                            delete parentNode.cids;
+                        }
+
+                        // 3. Add parent node to currentNodes (at beginning)
+                        currentNodes.unshift(parentNode);
+
+                        // 4. Reload chart with the updated tree structure
+                        if (chart) {
+                            chart.load(currentNodes, function() {
+                                try {
+                                    chart.center(parentUser.id);
+                                } catch(e) {}
+
+                                setTimeout(() => {
+                                    const parentEl = document.querySelector('.node[node-id="' + parentUser.id + '"]');
+                                    if (parentEl) {
+                                        parentEl.classList.add('rtx-node-highlight');
+                                        setTimeout(() => parentEl.classList.remove('rtx-node-highlight'), 1800);
+                                    }
+                                }, 150);
+                            });
+                        }
+                    } else {
+                        showToast(res.message || "Couldn't find this member's upline sponsor.", true);
                     }
                 })
                 .catch(err => {
@@ -1106,7 +1185,7 @@
                     showToast("Couldn't load the parent member. Please try again.", true);
                 })
                 .finally(() => {
-                    pendingParentLoads.delete(nodeId);
+                    pendingParentLoads.delete(childId);
                     if (buttonEl) buttonEl.removeAttribute('data-loading');
                 });
         }
@@ -1116,9 +1195,9 @@
         const searchClearBtn = document.getElementById('networkSearchClear');
         const resultsBox = document.getElementById('autocompleteResults');
         let debounceTimer;
-        let activeAcIndex = -1; // currently keyboard-highlighted suggestion, -1 = none
+        let activeAcIndex = -1;
 
-        // Selects a suggestion the same way a mouse click on it would
+        // Selects a member from search suggestions
         function selectAutocompleteUser(user) {
             searchInput.value = user.name;
             searchClearBtn.style.display = 'inline-flex';
@@ -1127,7 +1206,6 @@
             loadInitialTree(user.id);
         }
 
-        // Applies/clears the highlighted (keyboard-focused) suggestion row
         function setActiveAcIndex(index, items) {
             items.forEach(el => el.classList.remove('rtx-ac-active'));
             if (index >= 0 && index < items.length) {
@@ -1183,10 +1261,10 @@
                         resultsBox.style.display = 'block';
                     })
                     .catch(err => console.error("Autocomplete fetch error: ", err));
-            }, 300);
+            }, 250);
         });
 
-        // Arrow-key navigation + Enter-to-select + Escape-to-close on the suggestion list
+        // Keyboard navigation and Enter-to-select
         searchInput.addEventListener('keydown', function(e) {
             if (resultsBox.style.display !== 'block') return;
             const items = Array.from(resultsBox.querySelectorAll('.rtx-ac-item'));
@@ -1199,11 +1277,10 @@
                 e.preventDefault();
                 setActiveAcIndex((activeAcIndex - 1 + items.length) % items.length, items);
             } else if (e.key === 'Enter') {
-                if (activeAcIndex > -1) {
-                    e.preventDefault();
-                    items[activeAcIndex].dispatchEvent(new MouseEvent('click', {
-                        bubbles: true
-                    }));
+                e.preventDefault();
+                const targetIndex = activeAcIndex > -1 ? activeAcIndex : 0;
+                if (items[targetIndex]) {
+                    items[targetIndex].dispatchEvent(new MouseEvent('click', { bubbles: true }));
                 }
             } else if (e.key === 'Escape') {
                 resultsBox.style.display = 'none';
@@ -1245,7 +1322,7 @@
             loadInitialTree();
         });
 
-        // Initial Load (Auto-focus user if navigated from member profile details page)
+        // Initial Load
         if (initialUserId) {
             loadInitialTree(initialUserId);
         } else {

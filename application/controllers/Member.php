@@ -125,6 +125,22 @@ class Member extends CI_Controller
      */
     public function add_wallet($id = null)
     {
+        return $this->manage_wallet_funds($id, 'credit');
+    }
+
+    /**
+     * Handles reducing/deducting direct wallet money from user (Admin action)
+     */
+    public function reduce_wallet($id = null)
+    {
+        return $this->manage_wallet_funds($id, 'debit');
+    }
+
+    /**
+     * Core handler to credit or debit member wallet
+     */
+    private function manage_wallet_funds($id = null, $default_type = 'credit')
+    {
         if ($this->input->method(TRUE) !== 'POST') {
             redirect('admin/members');
         }
@@ -140,9 +156,22 @@ class Member extends CI_Controller
             redirect('admin/members');
         }
 
+        $type = strtolower(trim($this->input->post('type', TRUE) ?: $default_type));
+        if (!in_array($type, ['credit', 'debit'])) {
+            $type = 'credit';
+        }
+
         $this->load->library('form_validation');
         $this->form_validation->set_rules('amount', 'Amount', 'required|numeric|greater_than[0]');
-        $this->form_validation->set_rules('remark', 'Remark', 'trim');
+
+        if ($type === 'debit') {
+            $this->form_validation->set_rules('remark', 'Reason / Note', 'required|trim|min_length[3]', [
+                'required'   => 'Please provide a note / reason for reducing the wallet balance.',
+                'min_length' => 'The reason for reducing wallet balance must be at least 3 characters.'
+            ]);
+        } else {
+            $this->form_validation->set_rules('remark', 'Remark', 'trim');
+        }
 
         if ($this->form_validation->run() === FALSE) {
             $this->session->set_flashdata('error', validation_errors(' ', ' '));
@@ -150,32 +179,70 @@ class Member extends CI_Controller
         }
 
         $amount = (float)$this->input->post('amount');
-        $remark = $this->input->post('remark', TRUE) ?: 'Credited by admin';
+        $remark = trim($this->input->post('remark', TRUE) ?: '');
         $admin_id = $this->session->userdata('user_id');
 
-        $this->db->trans_begin();
+        if ($type === 'debit') {
+            $current_balance = (float)($user->wallet_balance ?? 0);
+            if ($current_balance < $amount) {
+                $this->session->set_flashdata('error', 'Cannot deduct ₹' . number_format($amount, 2) . '. Member currently only has ₹' . number_format($current_balance, 2) . ' in their wallet.');
+                redirect($this->input->server('HTTP_REFERER') ?: 'admin/members');
+            }
 
-        // 1. Insert credit transaction row
-        $this->db->insert('wallet_transactions', [
-            'user_id'    => (int)$id,
-            'type'       => 'credit',
-            'amount'     => $amount,
-            'source'     => 'admin_credit',
-            'remark'     => $remark,
-            'added_by'   => $admin_id,
-            'created_at' => date('Y-m-d H:i:s')
-        ]);
+            $this->db->trans_begin();
 
-        // 2. Increment user wallet balance
-        $new_balance = (float)$user->wallet_balance + $amount;
-        $this->db->update('users', ['wallet_balance' => $new_balance], ['id' => (int)$id]);
+            // 1. Insert debit transaction row with reason
+            $this->db->insert('wallet_transactions', [
+                'user_id'    => (int)$id,
+                'type'       => 'debit',
+                'amount'     => $amount,
+                'source'     => 'admin_debit',
+                'remark'     => $remark,
+                'added_by'   => $admin_id,
+                'created_at' => date('Y-m-d H:i:s')
+            ]);
 
-        if ($this->db->trans_status() === FALSE) {
-            $this->db->trans_rollback();
-            $this->session->set_flashdata('error', 'Failed to load funds due to transaction error.');
+            // 2. Decrement user wallet balance
+            $new_balance = max(0, $current_balance - $amount);
+            $this->db->update('users', ['wallet_balance' => $new_balance], ['id' => (int)$id]);
+
+            if ($this->db->trans_status() === FALSE) {
+                $this->db->trans_rollback();
+                $this->session->set_flashdata('error', 'Failed to deduct funds due to a database transaction error.');
+            } else {
+                $this->db->trans_commit();
+                $this->session->set_flashdata('success', "Wallet reduced by ₹" . number_format($amount, 2) . " successfully. Reason: " . htmlspecialchars($remark));
+            }
         } else {
-            $this->db->trans_commit();
-            $this->session->set_flashdata('success', "Wallet credited with ₹" . number_format($amount, 2) . " successfully.");
+            // Credit
+            if (empty($remark)) {
+                $remark = 'Credited by admin';
+            }
+
+            $this->db->trans_begin();
+
+            // 1. Insert credit transaction row
+            $this->db->insert('wallet_transactions', [
+                'user_id'    => (int)$id,
+                'type'       => 'credit',
+                'amount'     => $amount,
+                'source'     => 'admin_credit',
+                'remark'     => $remark,
+                'added_by'   => $admin_id,
+                'created_at' => date('Y-m-d H:i:s')
+            ]);
+
+            // 2. Increment user wallet balance
+            $new_balance = (float)$user->wallet_balance + $amount;
+            $this->db->update('users', ['wallet_balance' => $new_balance], ['id' => (int)$id]);
+
+            if ($this->db->trans_status() === FALSE) {
+                $this->db->trans_rollback();
+                $this->session->set_flashdata('error', 'Failed to load funds due to a database transaction error.');
+            } else {
+                $this->db->trans_commit();
+                $this->session->set_flashdata('success', "Wallet credited with ₹" . number_format($amount, 2) . " successfully.");
+            }
         }
 
         redirect($this->input->server('HTTP_REFERER') ?: 'admin/members');
@@ -235,7 +302,7 @@ class Member extends CI_Controller
      */
     public function getReferralTree($id = null)
     {
-        // Helper to fetch user list with fields and children count subquery
+        // Optimized helper to fetch user list with fields and children count subquery
         $fetch_users = function ($where_conds) {
             $this->db->select("u.id, u.parent_id, u.name, u.email, u.phone, u.profile_image, u.referral_code, u.wallet_balance, u.status, u.created_at, 
                 (SELECT COUNT(*) FROM users WHERE parent_id = u.id AND role = 0) as children_count");
@@ -252,7 +319,7 @@ class Member extends CI_Controller
                     'name'           => $row->name,
                     'email'          => $row->email,
                     'phone'          => $row->phone,
-                    'profile_image'  => (!empty($row->profile_image) && file_exists(FCPATH . ltrim($row->profile_image, '/'))) ? base_url(ltrim($row->profile_image, '/')) : null,
+                    'profile_image'  => !empty($row->profile_image) ? base_url(ltrim($row->profile_image, '/')) : null,
                     'referral_code'  => $row->referral_code,
                     'wallet_balance' => (float)$row->wallet_balance,
                     'status'         => (int)$row->status,
@@ -268,12 +335,13 @@ class Member extends CI_Controller
             // Return root members (parent_id IS NULL and role = 0)
             $children = $fetch_users(['u.parent_id' => null, 'u.role' => 0]);
             $response = [
-                'status' => true,
-                'user' => null,
+                'status'   => true,
+                'user'     => null,
+                'parent'   => null,
                 'children' => $children
             ];
         } else {
-            // Validate user exists and return their own profile + direct children (parent_id = $id and role = 0)
+            // Validate user exists and return their own profile + direct children
             $user_list = $fetch_users(['u.id' => (int)$id, 'u.role' => 0]);
             if (empty($user_list)) {
                 return $this->output
@@ -287,29 +355,21 @@ class Member extends CI_Controller
             $user = $user_list[0];
             $children = $fetch_users(['u.parent_id' => (int)$id, 'u.role' => 0]);
 
-            // Fetch all ancestors of the user up to the root (parent_id is null)
-            $ancestors = [];
-            $visited_anc = [(int)$id];
-            $current_parent_id = $user['parent_id'];
-            while ($current_parent_id !== null) {
-                if (in_array((int)$current_parent_id, $visited_anc)) {
-                    break;
+            // Fetch direct parent if user has a parent_id
+            $parent = null;
+            if ($user['parent_id'] !== null) {
+                $parent_list = $fetch_users(['u.id' => (int)$user['parent_id'], 'u.role' => 0]);
+                if (!empty($parent_list)) {
+                    $parent = $parent_list[0];
                 }
-                $visited_anc[] = (int)$current_parent_id;
-                $parent_list = $fetch_users(['u.id' => $current_parent_id, 'u.role' => 0]);
-                if (empty($parent_list)) {
-                    break;
-                }
-                $parent = $parent_list[0];
-                $ancestors[] = $parent;
-                $current_parent_id = $parent['parent_id'];
             }
 
             $response = [
-                'status' => true,
-                'user' => $user,
-                'children' => $children,
-                'ancestors' => $ancestors
+                'status'    => true,
+                'user'      => $user,
+                'parent'    => $parent,
+                'children'  => $children,
+                'ancestors' => $parent ? [$parent] : []
             ];
         }
 
@@ -330,12 +390,13 @@ class Member extends CI_Controller
                 ->set_output(json_encode(['status' => false, 'results' => []]));
         }
 
-        $this->db->select('id, name, email, referral_code, custom_id');
+        $this->db->select('id, name, email, phone, referral_code, custom_id');
         $this->db->from('users');
         $this->db->where('role', 0); // only members
         $this->db->group_start();
         $this->db->like('name', $query);
         $this->db->or_like('email', $query);
+        $this->db->or_like('phone', $query);
         $this->db->or_like('referral_code', $query);
         $this->db->or_like('custom_id', $query);
         $this->db->group_end();
@@ -746,5 +807,59 @@ class Member extends CI_Controller
         $this->load->view('member_edit', $data);
         $this->load->view('templates/footer');
     }
+
+    /**
+     * Deletes a member profile and cleanly reorganizes downlines:
+     * Direct children of the deleted member have their parent_id set to NULL (independent roots),
+     * while preserving all existing sub-networks under each child.
+     */
+    public function delete($id)
+    {
+        $id = (int)$id;
+        $user = $this->General_model->getOne('users', ['id' => $id]);
+
+        if (!$user) {
+            $this->session->set_flashdata('error', 'Member not found.');
+            redirect('admin/members');
+            return;
+        }
+
+        // Prevent deleting admin accounts or the currently logged-in admin
+        if ((int)$user->role === 1 || $id === (int)$this->session->userdata('user_id')) {
+            $this->session->set_flashdata('error', 'Administrator accounts cannot be deleted.');
+            redirect('admin/members/view/' . $id);
+            return;
+        }
+
+        $this->db->trans_start();
+
+        // 1. Decouple direct children of this user to separate roots (parent_id = NULL)
+        // Sub-networks under each child (e.g. D -> H, I, J) remain intact under their respective parents
+        $this->db->where('parent_id', $id);
+        $this->db->update('users', ['parent_id' => null]);
+
+        // 2. Remove profile image file if exists on disk
+        if (!empty($user->profile_image)) {
+            $img_path = FCPATH . ltrim($user->profile_image, '/');
+            if (file_exists($img_path) && is_file($img_path)) {
+                @unlink($img_path);
+            }
+        }
+
+        // 3. Delete the user record
+        $this->db->where('id', $id);
+        $this->db->delete('users');
+
+        $this->db->trans_complete();
+
+        if ($this->db->trans_status() === FALSE) {
+            $this->session->set_flashdata('error', 'Failed to delete member. A database error occurred.');
+            redirect('admin/members/view/' . $id);
+        } else {
+            $this->session->set_flashdata('success', 'Member "' . htmlspecialchars($user->name ?? 'Member') . '" was deleted successfully. All direct referrals under this member have been decoupled to independent roots.');
+            redirect('admin/members');
+        }
+    }
 }
+
 

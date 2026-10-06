@@ -418,6 +418,23 @@
                     </div>
 
                     <div class="ep-info-row">
+                        <div class="ep-info-label">Available Sizes</div>
+                        <div class="ep-info-value">
+                            <?php if (!empty($product->sizes)): ?>
+                                <div class="d-flex flex-wrap gap-1">
+                                    <?php foreach (explode(',', $product->sizes) as $sz): ?>
+                                        <span class="badge" style="background: linear-gradient(135deg, rgba(236, 64, 122, 0.1), rgba(212, 175, 55, 0.15)); color: #1f2937; border: 1px solid rgba(236, 64, 122, 0.3); font-weight: 600; padding: 5px 10px; border-radius: 6px; font-size: 0.82rem;">
+                                            <i class="fa-solid fa-shirt me-1 text-warning"></i><?php echo htmlspecialchars(trim($sz)); ?>
+                                        </span>
+                                    <?php endforeach; ?>
+                                </div>
+                            <?php else: ?>
+                                <span class="text-muted fst-italic">Standard / No sizes specified</span>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+
+                    <div class="ep-info-row">
                         <div class="ep-info-label">Description</div>
                         <div class="ep-info-value">
                             <?php if (!empty($product->description)): ?>

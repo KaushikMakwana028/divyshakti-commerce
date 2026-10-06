@@ -7,6 +7,8 @@ class General_model extends CI_Model
     {
         parent::__construct();
         $this->load->database();
+        date_default_timezone_set('Asia/Kolkata');
+        $this->db->query("SET time_zone = '+05:30'");
     }
 
     public function getOne($table, $where)

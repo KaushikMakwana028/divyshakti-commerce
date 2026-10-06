@@ -1070,12 +1070,29 @@
                                             <?php if (!empty($order->product_image)): ?>
                                                 <img src="<?php echo base_url($order->product_image); ?>" alt="Product" onerror="this.style.display='none';">
                                             <?php endif; ?>
-                                            <span class="ord-product-name"><?php echo htmlspecialchars($order->product_name ?? 'Product'); ?></span>
+                                            <div>
+                                                <span class="ord-product-name"><?php echo htmlspecialchars($order->product_name ?? 'Product'); ?></span>
+                                                <?php if (!empty($order->size)): ?>
+                                                    <span class="badge bg-warning-subtle text-dark border border-warning-subtle d-inline-block mt-1" style="font-size: 0.68rem; font-weight: 700; border-radius: 999px; padding: 2px 8px;">
+                                                        <i class="fa-solid fa-shirt me-1 text-warning"></i>Size: <?php echo htmlspecialchars($order->size); ?>
+                                                    </span>
+                                                <?php endif; ?>
+                                                <?php if (!empty($order->items_count) && (int)$order->items_count > 1): ?>
+                                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle d-inline-block mt-1" style="font-size: 0.68rem; font-weight: 700; border-radius: 999px; padding: 2px 8px;">
+                                                        <i class="fa-solid fa-boxes-stacked me-1"></i>+<?php echo ((int)$order->items_count - 1); ?> more item<?php echo ((int)$order->items_count - 1) > 1 ? 's' : ''; ?>
+                                                    </span>
+                                                <?php endif; ?>
+                                            </div>
                                         </div>
                                     </td>
 
                                     <td data-label="Quantity">
-                                        <span class="ord-qty-badge"><i class="fa-solid fa-layer-group"></i><?php echo (int)($order->quantity ?? 1); ?> units</span>
+                                        <span class="ord-qty-badge">
+                                            <i class="fa-solid fa-layer-group"></i><?php echo (int)($order->quantity ?? 1); ?> units
+                                            <?php if (!empty($order->items_count) && (int)$order->items_count > 1): ?>
+                                                <span style="font-size: 0.68rem; opacity: 0.85; margin-left: 2px;">(<?php echo (int)$order->items_count; ?> items)</span>
+                                            <?php endif; ?>
+                                        </span>
                                     </td>
 
                                     <td data-label="Total Amount">

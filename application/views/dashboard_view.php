@@ -254,6 +254,102 @@
             margin-top: 2px;
         }
 
+        /* Luxury Dashboard Filter Bar */
+        .dash-filter-bar {
+            background: #ffffff;
+            border: 1px solid #e9ecef;
+            border-radius: 16px;
+            padding: 0.95rem 1.35rem;
+            box-shadow: 0 4px 18px rgba(17, 24, 39, 0.03);
+            position: relative;
+            overflow: hidden;
+            border-left: 4px solid #d4af37;
+        }
+        .dash-filter-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, rgba(236, 64, 122, 0.12), rgba(212, 175, 55, 0.18));
+            color: #ec407a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.15rem;
+            flex-shrink: 0;
+        }
+        .dash-filter-title {
+            display: block;
+            font-size: 0.92rem;
+            font-weight: 700;
+            color: #0f172a;
+            line-height: 1.2;
+        }
+        .dash-filter-subtitle {
+            display: block;
+            font-size: 0.78rem;
+            color: #64748b;
+        }
+        .dash-select-wrapper {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+        }
+        .dash-select-icon {
+            position: absolute;
+            left: 12px;
+            pointer-events: none;
+            color: #d4af37;
+            font-size: 0.85rem;
+            z-index: 2;
+        }
+        .dash-filter-select {
+            padding-left: 32px;
+            padding-right: 28px;
+            padding-top: 7px;
+            padding-bottom: 7px;
+            border-radius: 10px;
+            border: 1.5px solid #e2e8f0;
+            font-size: 0.84rem;
+            font-weight: 600;
+            color: #1e293b;
+            background-color: #f8fafc;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            min-width: 140px;
+        }
+        .dash-filter-select:hover {
+            border-color: #d4af37;
+            background-color: #ffffff;
+        }
+        .dash-filter-select:focus {
+            border-color: #ec407a;
+            box-shadow: 0 0 0 3px rgba(236, 64, 122, 0.12);
+            background-color: #ffffff;
+            outline: none;
+        }
+        .dash-filter-badge {
+            background: rgba(212, 175, 55, 0.14);
+            color: #92400e;
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            font-size: 0.76rem;
+            font-weight: 700;
+            padding: 6px 12px;
+            border-radius: 50px;
+            letter-spacing: 0.2px;
+        }
+        .dash-filter-reset {
+            border-radius: 10px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            padding: 6px 12px;
+            transition: all 0.2s ease;
+        }
+        .dash-filter-reset:hover {
+            background-color: #ec407a;
+            border-color: #ec407a;
+            color: #ffffff;
+        }
+
         /* Product Leaderboard List */
         .prod-lead-item {
             display: flex;
@@ -432,6 +528,64 @@
         </div>
     </div>
 
+    <!-- Month & Year Analytics Filter Bar -->
+    <div class="dash-filter-bar mb-4">
+        <form id="dashFilterForm" method="GET" action="<?php echo base_url('admin/dashboard'); ?>" class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+            <div class="d-flex align-items-center gap-3">
+                <div class="dash-filter-icon">
+                    <i class="fa-solid fa-calendar-check"></i>
+                </div>
+                <div>
+                    <span class="dash-filter-title">Monthly Analytics Period</span>
+                    <span class="dash-filter-subtitle">Displaying performance metrics for <strong><?php echo htmlspecialchars($month_label . ' ' . $selected_year); ?></strong></span>
+                </div>
+            </div>
+
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <!-- Month Dropdown -->
+                <div class="dash-select-wrapper">
+                    <i class="fa-regular fa-calendar dash-select-icon"></i>
+                    <select name="month" id="filterMonth" class="form-select dash-filter-select" onchange="this.form.submit()">
+                        <option value="all" <?php echo ($selected_month === 'all') ? 'selected' : ''; ?>>All Months</option>
+                        <?php for ($m = 1; $m <= 12; $m++): ?>
+                            <option value="<?php echo $m; ?>" <?php echo ($selected_month !== 'all' && (int)$selected_month === $m) ? 'selected' : ''; ?>>
+                                <?php echo date('F', mktime(0, 0, 0, $m, 10)); ?>
+                            </option>
+                        <?php endfor; ?>
+                    </select>
+                </div>
+
+                <!-- Year Dropdown -->
+                <div class="dash-select-wrapper">
+                    <i class="fa-solid fa-clock-rotate-left dash-select-icon"></i>
+                    <select name="year" id="filterYear" class="form-select dash-filter-select" onchange="this.form.submit()">
+                        <?php 
+                        $cur_y = (int)date('Y');
+                        for ($y = $cur_y - 2; $y <= $cur_y + 1; $y++): 
+                        ?>
+                            <option value="<?php echo $y; ?>" <?php echo ((int)$selected_year === $y) ? 'selected' : ''; ?>>
+                                <?php echo $y; ?>
+                            </option>
+                        <?php endfor; ?>
+                    </select>
+                </div>
+
+                <!-- Quick Filter Tag -->
+                <span class="dash-filter-badge d-none d-sm-inline-flex align-items-center">
+                    <i class="fa-solid fa-filter me-1.5 text-warning"></i>
+                    <?php echo ($selected_month === 'all') ? 'Full Year ' . $selected_year : htmlspecialchars($month_label . ' ' . $selected_year); ?>
+                </span>
+
+                <!-- Reset to current month if not on current month -->
+                <?php if ((string)$selected_month !== (string)(int)date('m') || (int)$selected_year !== (int)date('Y')): ?>
+                    <a href="<?php echo base_url('admin/dashboard'); ?>" class="btn btn-outline-secondary dash-filter-reset d-inline-flex align-items-center gap-1" title="Reset to current month">
+                        <i class="fa-solid fa-rotate-left"></i> Current Month
+                    </a>
+                <?php endif; ?>
+            </div>
+        </form>
+    </div>
+
     <!-- 2. Primary KPI Metric Cards (2 Balanced Rows of 3 Cards) -->
     <div class="row g-4 mb-4">
         <!-- Card 1: Gross E-Commerce Sales -->
@@ -518,15 +672,15 @@
             <div class="dash-kpi-card kpi-green">
                 <div>
                     <div class="dash-kpi-top">
-                        <p class="dash-kpi-label">Network Members</p>
+                        <p class="dash-kpi-label">Network Signups</p>
                         <div class="dash-kpi-icon" style="background-color: rgba(16, 185, 129, 0.12); color: #10b981;">
                             <i class="fa-solid fa-users"></i>
                         </div>
                     </div>
-                    <div class="dash-kpi-val"><?php echo $total_members; ?> <span class="fs-6 text-muted fw-normal">Active Users</span></div>
+                    <div class="dash-kpi-val"><?php echo $month_new_members; ?> <span class="fs-6 text-muted fw-normal">Joined in Period</span></div>
                 </div>
                 <div class="dash-kpi-footer">
-                    <span><i class="fa-solid fa-box text-success me-1"></i> <?php echo $total_products; ?> Products in catalog</span>
+                    <span><i class="fa-solid fa-users text-success me-1"></i> <?php echo $total_all_members; ?> Total in network</span>
                     <a href="<?php echo base_url('admin/members'); ?>" class="text-success text-decoration-none extra-small fw-semibold">Directory &rarr;</a>
                 </div>
             </div>
@@ -570,7 +724,7 @@
                             6 Month Trend
                         </span>
                         <span class="badge" style="background: rgba(236, 64, 122, 0.12); color: #ec407a; font-size: 0.72rem; padding: 6px 10px; border-radius: 6px;">
-                            ₹<?php echo number_format($total_sales, 2); ?> Total
+                            ₹<?php echo number_format($total_sales, 2); ?> in <?php echo htmlspecialchars($month_label . ' ' . $selected_year); ?>
                         </span>
                     </div>
                 </div>
@@ -907,11 +1061,12 @@
     <!-- Data Generation & Charts Binding -->
     <?php
     // Prepare Sales & Registrations trends for Chart.js
+    $anchor_date = ($selected_month === 'all') ? sprintf('%04d-12-01', $selected_year) : sprintf('%04d-%02d-01', $selected_year, (int)$selected_month);
     $months_range = [];
     for ($i = 5; $i >= 0; $i--) {
-        $m_key = date('Y-m', strtotime("-$i months"));
+        $m_key = date('Y-m', strtotime("$anchor_date -$i months"));
         $months_range[$m_key] = [
-            'label' => date('M Y', strtotime("-$i months")),
+            'label' => date('M Y', strtotime("$anchor_date -$i months")),
             'sales' => 0.0,
             'regs' => 0
         ];

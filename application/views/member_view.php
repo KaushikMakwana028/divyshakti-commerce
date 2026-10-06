@@ -168,6 +168,17 @@
                                             title="Load Wallet Funds">
                                             <i class="fa-solid fa-wallet"></i>
                                         </button>
+                                        <button type="button"
+                                            class="mm-icon-btn mm-icon-reduce reduce-wallet-btn"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#reduceWalletModal"
+                                            data-id="<?php echo $member->id; ?>"
+                                            data-name="<?php echo htmlspecialchars($member->name ?? ''); ?>"
+                                            data-balance="₹<?php echo number_format($member->wallet_balance, 2); ?>"
+                                            data-raw-balance="<?php echo (float)$member->wallet_balance; ?>"
+                                            title="Reduce Wallet Funds">
+                                            <i class="fa-solid fa-hand-holding-dollar"></i>
+                                        </button>
                                         <a href="<?php echo base_url('admin/members/edit/' . $member->id); ?>" class="mm-icon-btn mm-icon-edit" title="Edit Member Details">
                                             <i class="fa-solid fa-pen-to-square"></i>
                                         </a>
@@ -279,7 +290,18 @@
                                 data-name="<?php echo htmlspecialchars($member->name ?? ''); ?>"
                                 data-balance="₹<?php echo number_format($member->wallet_balance, 2); ?>"
                                 title="Load Wallet Funds">
-                                <i class="fa-solid fa-wallet"></i> Wallet
+                                <i class="fa-solid fa-wallet"></i> Add
+                            </button>
+                            <button type="button"
+                                class="mm-icon-btn mm-icon-reduce reduce-wallet-btn flex-grow-1"
+                                data-bs-toggle="modal"
+                                data-bs-target="#reduceWalletModal"
+                                data-id="<?php echo $member->id; ?>"
+                                data-name="<?php echo htmlspecialchars($member->name ?? ''); ?>"
+                                data-balance="₹<?php echo number_format($member->wallet_balance, 2); ?>"
+                                data-raw-balance="<?php echo (float)$member->wallet_balance; ?>"
+                                title="Reduce Wallet Funds">
+                                <i class="fa-solid fa-hand-holding-dollar"></i> Reduce
                             </button>
                             <a href="<?php echo base_url('admin/members/edit/' . $member->id); ?>" class="mm-icon-btn mm-icon-edit" title="Edit">
                                 <i class="fa-solid fa-pen-to-square"></i>
@@ -325,27 +347,28 @@
 </div>
 
 <!-- ============================================================== -->
-<!-- 4. LOAD WALLET MODAL -->
+<!-- 4. LOAD WALLET FUNDS MODAL (CREDIT) -->
 <!-- ============================================================== -->
 <div class="modal fade mm-modal" id="loadWalletModal" tabindex="-1" aria-labelledby="loadWalletModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="mm-modal-header d-flex align-items-center justify-content-between">
                 <div class="d-flex align-items-center">
-                    <span class="mm-modal-icon-badge"><i class="fa-solid fa-coins"></i></span>
+                    <span class="mm-modal-icon-badge"><i class="fa-solid fa-wallet"></i></span>
                     <div>
-                        <h5 class="mm-modal-title" id="loadWalletModalLabel">Load Wallet Funds</h5>
-                        <div class="mm-modal-subtitle">Credit balance to a member account</div>
+                        <h5 class="mm-modal-title" id="loadWalletModalLabel">Load Member Wallet Funds</h5>
+                        <div class="mm-modal-subtitle">Credit balance into member's wallet account</div>
                     </div>
                 </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
 
             <form id="loadWalletForm" method="POST" action="">
+                <input type="hidden" name="type" value="credit">
                 <div class="mm-modal-body">
                     <div class="mm-summary-card">
                         <div class="mm-summary-row">
-                            <span class="mm-summary-label"><i class="fa-solid fa-user"></i> Member</span>
+                            <span class="mm-summary-label"><i class="fa-solid fa-user"></i> Member Account</span>
                             <input type="text" id="walletMemberName" class="mm-summary-value" readonly>
                         </div>
                         <div class="mm-summary-divider"></div>
@@ -356,15 +379,16 @@
                     </div>
 
                     <div class="mb-3">
-                        <label for="amount" class="mm-field-label">Amount to Add (₹)</label>
+                        <label for="creditAmount" class="mm-field-label">Amount to Add (₹) <span class="text-danger">*</span></label>
                         <div class="input-group">
                             <span class="input-group-text"><i class="fa-solid fa-indian-rupee-sign"></i></span>
-                            <input type="number" step="0.01" name="amount" id="amount" class="form-control" placeholder="0.00" min="0.01" required>
+                            <input type="number" step="0.01" name="amount" id="creditAmount" class="form-control" placeholder="0.00" min="0.01" required>
                         </div>
+                        <small class="text-success mt-1 d-block fw-semibold" id="creditBalancePreview"></small>
                     </div>
                     <div class="mb-0">
-                        <label for="remark" class="mm-field-label">Transaction Remark</label>
-                        <input type="text" name="remark" id="remark" class="form-control" placeholder="e.g. Approved loading bonus" required>
+                        <label for="creditRemark" class="mm-field-label">Transaction Remark <span class="text-danger">*</span></label>
+                        <input type="text" name="remark" id="creditRemark" class="form-control" placeholder="e.g. Approved loading bonus / Direct deposit" required>
                     </div>
                 </div>
 
@@ -372,6 +396,66 @@
                     <button type="button" class="mm-btn-cancel" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" class="mm-btn-submit">
                         <i class="fa-solid fa-check"></i> Credit Wallet
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================== -->
+<!-- 5. BRAND NEW REDUCE WALLET FUNDS MODAL (DEBIT) -->
+<!-- ============================================================== -->
+<div class="modal fade mm-modal" id="reduceWalletModal" tabindex="-1" aria-labelledby="reduceWalletModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="mm-modal-header mm-modal-header-reduce d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center">
+                    <span class="mm-modal-icon-badge mm-modal-icon-badge-reduce"><i class="fa-solid fa-arrow-down-short-wide"></i></span>
+                    <div>
+                        <h5 class="mm-modal-title" id="reduceWalletModalLabel">Reduce Member Wallet Funds</h5>
+                        <div class="mm-modal-subtitle">Deduct balance from member's wallet with reason</div>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <form id="reduceWalletForm" method="POST" action="">
+                <input type="hidden" name="type" value="debit">
+                <div class="mm-modal-body">
+                    <div class="mm-summary-card">
+                        <div class="mm-summary-row">
+                            <span class="mm-summary-label"><i class="fa-solid fa-user"></i> Member Account</span>
+                            <input type="text" id="reduceMemberName" class="mm-summary-value" readonly>
+                        </div>
+                        <div class="mm-summary-divider"></div>
+                        <div class="mm-summary-row">
+                            <span class="mm-summary-label"><i class="fa-solid fa-wallet"></i> Available Balance</span>
+                            <input type="text" id="reduceCurrentBalance" class="mm-summary-value" style="color: #dc2626;" readonly>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="reduceAmount" class="mm-field-label">Amount to Deduct / Reduce (₹) <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fa-solid fa-indian-rupee-sign"></i></span>
+                            <input type="number" step="0.01" name="amount" id="reduceAmount" class="form-control" placeholder="0.00" min="0.01" required>
+                        </div>
+                        <small class="mt-1 d-block fw-semibold" id="reduceBalancePreview"></small>
+                    </div>
+                    <div class="mb-0">
+                        <label for="reduceRemark" class="mm-field-label">Reason / Note for Reduction <span class="text-danger">*</span></label>
+                        <textarea name="remark" id="reduceRemark" class="form-control" rows="2" placeholder="e.g. Penalty for order cancellation / Manual deduction adjustment" required minlength="3"></textarea>
+                        <small class="text-danger mt-1 d-block" style="font-size:0.76rem;">
+                            <i class="fa-solid fa-circle-exclamation me-1"></i>This note will be shown to the user in their mobile app transaction history.
+                        </small>
+                    </div>
+                </div>
+
+                <div class="mm-modal-footer">
+                    <button type="button" class="mm-btn-cancel" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" id="reduceSubmitBtn" class="mm-btn-submit mm-btn-submit-reduce">
+                        <i class="fa-solid fa-minus-circle"></i> Deduct from Wallet
                     </button>
                 </div>
             </form>
@@ -790,6 +874,18 @@
         color: #fff;
     }
 
+    .mm-icon-reduce {
+        background: #fef2f2;
+        border-color: #fecaca;
+        color: #dc2626;
+    }
+
+    .mm-icon-reduce:hover {
+        background: #dc2626;
+        border-color: #dc2626;
+        color: #fff;
+    }
+
     .mm-icon-edit {
         background: #fffbeb;
         border-color: #fde68a;
@@ -1159,6 +1255,28 @@
         box-shadow: 0 10px 22px -6px rgba(236, 64, 122, 0.5);
     }
 
+    .mm-modal-header-reduce {
+        background: linear-gradient(135deg, #7f1d1d 0%, #991b1b 50%, #111827 100%) !important;
+    }
+
+    .mm-modal-header-reduce::after {
+        background: linear-gradient(90deg, #ef4444, #f59e0b) !important;
+    }
+
+    .mm-modal-icon-badge-reduce {
+        color: #fca5a5 !important;
+        background: rgba(255, 255, 255, 0.16) !important;
+    }
+
+    .mm-btn-submit-reduce {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+        box-shadow: 0 8px 18px -6px rgba(220, 38, 38, 0.45) !important;
+    }
+
+    .mm-btn-submit-reduce:hover {
+        box-shadow: 0 10px 22px -6px rgba(220, 38, 38, 0.6) !important;
+    }
+
     @media (max-width: 575px) {
         .mm-title {
             font-size: 1.5rem;
@@ -1233,6 +1351,51 @@
             loadTable(1);
         });
 
+        // ==============================================================
+        // 1. Load Wallet Funds Modal Handling (Credit)
+        // ==============================================================
+        const creditAmount = document.getElementById('creditAmount');
+        const creditPreview = document.getElementById('creditBalancePreview');
+        let currentCreditBal = 0;
+
+        if (creditAmount && creditPreview) {
+            creditAmount.addEventListener('input', function() {
+                const val = parseFloat(this.value) || 0;
+                if (val > 0) {
+                    creditPreview.innerHTML = `<i class="fa-solid fa-calculator me-1"></i>New balance after credit: ₹${(currentCreditBal + val).toFixed(2)}`;
+                } else {
+                    creditPreview.innerHTML = '';
+                }
+            });
+        }
+
+        // ==============================================================
+        // 2. Reduce Wallet Funds Modal Handling (Debit)
+        // ==============================================================
+        const reduceAmount = document.getElementById('reduceAmount');
+        const reducePreview = document.getElementById('reduceBalancePreview');
+        const reduceSubmitBtn = document.getElementById('reduceSubmitBtn');
+        let currentReduceBal = 0;
+
+        if (reduceAmount && reducePreview) {
+            reduceAmount.addEventListener('input', function() {
+                const val = parseFloat(this.value) || 0;
+                if (val > 0) {
+                    if (val > currentReduceBal) {
+                        reducePreview.innerHTML = `<span class="text-danger"><i class="fa-solid fa-circle-xmark me-1"></i>Amount exceeds available balance (₹${currentReduceBal.toFixed(2)})</span>`;
+                        if (reduceSubmitBtn) reduceSubmitBtn.disabled = true;
+                    } else {
+                        const remaining = Math.max(0, currentReduceBal - val);
+                        reducePreview.innerHTML = `<span class="text-info"><i class="fa-solid fa-calculator me-1"></i>Remaining balance after deduction: ₹${remaining.toFixed(2)}</span>`;
+                        if (reduceSubmitBtn) reduceSubmitBtn.disabled = false;
+                    }
+                } else {
+                    reducePreview.innerHTML = '';
+                    if (reduceSubmitBtn) reduceSubmitBtn.disabled = false;
+                }
+            });
+        }
+
         document.addEventListener('click', function(e) {
             // Handle pagination link clicks
             const pageLink = e.target.closest('#table-container .pagination .page-link, #table-container .mm-pagination .page-link');
@@ -1244,16 +1407,53 @@
                 }
             }
 
-            // Handle dynamic wallet load button clicks (Event Delegation)
-            const walletBtn = e.target.closest('.load-wallet-btn');
-            if (walletBtn) {
-                const memberId = walletBtn.getAttribute('data-id');
-                const memberName = walletBtn.getAttribute('data-name');
-                const memberBalance = walletBtn.getAttribute('data-balance');
+            // Handle dynamic Load Wallet button clicks (Credit Modal)
+            const loadBtn = e.target.closest('.load-wallet-btn');
+            if (loadBtn) {
+                const memberId = loadBtn.getAttribute('data-id');
+                const memberName = loadBtn.getAttribute('data-name');
+                const memberBalance = loadBtn.getAttribute('data-balance');
+                currentCreditBal = parseFloat(String(memberBalance || '0').replace(/[^0-9.]/g, '')) || 0;
 
-                document.getElementById('walletMemberName').value = memberName;
-                document.getElementById('walletCurrentBalance').value = memberBalance;
-                document.getElementById('loadWalletForm').action = "<?php echo base_url('admin/members/wallet/'); ?>" + memberId;
+                const nameInput = document.getElementById('walletMemberName');
+                const balInput = document.getElementById('walletCurrentBalance');
+                const form = document.getElementById('loadWalletForm');
+                const amtInput = document.getElementById('creditAmount');
+                const rmkInput = document.getElementById('creditRemark');
+
+                if (nameInput) nameInput.value = memberName;
+                if (balInput) balInput.value = memberBalance;
+                if (form) form.action = "<?php echo base_url('admin/members/wallet/'); ?>" + memberId;
+                if (amtInput) amtInput.value = '';
+                if (rmkInput) rmkInput.value = '';
+                if (creditPreview) creditPreview.innerHTML = '';
+            }
+
+            // Handle dynamic Reduce Wallet button clicks (Debit Modal)
+            const reduceBtn = e.target.closest('.reduce-wallet-btn');
+            if (reduceBtn) {
+                const memberId = reduceBtn.getAttribute('data-id');
+                const memberName = reduceBtn.getAttribute('data-name');
+                const memberBalance = reduceBtn.getAttribute('data-balance');
+                const rawBal = reduceBtn.getAttribute('data-raw-balance');
+                currentReduceBal = (rawBal !== null && rawBal !== '') ? parseFloat(rawBal) : (parseFloat(String(memberBalance || '0').replace(/[^0-9.]/g, '')) || 0);
+
+                const nameInput = document.getElementById('reduceMemberName');
+                const balInput = document.getElementById('reduceCurrentBalance');
+                const form = document.getElementById('reduceWalletForm');
+                const amtInput = document.getElementById('reduceAmount');
+                const rmkInput = document.getElementById('reduceRemark');
+
+                if (nameInput) nameInput.value = memberName;
+                if (balInput) balInput.value = memberBalance;
+                if (form) form.action = "<?php echo base_url('admin/members/reduce_wallet/'); ?>" + memberId;
+                if (amtInput) {
+                    amtInput.value = '';
+                    amtInput.max = currentReduceBal.toFixed(2);
+                }
+                if (rmkInput) rmkInput.value = '';
+                if (reducePreview) reducePreview.innerHTML = '';
+                if (reduceSubmitBtn) reduceSubmitBtn.disabled = false;
             }
         });
     });
