@@ -127,6 +127,16 @@ class General_model extends CI_Model
      */
     public function calculateProfileCompletion($user)
     {
+        if (!$user) {
+            return [
+                'total_fields'    => 14,
+                'completed_count' => 0,
+                'percentage'      => 0,
+                'is_completed'    => false,
+                'missing_fields'  => ['name', 'phone', 'gender', 'address', 'aadhar_number', 'aadhar_image', 'pan_number', 'pan_image', 'account_holder_name', 'bank_name', 'account_number', 'ifsc_code', 'account_type', 'branch_name']
+            ];
+        }
+
         $required_fields = [
             'name'                => 'Name',
             'phone'               => 'Phone',
@@ -149,7 +159,8 @@ class General_model extends CI_Model
 
         foreach ($required_fields as $field => $label) {
             $val = isset($user->$field) ? trim((string)$user->$field) : '';
-            if ($val !== '') {
+            $lower = strtolower($val);
+            if ($val !== '' && $lower !== 'null' && $lower !== 'undefined' && $lower !== 'none' && $lower !== 'n/a' && $lower !== 'nan') {
                 $completed_count++;
             } else {
                 $missing_fields[] = $field;
@@ -157,12 +168,17 @@ class General_model extends CI_Model
         }
 
         $total_fields = count($required_fields);
-        $percentage = (int) round(($completed_count / $total_fields) * 100);
-        if ($percentage > 100) {
+        if ($completed_count === $total_fields) {
             $percentage = 100;
+            $is_completed = true;
+        } else {
+            // Use floor so incomplete profile never rounds up to 100%
+            $percentage = (int) floor(($completed_count / $total_fields) * 100);
+            if ($percentage >= 100) {
+                $percentage = 99; // Never allow 100 if any field is missing
+            }
+            $is_completed = false;
         }
-
-        $is_completed = ($completed_count === $total_fields);
 
         return [
             'total_fields'    => $total_fields,
@@ -426,6 +442,29 @@ class General_model extends CI_Model
         $amount = max(1.0, (float)$amount);
         return $this->setSetting('min_withdraw_amount', number_format($amount, 2, '.', ''));
     }
+
+    /**
+     * Get all payment configuration settings
+     *
+     * @return array
+     */
+    public function getPaymentSettings()
+    {
+        return [
+            'payment_qr_code'             => $this->getSetting('payment_qr_code', ''),
+            'payment_upi_id'              => $this->getSetting('payment_upi_id', ''),
+            'payment_upi_name'            => $this->getSetting('payment_upi_name', ''),
+            'payment_bank_name'           => $this->getSetting('payment_bank_name', ''),
+            'payment_account_holder_name' => $this->getSetting('payment_account_holder_name', ''),
+            'payment_account_number'      => $this->getSetting('payment_account_number', ''),
+            'payment_ifsc_code'           => $this->getSetting('payment_ifsc_code', ''),
+            'payment_account_type'        => $this->getSetting('payment_account_type', 'Current'),
+            'payment_branch_name'         => $this->getSetting('payment_branch_name', ''),
+            'payment_instructions'        => $this->getSetting('payment_instructions', ''),
+            'min_deposit_amount'          => (float)$this->getSetting('min_deposit_amount', '10.00'),
+        ];
+    }
 }
+
 
 

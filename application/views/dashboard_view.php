@@ -915,7 +915,12 @@
                                                 </div>
                                                 <div>
                                                     <span class="fw-semibold text-dark d-block"><?php echo htmlspecialchars($ord->buyer_name ?? 'Customer'); ?></span>
-                                                    <span class="text-muted extra-small" style="font-size: 0.72rem;">Order #<?php echo $ord->id; ?></span>
+                                                    <?php 
+                                                        $dash_order_id = !empty($ord->order_number) 
+                                                            ? $ord->order_number 
+                                                            : ('DS' . date('Ymd', strtotime($ord->created_at ?: date('Y-m-d'))) . sprintf('%04d', $ord->id));
+                                                    ?>
+                                                    <span class="text-muted extra-small" style="font-size: 0.72rem;">Order <?php echo htmlspecialchars($dash_order_id); ?></span>
                                                 </div>
                                             </div>
                                         </td>

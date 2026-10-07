@@ -258,7 +258,7 @@ $mpdSourceMap = [
             <div class="mpd-card mpd-section-card mt-3">
                 <div class="mpd-section-header">
                     <h5><i class="fa-solid fa-id-card"></i> KYC & Identity Documents</h5>
-                    <?php if (!empty($member->is_profile_completed)): ?>
+                    <?php if (!empty($member->is_profile_completed) && (int)($member->profile_completion_percentage ?? 0) >= 100): ?>
                         <span class="badge bg-success">100% Completed</span>
                     <?php else: ?>
                         <span class="badge bg-warning text-dark"><?php echo (int)($member->profile_completion_percentage ?? 0); ?>% Completed</span>

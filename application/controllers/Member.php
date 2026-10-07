@@ -71,6 +71,23 @@ class Member extends CI_Controller
         $this->db->limit($limit, $offset);
         $data['members'] = $this->db->get()->result();
 
+        // Dynamically compute and sync true profile completion metrics for all returned members
+        if (!empty($data['members'])) {
+            foreach ($data['members'] as $m) {
+                $comp = $this->General_model->calculateProfileCompletion($m);
+                $true_pct = (int)$comp['percentage'];
+                $true_comp = $comp['is_completed'] ? 1 : 0;
+                if ((int)$m->profile_completion_percentage !== $true_pct || (int)$m->is_profile_completed !== $true_comp) {
+                    $this->General_model->update('users', ['id' => $m->id], [
+                        'profile_completion_percentage' => $true_pct,
+                        'is_profile_completed'          => $true_comp
+                    ]);
+                    $m->profile_completion_percentage = $true_pct;
+                    $m->is_profile_completed = $true_comp;
+                }
+            }
+        }
+
         $data['total_pages'] = ceil($total_rows / $limit);
         $data['current_page'] = $page;
         $data['search'] = $search;
@@ -96,6 +113,19 @@ class Member extends CI_Controller
         $member = $this->General_model->getOne('users', ['id' => $id, 'role' => 0]);
         if (!$member) {
             show_404();
+        }
+
+        // Dynamically compute and sync true profile completion metrics
+        $comp = $this->General_model->calculateProfileCompletion($member);
+        $true_pct = (int)$comp['percentage'];
+        $true_comp = $comp['is_completed'] ? 1 : 0;
+        if ((int)$member->profile_completion_percentage !== $true_pct || (int)$member->is_profile_completed !== $true_comp) {
+            $this->General_model->update('users', ['id' => $member->id], [
+                'profile_completion_percentage' => $true_pct,
+                'is_profile_completed'          => $true_comp
+            ]);
+            $member->profile_completion_percentage = $true_pct;
+            $member->is_profile_completed = $true_comp;
         }
 
         $data['member'] = $member;
@@ -265,9 +295,12 @@ class Member extends CI_Controller
         }
 
         $new_status = ((int)($user->is_profile_active ?? 0) === 1) ? 0 : 1;
+        $comp = $this->General_model->calculateProfileCompletion($user);
         $this->General_model->update('users', ['id' => (int)$id], [
-            'is_profile_active' => $new_status,
-            'updated_at'        => date('Y-m-d H:i:s')
+            'is_profile_active'             => $new_status,
+            'profile_completion_percentage' => (int)$comp['percentage'],
+            'is_profile_completed'          => $comp['is_completed'] ? 1 : 0,
+            'updated_at'                    => date('Y-m-d H:i:s')
         ]);
 
         if ($new_status === 1) {
@@ -799,6 +832,9 @@ class Member extends CI_Controller
         }
 
         // GET Request: render form
+        $comp = $this->General_model->calculateProfileCompletion($member);
+        $member->profile_completion_percentage = $comp['percentage'];
+        $member->is_profile_completed = $comp['is_completed'] ? 1 : 0;
         $data['member']   = $member;
         $data['referrer'] = $member->parent_id ? $this->General_model->getOne('users', ['id' => $member->parent_id]) : null;
         $data['user']     = $this->General_model->getOne('users', ['id' => $this->session->userdata('user_id')]);

@@ -282,50 +282,7 @@ class Api extends CI_Controller
      */
     private function calculate_profile_completion($user)
     {
-        $required_fields = [
-            'name'                => 'Name',
-            'phone'               => 'Phone',
-            'gender'              => 'Gender',
-            'address'             => 'Address',
-            'aadhar_number'       => 'Aadhar Number',
-            'aadhar_image'        => 'Aadhar Image',
-            'pan_number'          => 'PAN Number',
-            'pan_image'           => 'PAN Image',
-            'account_holder_name' => 'Account Holder Name',
-            'bank_name'           => 'Bank Name',
-            'account_number'      => 'Account Number',
-            'ifsc_code'           => 'IFSC Code',
-            'account_type'        => 'Account Type',
-            'branch_name'         => 'Branch Name',
-        ];
-
-        $completed_count = 0;
-        $missing_fields = [];
-
-        foreach ($required_fields as $field => $label) {
-            $val = isset($user->$field) ? trim((string)$user->$field) : '';
-            if ($val !== '') {
-                $completed_count++;
-            } else {
-                $missing_fields[] = $field;
-            }
-        }
-
-        $total_fields = count($required_fields);
-        $percentage = (int) round(($completed_count / $total_fields) * 100);
-        if ($percentage > 100) {
-            $percentage = 100;
-        }
-
-        $is_completed = ($completed_count === $total_fields);
-
-        return [
-            'total_fields'    => $total_fields,
-            'completed_count' => $completed_count,
-            'percentage'      => $percentage,
-            'is_completed'    => $is_completed,
-            'missing_fields'  => $missing_fields
-        ];
+        return $this->General_model->calculateProfileCompletion($user);
     }
 
     /**
@@ -406,6 +363,7 @@ class Api extends CI_Controller
         $field_definitions = [
             'name'                => ['label' => 'Full Name', 'category' => 'personal'],
             'phone'               => ['label' => 'Phone Number', 'category' => 'personal'],
+            'gender'              => ['label' => 'Gender', 'category' => 'personal'],
             'address'             => ['label' => 'Postal Address', 'category' => 'personal'],
             'aadhar_number'       => ['label' => 'Aadhar Number', 'category' => 'kyc'],
             'aadhar_image'        => ['label' => 'Aadhar Card Document', 'category' => 'kyc'],
@@ -425,7 +383,8 @@ class Api extends CI_Controller
 
         foreach ($field_definitions as $field => $meta) {
             $val = isset($user->$field) ? trim((string)$user->$field) : '';
-            $is_done = ($val !== '');
+            $lower = strtolower($val);
+            $is_done = ($val !== '' && $lower !== 'null' && $lower !== 'undefined' && $lower !== 'none' && $lower !== 'n/a' && $lower !== 'nan');
             $item = [
                 'field'    => $field,
                 'label'    => $meta['label'],
@@ -1051,8 +1010,12 @@ class Api extends CI_Controller
 
         $recent_orders = [];
         foreach ($recent_orders_raw as $ord) {
+            $order_num = !empty($ord->order_number) 
+                ? $ord->order_number 
+                : ('DS' . date('Ymd', strtotime($ord->created_at ?: date('Y-m-d'))) . sprintf('%04d', (int)$ord->id));
             $recent_orders[] = [
                 'order_id'      => (int)$ord->id,
+                'order_number'  => $order_num,
                 'product_id'    => (int)$ord->product_id,
                 'product_name'  => $ord->product_name ?? 'Product',
                 'product_slug'  => null,
@@ -1555,7 +1518,8 @@ class Api extends CI_Controller
         // Keep parameter conditions for next call
         $total = $this->db->count_all_results('', FALSE);
 
-        // Apply sorting
+        // Apply sorting: available / in-stock products first, out-of-stock last
+        $this->db->order_by('CASE WHEN products.stock > 0 THEN 1 ELSE 0 END', 'DESC', FALSE);
         if ($sort_by === 'price_low') {
             $this->db->order_by('products.price', 'ASC');
         } elseif ($sort_by === 'price_high') {
@@ -1654,7 +1618,8 @@ class Api extends CI_Controller
 
         $total = $this->db->count_all_results('', FALSE);
 
-        // Sorting
+        // Sorting: available / in-stock products first, out-of-stock last
+        $this->db->order_by('CASE WHEN products.stock > 0 THEN 1 ELSE 0 END', 'DESC', FALSE);
         if ($sort_by === 'price_low') {
             $this->db->order_by('products.price', 'ASC');
         } elseif ($sort_by === 'price_high') {
@@ -2072,16 +2037,12 @@ class Api extends CI_Controller
         }
 
         // Check if already in user's cart (matching product and size)
-        $where_cart = ['user_id' => $user_id, 'product_id' => $product_id];
-        if (!empty($size)) {
-            $where_cart['size'] = $size;
-        } else {
-            $where_cart['size'] = null;
-        }
-        $existing = $this->General_model->getOne('cart', $where_cart);
-        if (!$existing && empty($size)) {
-            $existing = $this->General_model->getOne('cart', ['user_id' => $user_id, 'product_id' => $product_id, 'size' => '']);
-        }
+        $clean_size = !empty($size) ? trim($size) : '';
+        $existing = $this->db->get_where('cart', [
+            'user_id'    => $user_id,
+            'product_id' => $product_id,
+            'size'       => $clean_size
+        ])->row();
 
         if ($existing) {
             $new_quantity = (int)$existing->quantity + $quantity;
@@ -2098,7 +2059,7 @@ class Api extends CI_Controller
                 'user_id'    => $user_id,
                 'product_id' => $product_id,
                 'quantity'   => $quantity,
-                'size'       => $size,
+                'size'       => $clean_size,
                 'created_at' => date('Y-m-d H:i:s'),
                 'updated_at' => date('Y-m-d H:i:s')
             ];
@@ -2109,17 +2070,18 @@ class Api extends CI_Controller
         }
 
         // Fetch full details of the cart row
-        $this->db->select('cart.id, cart.product_id, cart.quantity, cart.size, products.name as product_name, products.price as product_price, products.image as product_image');
+        $this->db->select('cart.id as cart_id, cart.id, cart.product_id, cart.quantity, cart.size, products.name as product_name, products.price as product_price, products.image as product_image');
         $this->db->from('cart');
         $this->db->join('products', 'products.id = cart.product_id', 'inner');
         $this->db->where('cart.id', $cart_row_id);
         $full_cart_item = $this->db->get()->row();
 
         if ($full_cart_item) {
+            $full_cart_item->cart_id = (int)$full_cart_item->id;
             $full_cart_item->id = (int)$full_cart_item->id;
             $full_cart_item->product_id = (int)$full_cart_item->product_id;
             $full_cart_item->quantity = (int)$full_cart_item->quantity;
-            $full_cart_item->size = $full_cart_item->size ?: null;
+            $full_cart_item->size = !empty($full_cart_item->size) ? $full_cart_item->size : null;
             $full_cart_item->product_price = (float)$full_cart_item->product_price;
             $full_cart_item->product_image = $full_cart_item->product_image ? base_url($full_cart_item->product_image) : null;
             $full_cart_item->subtotal = (float)($full_cart_item->product_price * $full_cart_item->quantity);
@@ -2171,6 +2133,7 @@ class Api extends CI_Controller
         $cart_items = [];
         foreach ($rows as $row) {
             $cart_items[] = [
+                'id'            => (int)$row->cart_id,
                 'cart_id'       => (int)$row->cart_id,
                 'product_id'    => (int)$row->product_id,
                 'product_name'  => $row->product_name,
@@ -2190,6 +2153,7 @@ class Api extends CI_Controller
     /**
      * POST api/cart/update
      * Authenticated endpoint to update absolute quantity of an item in the cart
+     * Accepts cart_id (preferred) or (product_id + optional size)
      */
     public function update_cart_quantity()
     {
@@ -2216,20 +2180,48 @@ class Api extends CI_Controller
             $this->response(false, $error_msg, $error_data, 403);
         }
 
-        $this->load->library('form_validation');
-        $this->form_validation->set_rules('product_id', 'Product ID', 'required|numeric');
-        $this->form_validation->set_rules('quantity', 'Quantity', 'required|integer|greater_than[0]');
-
-        if ($this->form_validation->run() === FALSE) {
-            $errors = $this->form_validation->error_array();
-            $this->response(false, implode(' ', $errors), $errors, 400);
-        }
-
-        $product_id = (int)$this->input->post('product_id');
+        $cart_id = $this->input->post('cart_id');
+        $product_id = $this->input->post('product_id');
+        $size = $this->input->post('size');
         $quantity = (int)$this->input->post('quantity');
 
-        // Check product stock
-        $product = $this->General_model->getOne('products', ['id' => $product_id, 'status' => 1]);
+        if ($quantity <= 0) {
+            $this->response(false, 'Quantity must be greater than 0', null, 400);
+        }
+
+        // Priority 1: Match by unique cart_id
+        $existing = null;
+        if (!empty($cart_id) && is_numeric($cart_id)) {
+            $existing = $this->General_model->getOne('cart', [
+                'id'      => (int)$cart_id,
+                'user_id' => $user_id
+            ]);
+        }
+
+        // Priority 2: Match by product_id and size
+        if (!$existing && !empty($product_id) && is_numeric($product_id)) {
+            if ($size !== null && $size !== '') {
+                $clean_size = trim($size);
+                $existing = $this->General_model->getOne('cart', [
+                    'user_id'    => $user_id,
+                    'product_id' => (int)$product_id,
+                    'size'       => $clean_size
+                ]);
+            }
+            if (!$existing) {
+                $existing = $this->General_model->getOne('cart', [
+                    'user_id'    => $user_id,
+                    'product_id' => (int)$product_id
+                ]);
+            }
+        }
+
+        if (!$existing) {
+            $this->response(false, 'Cart item not found in your cart', null, 404);
+        }
+
+        $prod_id = (int)$existing->product_id;
+        $product = $this->General_model->getOne('products', ['id' => $prod_id, 'status' => 1]);
         if (!$product) {
             $this->response(false, 'Product not found or inactive', null, 404);
         }
@@ -2238,25 +2230,21 @@ class Api extends CI_Controller
             $this->response(false, 'Insufficient stock. Only ' . $product->stock . ' units available.', null, 400);
         }
 
-        // Check if cart item exists
-        $existing = $this->General_model->getOne('cart', ['user_id' => $user_id, 'product_id' => $product_id]);
-        if (!$existing) {
-            $this->response(false, 'Product not found in your cart', null, 404);
-        }
-
         $this->db->update('cart', ['quantity' => $quantity, 'updated_at' => date('Y-m-d H:i:s')], ['id' => (int)$existing->id]);
 
         // Fetch full details of the cart row
-        $this->db->select('cart.id, cart.product_id, cart.quantity, products.name as product_name, products.price as product_price, products.image as product_image');
+        $this->db->select('cart.id as cart_id, cart.id, cart.product_id, cart.quantity, cart.size, products.name as product_name, products.price as product_price, products.image as product_image');
         $this->db->from('cart');
         $this->db->join('products', 'products.id = cart.product_id', 'inner');
         $this->db->where('cart.id', (int)$existing->id);
         $full_cart_item = $this->db->get()->row();
 
         if ($full_cart_item) {
+            $full_cart_item->cart_id = (int)$full_cart_item->id;
             $full_cart_item->id = (int)$full_cart_item->id;
             $full_cart_item->product_id = (int)$full_cart_item->product_id;
             $full_cart_item->quantity = (int)$full_cart_item->quantity;
+            $full_cart_item->size = !empty($full_cart_item->size) ? $full_cart_item->size : null;
             $full_cart_item->product_price = (float)$full_cart_item->product_price;
             $full_cart_item->product_image = $full_cart_item->product_image ? base_url($full_cart_item->product_image) : null;
             $full_cart_item->subtotal = (float)($full_cart_item->product_price * $full_cart_item->quantity);
@@ -2268,6 +2256,7 @@ class Api extends CI_Controller
     /**
      * POST api/cart/remove
      * Authenticated endpoint to delete a product from the user's cart
+     * Accepts cart_id (preferred) or (product_id + optional size)
      */
     public function remove_from_cart()
     {
@@ -2287,17 +2276,40 @@ class Api extends CI_Controller
         $auth = $this->check_auth();
         $user_id = (int)$auth['decoded']->user_id;
 
+        $cart_id = $this->input->post('cart_id', TRUE);
         $product_id = $this->input->post('product_id', TRUE);
-        if (empty($product_id) || !is_numeric($product_id)) {
-            $this->response(false, 'Invalid or missing product ID', null, 400);
+        $size = $this->input->post('size', TRUE);
+
+        $existing = null;
+        if (!empty($cart_id) && is_numeric($cart_id)) {
+            $existing = $this->General_model->getOne('cart', [
+                'id'      => (int)$cart_id,
+                'user_id' => $user_id
+            ]);
         }
 
-        $existing = $this->General_model->getOne('cart', ['user_id' => $user_id, 'product_id' => (int)$product_id]);
+        if (!$existing && !empty($product_id) && is_numeric($product_id)) {
+            if ($size !== null && $size !== '') {
+                $clean_size = trim($size);
+                $existing = $this->General_model->getOne('cart', [
+                    'user_id'    => $user_id,
+                    'product_id' => (int)$product_id,
+                    'size'       => $clean_size
+                ]);
+            }
+            if (!$existing) {
+                $existing = $this->General_model->getOne('cart', [
+                    'user_id'    => $user_id,
+                    'product_id' => (int)$product_id
+                ]);
+            }
+        }
+
         if (!$existing) {
             $this->response(false, 'Product not found in your cart', null, 404);
         }
 
-        $this->db->delete('cart', ['user_id' => $user_id, 'product_id' => (int)$product_id]);
+        $this->db->delete('cart', ['id' => (int)$existing->id, 'user_id' => $user_id]);
         $this->response(true, 'Product removed from cart successfully', null, 200);
     }
 
@@ -2332,15 +2344,19 @@ class Api extends CI_Controller
         $user_id = (int)$auth['decoded']->user_id;
 
         $product_id = $this->input->get('product_id', TRUE);
+        $size = $this->input->get('size', TRUE);
         if (empty($product_id) || !is_numeric($product_id)) {
             $this->response(false, 'Invalid or missing product ID', null, 400);
         }
 
-        $this->db->select('cart.id as cart_id, cart.quantity, products.id as product_id, products.name as product_name, products.price, products.image, products.stock as product_stock');
+        $this->db->select('cart.id as cart_id, cart.id, cart.quantity, cart.size, products.id as product_id, products.name as product_name, products.price, products.image, products.stock as product_stock');
         $this->db->from('cart');
         $this->db->join('products', 'products.id = cart.product_id', 'inner');
         $this->db->where('cart.user_id', $user_id);
         $this->db->where('cart.product_id', (int)$product_id);
+        if ($size !== null && $size !== '') {
+            $this->db->where('cart.size', trim($size));
+        }
         $this->db->where('products.status', 1);
         $query = $this->db->get();
         $row = $query->row();
@@ -2349,12 +2365,14 @@ class Api extends CI_Controller
             $this->response(true, 'Product not in cart', null, 200);
         } else {
             $item = [
+                'id'            => (int)$row->cart_id,
                 'cart_id'       => (int)$row->cart_id,
                 'product_id'    => (int)$row->product_id,
                 'product_name'  => $row->product_name,
                 'product_slug'  => null,
                 'price'         => (float)$row->price,
                 'quantity'      => (int)$row->quantity,
+                'size'          => !empty($row->size) ? $row->size : null,
                 'product_stock' => (int)$row->product_stock,
                 'image'         => $row->image ? base_url($row->image) : null,
                 'total_price'   => (float)$row->price * (int)$row->quantity
@@ -2530,7 +2548,8 @@ class Api extends CI_Controller
                 $items_to_order[] = [
                     'product'  => $prod,
                     'quantity' => $qty,
-                    'size'     => !empty($row->size) ? trim($row->size) : null
+                    'size'     => !empty($row->size) ? trim($row->size) : null,
+                    'cart_id'  => (int)$row->id
                 ];
             }
         }
@@ -2651,17 +2670,30 @@ class Api extends CI_Controller
         $primary_prod = $items_to_order[0]['product'];
         $primary_size = $items_to_order[0]['size'] ?? null;
 
+        // Generate unique Order Number (Format: DS + YYYYMMDD + 4-digit sequence, e.g. DS202610070001)
+        $date_prefix = 'DS' . date('Ymd');
+        $today_count = $this->db->where('DATE(created_at)', date('Y-m-d'))->count_all_results('orders');
+        $seq = $today_count + 1;
+        $order_number = $date_prefix . sprintf('%04d', $seq);
+
+        // Ensure collision safety
+        while ($this->General_model->getOne('orders', ['order_number' => $order_number])) {
+            $seq++;
+            $order_number = $date_prefix . sprintf('%04d', $seq);
+        }
+
         // Create single order row for the full cart / purchase
         $order_data = [
-            'user_id'    => $user_id,
-            'product_id' => (int)$primary_prod->id,
-            'quantity'   => (int)$total_quantity,
-            'size'       => $primary_size,
-            'amount'     => (float)$total_payable,
-            'status'     => 'placed',
-            'address_id' => $resolved_address_id,
-            'created_at' => date('Y-m-d H:i:s'),
-            'updated_at' => date('Y-m-d H:i:s')
+            'order_number' => $order_number,
+            'user_id'      => $user_id,
+            'product_id'   => (int)$primary_prod->id,
+            'quantity'     => (int)$total_quantity,
+            'size'         => $primary_size,
+            'amount'       => (float)$total_payable,
+            'status'       => 'placed',
+            'address_id'   => $resolved_address_id,
+            'created_at'   => date('Y-m-d H:i:s'),
+            'updated_at'   => date('Y-m-d H:i:s')
         ];
 
         $order_id = $this->General_model->insert('orders', $order_data);
@@ -2674,7 +2706,7 @@ class Api extends CI_Controller
             'amount'       => (float)$total_payable,
             'source'       => 'purchase',
             'reference_id' => (int)$order_id,
-            'remark'       => "Debited for product order purchase (Order ID: #{$order_id})",
+            'remark'       => "Debited for product order purchase (Order: {$order_number})",
             'created_at'   => date('Y-m-d H:i:s')
         ]);
 
@@ -2704,13 +2736,23 @@ class Api extends CI_Controller
             $this->db->update('products', ['stock' => $new_stock], ['id' => (int)$prod->id]);
 
             // Clear purchased item from cart
-            $this->db->delete('cart', [
-                'user_id'    => $user_id,
-                'product_id' => (int)$prod->id
-            ]);
+            if (!empty($entry['cart_id'])) {
+                $this->db->delete('cart', [
+                    'id'      => (int)$entry['cart_id'],
+                    'user_id' => $user_id
+                ]);
+            } else {
+                $clean_cart_size = !empty($entry_size) ? trim($entry_size) : '';
+                $this->db->delete('cart', [
+                    'user_id'    => $user_id,
+                    'product_id' => (int)$prod->id,
+                    'size'       => $clean_cart_size
+                ]);
+            }
 
             $line_items[] = [
                 'order_id'        => (int)$order_id,
+                'order_number'    => $order_number,
                 'product_id'      => (int)$prod->id,
                 'product_name'    => $prod->name,
                 'product_slug'    => null,
@@ -2724,8 +2766,14 @@ class Api extends CI_Controller
             ];
         }
 
+        // If full-cart checkout, guarantee cart is completely cleared for the buyer
+        if (empty($product_id)) {
+            $this->db->delete('cart', ['user_id' => $user_id]);
+        }
+
         $created_order = [
             'id'               => (int)$order_id,
+            'order_number'     => $order_number,
             'buyer_id'         => $user_id,
             'product_id'       => (int)$primary_prod->id,
             'product_name'     => $primary_prod->name,
@@ -2755,6 +2803,8 @@ class Api extends CI_Controller
             $this->response(true, 'Order placed successfully! Payment confirmed from wallet.', [
                 'order_ids'             => $order_ids,
                 'order_id'              => !empty($order_ids) ? $order_ids[0] : null,
+                'order_numbers'         => [$order_number],
+                'order_number'          => $order_number,
                 'line_items'            => $line_items,
                 'orders'                => $created_orders,
                 'order'                 => count($created_orders) === 1 ? $created_orders[0] : null,
@@ -3005,9 +3055,11 @@ class Api extends CI_Controller
                     $c_prod = $this->General_model->getOne('products', ['id' => (int)$it->product_id]);
                     $n_stock = max(0, (int)($c_prod->stock ?? 0) - (int)$it->quantity);
                     $this->db->update('products', ['stock' => $n_stock], ['id' => (int)$it->product_id]);
+                    $clean_it_size = !empty($it->size) ? trim($it->size) : '';
                     $this->db->delete('cart', [
                         'user_id'    => $user_id,
-                        'product_id' => (int)$it->product_id
+                        'product_id' => (int)$it->product_id,
+                        'size'       => $clean_it_size
                     ]);
                 }
             } else {
@@ -3016,9 +3068,11 @@ class Api extends CI_Controller
                 $this->db->update('products', ['stock' => $new_stock], ['id' => $product_id]);
 
                 // Clear purchased item from cart
+                $clean_ord_size = !empty($ord->size) ? trim($ord->size) : '';
                 $this->db->delete('cart', [
                     'user_id'    => $user_id,
-                    'product_id' => $product_id
+                    'product_id' => $product_id,
+                    'size'       => $clean_ord_size
                 ]);
             }
 
@@ -3196,8 +3250,13 @@ class Api extends CI_Controller
                 ];
             }
 
+            $order_num = !empty($row->order_number) 
+                ? $row->order_number 
+                : ('DS' . date('Ymd', strtotime($row->created_at ?: date('Y-m-d'))) . sprintf('%04d', (int)$row->id));
+
             $orders[] = [
                 'id'            => (int)$row->id,
+                'order_number'  => $order_num,
                 'product_id'    => (int)$row->product_id,
                 'product_name'  => $row->product_name,
                 'product_slug'  => null,
@@ -3240,7 +3299,7 @@ class Api extends CI_Controller
 
         $id = $id ?: ($this->input->get('order_id') ?: ($this->input->get('id') ?: ($this->input->post('order_id') ?: $this->input->post('id'))));
 
-        if (empty($id) || !is_numeric($id)) {
+        if (empty($id)) {
             $this->response(false, 'Invalid or missing order ID', null, 400);
         }
 
@@ -3249,7 +3308,11 @@ class Api extends CI_Controller
         $this->db->join('products', 'products.id = orders.product_id', 'left');
         $this->db->join('categories', 'categories.id = products.category_id', 'left');
         $this->db->join('users', 'users.id = orders.user_id', 'inner');
-        $this->db->where('orders.id', (int)$id);
+        if (is_numeric($id)) {
+            $this->db->where('orders.id', (int)$id);
+        } else {
+            $this->db->where('orders.order_number', trim($id));
+        }
         $query = $this->db->get();
         $order = $query->row();
 
@@ -3389,8 +3452,13 @@ class Api extends CI_Controller
             ];
         }
 
+        $order_num = !empty($order->order_number) 
+            ? $order->order_number 
+            : ('DS' . date('Ymd', strtotime($order->created_at ?: date('Y-m-d'))) . sprintf('%04d', (int)$order->id));
+
         $order_detail = [
             'id'               => (int)$order->id,
+            'order_number'     => $order_num,
             'buyer_id'         => (int)$order->user_id,
             'buyer_name'       => $order->buyer_name,
             'buyer_email'      => $order->buyer_email,
@@ -3449,14 +3517,20 @@ class Api extends CI_Controller
 
         $id = $id ?: ($this->input->post('order_id') ?: ($this->input->post('id') ?: ($this->input->get('order_id') ?: $this->input->get('id'))));
 
-        if (empty($id) || !is_numeric($id)) {
+        if (empty($id)) {
             $this->response(false, 'Invalid or missing order ID', null, 400);
         }
 
-        $order = $this->General_model->getOne('orders', ['id' => (int)$id]);
+        if (is_numeric($id)) {
+            $order = $this->General_model->getOne('orders', ['id' => (int)$id]);
+        } else {
+            $order = $this->General_model->getOne('orders', ['order_number' => trim($id)]);
+        }
         if (!$order) {
             $this->response(false, 'Order not found', null, 404);
         }
+
+        $display_order_id = !empty($order->order_number) ? $order->order_number : ('#' . $order->id);
 
         // Restrict cancellation to buyer OR admin
         if ($role !== 1 && (int)$order->user_id !== $user_id) {
@@ -3465,7 +3539,7 @@ class Api extends CI_Controller
 
         // Check if already cancelled
         if ($order->status === 'cancelled') {
-            $this->response(false, 'Order #' . $id . ' is already cancelled.', null, 400);
+            $this->response(false, 'Order ' . $display_order_id . ' is already cancelled.', null, 400);
         }
 
         // Validate allowed cancellation statuses
@@ -3497,14 +3571,14 @@ class Api extends CI_Controller
                     'type'         => 'credit',
                     'amount'       => $order_amount,
                     'source'       => 'admin_credit',
-                    'reference_id' => (int)$id,
-                    'remark'       => "Refund for cancelled Order #{$id}",
+                    'reference_id' => (int)$order->id,
+                    'remark'       => "Refund for cancelled Order {$display_order_id}",
                     'created_at'   => date('Y-m-d H:i:s')
                 ]);
             }
 
             // 2. Restore product stock
-            $order_item_rows = $this->db->get_where('order_items', ['order_id' => (int)$id])->result();
+            $order_item_rows = $this->db->get_where('order_items', ['order_id' => (int)$order->id])->result();
             if (!empty($order_item_rows)) {
                 foreach ($order_item_rows as $it) {
                     $this->db->set('stock', 'stock + ' . (int)$it->quantity, FALSE);
@@ -3583,11 +3657,12 @@ class Api extends CI_Controller
         } else {
             $this->db->trans_commit();
             $resp_msg = $is_already_paid
-                ? "Order #{$id} cancelled successfully. Paid amount of ₹" . number_format($order->amount, 2) . " has been refunded to wallet and commissions reversed."
-                : "Order #{$id} cancelled successfully.";
+                ? "Order {$display_order_id} cancelled successfully. Paid amount of ₹" . number_format($order->amount, 2) . " has been refunded to wallet and commissions reversed."
+                : "Order {$display_order_id} cancelled successfully.";
 
             $this->response(true, $resp_msg, [
                 'order_id'         => (int)$order->id,
+                'order_number'     => $display_order_id,
                 'status'           => 'cancelled',
                 'status_label'     => 'Cancelled',
                 'was_paid'         => $is_already_paid,
@@ -3819,6 +3894,69 @@ class Api extends CI_Controller
     }
 
     /**
+     * GET api/get_payment_settings
+     * Retrieve admin payment gateway configuration (QR Code, UPI, Bank Details, and Instructions)
+     */
+    public function get_payment_settings()
+    {
+        if ($this->input->method(TRUE) !== 'GET') {
+            $this->response(false, 'Method Not Allowed', null, 405);
+        }
+
+        $qr_file = $this->General_model->getSetting('payment_qr_code', '');
+        $qr_url = !empty($qr_file) ? base_url($qr_file) : null;
+
+        $upi_id = $this->General_model->getSetting('payment_upi_id', '');
+        $upi_name = $this->General_model->getSetting('payment_upi_name', '');
+        $bank_name = $this->General_model->getSetting('payment_bank_name', '');
+        $account_holder = $this->General_model->getSetting('payment_account_holder_name', '');
+        $account_number = $this->General_model->getSetting('payment_account_number', '');
+        $ifsc_code = $this->General_model->getSetting('payment_ifsc_code', '');
+        $account_type = $this->General_model->getSetting('payment_account_type', 'Current');
+        $branch_name = $this->General_model->getSetting('payment_branch_name', '');
+        $instructions = $this->General_model->getSetting('payment_instructions', '');
+        $min_deposit = (float)$this->General_model->getSetting('min_deposit_amount', '10.00');
+
+        // Check user session / token if provided
+        $wallet_balance = 0.00;
+        $user_id = null;
+        try {
+            $auth = $this->check_auth_optional();
+            if ($auth && isset($auth['decoded']->user_id)) {
+                $user_id = (int)$auth['decoded']->user_id;
+                $user = $this->General_model->getOne('users', ['id' => $user_id]);
+                if ($user) {
+                    $wallet_balance = (float)$user->wallet_balance;
+                }
+            }
+        } catch (\Throwable $e) {}
+
+        $data = [
+            'qr_code'               => $qr_url,
+            'qr_code_url'           => $qr_url,
+            'qr_code_path'          => $qr_file,
+            'has_qr_code'           => !empty($qr_url),
+            'upi_id'                => $upi_id,
+            'upi_name'              => $upi_name,
+            'has_upi'               => !empty($upi_id),
+            'bank_name'             => $bank_name,
+            'account_holder_name'   => $account_holder,
+            'account_number'        => $account_number,
+            'ifsc_code'             => $ifsc_code,
+            'account_type'          => $account_type,
+            'branch_name'           => $branch_name,
+            'has_bank'              => (!empty($account_number) && !empty($ifsc_code)),
+            'instructions'          => $instructions,
+            'min_deposit_amount'    => $min_deposit,
+            'formatted_min_deposit' => '₹' . number_format($min_deposit, 2),
+            'wallet_balance'        => $wallet_balance,
+            'formatted_balance'     => '₹' . number_format($wallet_balance, 2),
+        ];
+
+        $this->response(true, 'Payment settings retrieved successfully', $data, 200);
+    }
+
+    /**
      * POST api/wallet/deposit
      * Authenticated endpoint to submit a wallet deposit request (cash/online with proof)
      */
@@ -3867,8 +4005,8 @@ class Api extends CI_Controller
             }
 
             $config['upload_path']   = $upload_path;
-            $config['allowed_types'] = 'jpg|jpeg|png|pdf';
-            $config['max_size']      = 2048; // 2MB
+            $config['allowed_types'] = 'jpg|jpeg|png|webp|pdf';
+            $config['max_size']      = 15360; // 15MB
             $config['encrypt_name']  = TRUE;
 
             $this->load->library('upload', $config);
@@ -4932,6 +5070,328 @@ class Api extends CI_Controller
             'active_referrals' => $downline_stats['active'],
             'levels'           => max($downline_stats['max_depth'], 1),
         ], 200);
+    }
+
+    /**
+     * GET api/get_member_details
+     * Fetches real, accurate member profile, sponsor hierarchy, performance statistics, and chronological activity feed.
+     */
+    public function get_member_details($id = null)
+    {
+        if ($this->input->method(TRUE) !== 'GET') {
+            $this->response(false, 'Method Not Allowed', null, 405);
+        }
+
+        $auth = $this->check_auth();
+        $viewer_id = (int)$auth['decoded']->user_id;
+
+        $target_id = $id ?: ($this->input->get('id', TRUE) ?: ($this->input->get('user_id', TRUE) ?: $this->input->get('member_id', TRUE)));
+        if (empty($target_id) || !is_numeric($target_id)) {
+            $this->response(false, 'Member ID is required', null, 400);
+        }
+        $target_id = (int)$target_id;
+
+        $member = $this->General_model->getOne('users', ['id' => $target_id]);
+        if (!$member) {
+            $this->response(false, 'Member not found', null, 404);
+        }
+
+        // Profile completion calculation
+        $comp = $this->calculate_profile_completion($member);
+        $true_pct = (int)$comp['percentage'];
+        $true_comp = $comp['is_completed'] ? 1 : 0;
+
+        // Initials calculation
+        $parts = array_filter(explode(' ', trim($member->name)));
+        $initials = '';
+        foreach ($parts as $p) {
+            $initials .= strtoupper($p[0]);
+            if (strlen($initials) >= 2) break;
+        }
+        if (empty($initials)) $initials = 'DS';
+
+        $img_url = $this->get_user_image_url($member->profile_image ?? '');
+        $is_active = ((int)$member->status === 1 && !empty($member->is_profile_active));
+        $wallet_val = (float)($member->wallet_balance ?? 0.00);
+
+        // Fetch Sponsor / Parent details if any
+        $sponsor = null;
+        if (!empty($member->parent_id) && (int)$member->parent_id > 0) {
+            $parent = $this->General_model->getOne('users', ['id' => (int)$member->parent_id]);
+            if ($parent) {
+                $p_parts = array_filter(explode(' ', trim($parent->name)));
+                $p_initials = '';
+                foreach ($p_parts as $p) {
+                    $p_initials .= strtoupper($p[0]);
+                    if (strlen($p_initials) >= 2) break;
+                }
+                $sponsor = [
+                    'id'            => (int)$parent->id,
+                    'custom_id'     => $parent->custom_id ?: str_pad($parent->id, 7, '0', STR_PAD_LEFT),
+                    'name'          => $parent->name,
+                    'phone'         => $parent->phone ?: '',
+                    'email'         => $parent->email ?: '',
+                    'referral_code' => $parent->referral_code,
+                    'profile_image' => $this->get_user_image_url($parent->profile_image ?? ''),
+                    'initials'      => $p_initials ?: 'DS',
+                    'is_active'     => ((int)$parent->status === 1 && !empty($parent->is_profile_active)),
+                ];
+            }
+        }
+
+        // Fast in-memory hierarchy calculation for exact team counts
+        $all_members_raw = $this->db->select('id, parent_id, is_profile_active, status')->from('users')->get()->result();
+        $children_by_parent = [];
+        $active_status_by_id = [];
+        foreach ($all_members_raw as $r) {
+            $nid = (int)$r->id;
+            $pid = ($r->parent_id !== null && $r->parent_id !== '' && (int)$r->parent_id > 0) ? (int)$r->parent_id : 0;
+            $active_status_by_id[$nid] = ((int)$r->status === 1 && !empty($r->is_profile_active));
+            if (!isset($children_by_parent[$pid])) {
+                $children_by_parent[$pid] = [];
+            }
+            $children_by_parent[$pid][] = $nid;
+        }
+
+        $direct_children = $children_by_parent[$target_id] ?? [];
+        $direct_count = count($direct_children);
+        $active_direct_count = 0;
+        foreach ($direct_children as $cid) {
+            if (!empty($active_status_by_id[$cid])) {
+                $active_direct_count++;
+            }
+        }
+
+        // Recursive downline count
+        $total_downlines = 0;
+        $active_downlines = 0;
+        $visited = [$target_id];
+        $count_downline = function($pid) use (&$count_downline, &$children_by_parent, &$active_status_by_id, &$total_downlines, &$active_downlines, &$visited) {
+            $c_list = $children_by_parent[$pid] ?? [];
+            foreach ($c_list as $cid) {
+                if (in_array($cid, $visited)) continue;
+                $visited[] = $cid;
+                $total_downlines++;
+                if (!empty($active_status_by_id[$cid])) {
+                    $active_downlines++;
+                }
+                $count_downline($cid);
+            }
+        };
+        $count_downline($target_id);
+
+        // Orders metrics
+        $orders_agg = $this->db->select('COUNT(id) as total_orders, COALESCE(SUM(amount), 0) as total_spent')
+            ->from('orders')
+            ->where('user_id', $target_id)
+            ->where_in('status', ['placed', 'confirmed', 'packed', 'out_for_delivery', 'delivered', 'completed'])
+            ->get()->row();
+        $total_orders = (int)($orders_agg->total_orders ?? 0);
+        $total_spent = (float)($orders_agg->total_spent ?? 0.00);
+
+        // Total earnings calculation from wallet transactions
+        $earnings_agg = $this->db->select('COALESCE(SUM(amount), 0) as total_earned')
+            ->from('wallet_transactions')
+            ->where('user_id', $target_id)
+            ->where('type', 'credit')
+            ->where_in('source', ['referral_commission', 'admin_commission', 'commission'])
+            ->get()->row();
+        $total_earned = (float)($earnings_agg->total_earned ?? 0.00);
+        if ($total_earned <= 0 && $wallet_val > 0) {
+            $total_earned = $wallet_val;
+        }
+
+        // Build 100% REAL Activities Chronology
+        $activities = [];
+
+        // 1. Registration Activity
+        $activities[] = [
+            'id'          => 'act_reg_' . $member->id,
+            'type'        => 'registration',
+            'title'       => 'Joined Divya Shakti',
+            'subtitle'    => 'Account created with ID ' . ($member->custom_id ?: str_pad($member->id, 7, '0', STR_PAD_LEFT)),
+            'badge'       => 'Registered',
+            'date'        => date('d M Y, h:i A', strtotime($member->created_at)),
+            'timestamp'   => strtotime($member->created_at),
+            'icon'        => 'person-add',
+            'color'       => '#4A7CE6',
+            'bg'          => '#EEF5FF'
+        ];
+
+        // 2. Profile Activation
+        if ($is_active) {
+            $act_time = !empty($member->updated_at) ? $member->updated_at : $member->created_at;
+            $activities[] = [
+                'id'          => 'act_ver_' . $member->id,
+                'type'        => 'activation',
+                'title'       => 'Profile Verified & Active',
+                'subtitle'    => 'KYC verified and business slot active',
+                'badge'       => 'Verified',
+                'date'        => date('d M Y, h:i A', strtotime($act_time)),
+                'timestamp'   => strtotime($act_time),
+                'icon'        => 'checkmark-done-circle',
+                'color'       => '#0E9F6E',
+                'bg'          => '#E8FBF5'
+            ];
+        }
+
+        // 3. Real Orders placed by this member
+        $recent_orders = $this->db->select('o.id, o.amount, o.status, o.created_at, p.name as product_name')
+            ->from('orders o')
+            ->join('products p', 'p.id = o.product_id', 'left')
+            ->where('o.user_id', $target_id)
+            ->order_by('o.id', 'DESC')
+            ->limit(5)
+            ->get()->result();
+
+        foreach ($recent_orders as $ord) {
+            $p_name = !empty($ord->product_name) ? $ord->product_name : 'Product Purchase';
+            $st = ucfirst(str_replace('_', ' ', $ord->status));
+            $activities[] = [
+                'id'          => 'act_ord_' . $ord->id,
+                'type'        => 'order',
+                'title'       => 'Placed Order #' . $ord->id,
+                'subtitle'    => $p_name . ' • ₹' . number_format((float)$ord->amount, 2),
+                'badge'       => $st,
+                'date'        => date('d M Y, h:i A', strtotime($ord->created_at)),
+                'timestamp'   => strtotime($ord->created_at),
+                'icon'        => 'bag-handle',
+                'color'       => '#E64A78',
+                'bg'          => '#FFF0F4'
+            ];
+        }
+
+        // 4. Real Referrals added by this member
+        $recent_referrals = $this->db->select('id, custom_id, name, referral_code, is_profile_active, created_at')
+            ->from('users')
+            ->where('parent_id', $target_id)
+            ->order_by('id', 'DESC')
+            ->limit(5)
+            ->get()->result();
+
+        foreach ($recent_referrals as $rf) {
+            $rf_active = !empty($rf->is_profile_active);
+            $activities[] = [
+                'id'          => 'act_ref_' . $rf->id,
+                'type'        => 'referral',
+                'title'       => 'Added Team Member: ' . $rf->name,
+                'subtitle'    => 'Code: ' . ($rf->referral_code ?: $rf->custom_id) . ' • ' . ($rf_active ? 'Active' : 'Pending'),
+                'badge'       => $rf_active ? 'Active' : 'Pending',
+                'date'        => date('d M Y, h:i A', strtotime($rf->created_at)),
+                'timestamp'   => strtotime($rf->created_at),
+                'icon'        => 'people',
+                'color'       => '#7B61C4',
+                'bg'          => '#F5F0FF'
+            ];
+        }
+
+        // 5. Real Wallet Transactions (credits/commissions/withdrawals)
+        $recent_txs = $this->db->select('id, type, amount, source, remark, created_at')
+            ->from('wallet_transactions')
+            ->where('user_id', $target_id)
+            ->order_by('id', 'DESC')
+            ->limit(5)
+            ->get()->result();
+
+        foreach ($recent_txs as $tx) {
+            $is_cr = ($tx->type === 'credit');
+            $sign = $is_cr ? '+' : '-';
+            $src_title = ucwords(str_replace('_', ' ', $tx->source ?: ($is_cr ? 'Credit' : 'Debit')));
+            $activities[] = [
+                'id'          => 'act_tx_' . $tx->id,
+                'type'        => 'transaction',
+                'title'       => $src_title,
+                'subtitle'    => ($tx->remark ?: 'Wallet balance update') . ' • ' . $sign . '₹' . number_format((float)$tx->amount, 2),
+                'badge'       => $sign . '₹' . number_format((float)$tx->amount, 2),
+                'date'        => date('d M Y, h:i A', strtotime($tx->created_at)),
+                'timestamp'   => strtotime($tx->created_at),
+                'icon'        => $is_cr ? 'trending-up' : 'trending-down',
+                'color'       => $is_cr ? '#C89738' : '#64748B',
+                'bg'          => $is_cr ? '#FBF5E6' : '#F1F5F9'
+            ];
+        }
+
+        // Sort all real activities strictly by timestamp descending
+        usort($activities, function ($a, $b) {
+            return ($b['timestamp'] ?? 0) <=> ($a['timestamp'] ?? 0);
+        });
+
+        // Limit to 15 recent real events
+        $activities = array_slice($activities, 0, 15);
+
+        // Fetch Real Direct Team Members
+        $direct_members_list = [];
+        $direct_members_query = $this->db->select('id, custom_id, name, phone, email, referral_code, is_profile_active, status, wallet_balance, profile_image, created_at')
+            ->from('users')
+            ->where('parent_id', $target_id)
+            ->order_by('id', 'DESC')
+            ->limit(20)
+            ->get()->result();
+
+        $color_palette = ['#E64A78', '#C89738', '#7B61C4', '#4A7CE6', '#0E9F6E', '#3F83F8'];
+        foreach ($direct_members_query as $idx => $dm) {
+            $dm_parts = array_filter(explode(' ', trim($dm->name)));
+            $dm_initials = '';
+            foreach ($dm_parts as $p) {
+                $dm_initials .= strtoupper($p[0]);
+                if (strlen($dm_initials) >= 2) break;
+            }
+            $is_dm_active = ((int)$dm->status === 1 && !empty($dm->is_profile_active));
+            $direct_members_list[] = [
+                'id'            => (int)$dm->id,
+                'user_id'       => (int)$dm->id,
+                'custom_id'     => $dm->custom_id ?: str_pad($dm->id, 7, '0', STR_PAD_LEFT),
+                'name'          => $dm->name,
+                'phone'         => $dm->phone ?: '',
+                'email'         => $dm->email ?: '',
+                'referral_code' => $dm->referral_code,
+                'profile_image' => $this->get_user_image_url($dm->profile_image ?? ''),
+                'initials'      => $dm_initials ?: 'DS',
+                'badgeColor'    => $color_palette[$idx % count($color_palette)],
+                'is_active'     => $is_dm_active,
+                'status'        => $is_dm_active ? 'Active' : 'Pending KYC',
+                'slot'          => '₹' . number_format((float)($dm->wallet_balance ?? 0.00), 2),
+                'joined'        => date('d M Y', strtotime($dm->created_at)),
+            ];
+        }
+
+        $response_data = [
+            'member' => [
+                'id'                            => (int)$member->id,
+                'user_id'                       => (int)$member->id,
+                'custom_id'                     => $member->custom_id ?: str_pad($member->id, 7, '0', STR_PAD_LEFT),
+                'name'                          => $member->name,
+                'phone'                         => $member->phone ?: '',
+                'email'                         => $member->email ?: '',
+                'gender'                        => !empty($member->gender) ? ucfirst($member->gender) : 'Not specified',
+                'profile_image'                 => $img_url,
+                'initials'                      => $initials,
+                'referral_code'                 => $member->referral_code,
+                'wallet_balance'                => $wallet_val,
+                'wallet_formatted'              => '₹' . number_format($wallet_val, 2),
+                'is_profile_active'             => (bool)$member->is_profile_active,
+                'is_profile_completed'          => (bool)$true_comp,
+                'profile_completion_percentage' => $true_pct,
+                'status'                        => ((int)$member->status === 1) ? ($member->is_profile_active ? 'Active' : 'Pending KYC') : 'Inactive',
+                'parent_id'                     => $member->parent_id ? (int)$member->parent_id : null,
+                'joined'                        => date('d M Y', strtotime($member->created_at)),
+                'created_at'                    => $member->created_at,
+            ],
+            'sponsor'        => $sponsor,
+            'stats'          => [
+                'wallet_balance' => '₹' . number_format($wallet_val, 2),
+                'total_earnings' => '₹' . number_format($total_earned, 2),
+                'total_orders'   => $total_orders,
+                'total_spent'    => '₹' . number_format($total_spent, 2),
+                'direct_team'    => $direct_count,
+                'active_direct'  => $active_direct_count,
+                'total_team'     => $total_downlines,
+                'active_team'    => $active_downlines,
+            ],
+            'direct_members' => $direct_members_list,
+        ];
+
+        $this->response(true, 'Member details retrieved successfully', $response_data, 200);
     }
 
     /**

@@ -468,6 +468,12 @@
                             <span>Withdrawals</span>
                         </a>
                     </li>
+                    <li class="<?php echo ($this->uri->segment(1) == 'admin' && ($this->uri->segment(2) == 'payment_settings' || $this->uri->segment(2) == 'payment-settings')) ? 'active' : ''; ?>">
+                        <a href="<?php echo base_url('admin/payment_settings'); ?>">
+                            <i class="fa-solid fa-qrcode"></i>
+                            <span>Payment Settings</span>
+                        </a>
+                    </li>
                     <li class="<?php echo ($this->uri->segment(1) == 'admin' && $this->uri->segment(2) == 'cms') ? 'active' : ''; ?>">
                         <a href="<?php echo base_url('admin/cms'); ?>">
                             <i class="fa-solid fa-file-contract"></i>

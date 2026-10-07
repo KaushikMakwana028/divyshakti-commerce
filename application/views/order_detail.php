@@ -1111,7 +1111,12 @@ if (!empty($shipping_address)) {
         <div class="hero-top">
             <div class="hero-id">
                 <div class="row1">
-                    <h2>Order #<?php echo $order->id; ?></h2>
+                    <?php 
+                        $display_order_id = !empty($order->order_number) 
+                            ? $order->order_number 
+                            : ('DS' . date('Ymd', strtotime($order->created_at ?: date('Y-m-d'))) . sprintf('%04d', $order->id));
+                    ?>
+                    <h2>Order <?php echo htmlspecialchars($display_order_id); ?></h2>
                     <span class="status-pill <?php echo $status_ui[0]; ?>"><i class="fa-solid <?php echo $status_ui[1]; ?>"></i> <?php echo $status_ui[2]; ?></span>
                 </div>
                 <div class="hero-meta">

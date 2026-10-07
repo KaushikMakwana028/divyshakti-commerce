@@ -44,16 +44,13 @@ class Order extends CI_Controller
             $clean_search = trim($search);
             $clean_id = ltrim($clean_search, '#');
             $this->db->group_start();
+            $this->db->like('orders.order_number', $clean_search);
             if (is_numeric($clean_id) && (int)$clean_id > 0) {
-                $this->db->where('orders.id', (int)$clean_id);
-                $this->db->or_like('users.name', $clean_search);
-                $this->db->or_like('users.email', $clean_search);
-                $this->db->or_like('products.name', $clean_search);
-            } else {
-                $this->db->like('users.name', $clean_search);
-                $this->db->or_like('users.email', $clean_search);
-                $this->db->or_like('products.name', $clean_search);
+                $this->db->or_where('orders.id', (int)$clean_id);
             }
+            $this->db->or_like('users.name', $clean_search);
+            $this->db->or_like('users.email', $clean_search);
+            $this->db->or_like('products.name', $clean_search);
             $this->db->group_end();
         }
         if ($status !== '' && $status !== null) {
@@ -129,16 +126,20 @@ class Order extends CI_Controller
      */
     public function detail($id = null)
     {
-        if (empty($id) || !is_numeric($id)) {
+        if (empty($id)) {
             show_404();
         }
 
-        // Fetch order details
+        // Fetch order details by numeric id or order_number string
         $this->db->select('orders.*, users.name as buyer_name, users.email as buyer_email, users.phone as buyer_phone, users.referral_code as buyer_ref, products.name as product_name, products.price as product_price, products.image as product_image');
         $this->db->from('orders');
         $this->db->join('users', 'users.id = orders.user_id', 'inner');
         $this->db->join('products', 'products.id = orders.product_id', 'left');
-        $this->db->where('orders.id', (int)$id);
+        if (is_numeric($id)) {
+            $this->db->where('orders.id', (int)$id);
+        } else {
+            $this->db->where('orders.order_number', trim($id));
+        }
         $order = $this->db->get()->row();
 
         if (!$order) {
@@ -151,7 +152,7 @@ class Order extends CI_Controller
         $data['order_items'] = $this->db->select('order_items.*, products.name as product_name, products.price as product_price, products.image as product_image')
             ->from('order_items')
             ->join('products', 'products.id = order_items.product_id', 'left')
-            ->where('order_items.order_id', (int)$id)
+            ->where('order_items.order_id', (int)$order->id)
             ->get()->result();
 
         $data['shipping_address'] = null;
@@ -163,19 +164,19 @@ class Order extends CI_Controller
         $this->db->select('order_commissions.*, users.name as receiver_name, users.email as receiver_email, users.role as receiver_role');
         $this->db->from('order_commissions');
         $this->db->join('users', 'users.id = order_commissions.receiver_id', 'inner');
-        $this->db->where('order_commissions.order_id', (int)$id);
+        $this->db->where('order_commissions.order_id', (int)$order->id);
         $this->db->order_by('order_commissions.level', 'ASC');
         $data['commissions'] = $this->db->get()->result();
 
         // Fetch admin remainder commission log if any
         $data['admin_commission'] = $this->General_model->getOne('wallet_transactions', [
-            'reference_id' => (int)$id,
+            'reference_id' => (int)$order->id,
             'source'       => 'admin_commission'
         ]);
 
         // Check if payment was already deducted at checkout via wallet
         $data['is_already_paid'] = (bool)$this->General_model->getOne('wallet_transactions', [
-            'reference_id' => (int)$id,
+            'reference_id' => (int)$order->id,
             'source'       => 'purchase'
         ]);
 

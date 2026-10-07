@@ -1,7 +1,7 @@
 <style>
     /* =======================================================
-   Order Management Page — scoped styles (.ord- prefix)
-   ======================================================= */
+       Order Management Page — scoped styles (.ord- prefix)
+       ======================================================= */
     .ord-wrap {
         --ord-gold: #c89738;
         --ord-gold-dark: #a97c26;
@@ -10,7 +10,6 @@
         --ord-border: #e5e7eb;
         --ord-muted: #6b7280;
         --ord-text: #111827;
-        --ord-bg: #f4f6fa;
         --ord-radius: 16px;
         --ord-radius-sm: 12px;
         --ord-shadow: 0 2px 8px rgba(17, 24, 39, .05);
@@ -78,18 +77,6 @@
         margin-bottom: 22px;
     }
 
-    @media (max-width:991px) {
-        .ord-kpi-grid {
-            grid-template-columns: repeat(2, 1fr);
-        }
-    }
-
-    @media (max-width:575px) {
-        .ord-kpi-grid {
-            grid-template-columns: 1fr;
-        }
-    }
-
     .ord-kpi-card {
         background: #fff;
         border: 1px solid var(--ord-border);
@@ -103,6 +90,7 @@
         transition: all .25s cubic-bezier(.4, 0, .2, 1);
         position: relative;
         overflow: hidden;
+        min-width: 0;
     }
 
     .ord-kpi-card:hover {
@@ -135,6 +123,10 @@
 
     .ord-kpi-card.pending {
         --ord-accent: linear-gradient(90deg, #f97316, #ea580c);
+    }
+
+    .ord-kpi-body {
+        min-width: 0;
     }
 
     .ord-kpi-label {
@@ -226,6 +218,8 @@
         gap: 8px;
         cursor: pointer;
         transition: all .18s ease;
+        white-space: nowrap;
+        flex-shrink: 0;
     }
 
     .ord-pill:hover {
@@ -271,6 +265,7 @@
         background: #fff;
         overflow: hidden;
         transition: border-color .18s ease, box-shadow .18s ease;
+        min-width: 0;
     }
 
     .ord-search-wrap:focus-within {
@@ -287,9 +282,11 @@
         border: none;
         outline: none;
         flex: 1;
+        min-width: 0;
         padding: 11px 6px 11px 0;
         font-size: .87rem;
         font-family: inherit;
+        text-overflow: ellipsis;
     }
 
     .ord-clear-search {
@@ -312,7 +309,7 @@
         border-radius: var(--ord-radius-sm);
         font-size: .87rem;
         font-family: inherit;
-        background: #fff;
+        background-color: #fff;
         appearance: none;
         background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236b7280' stroke-width='1.6' fill='none' fill-rule='evenodd'/%3E%3C/svg%3E");
         background-repeat: no-repeat;
@@ -330,6 +327,7 @@
         flex: 0 0 auto;
         display: inline-flex;
         align-items: center;
+        justify-content: center;
         gap: 8px;
         padding: 11px 20px;
         border-radius: var(--ord-radius-sm);
@@ -345,13 +343,6 @@
     .ord-reset-btn:hover {
         background: var(--ord-dark);
         transform: translateY(-1px);
-    }
-
-    @media (max-width:575px) {
-        .ord-reset-btn {
-            width: 100%;
-            justify-content: center;
-        }
     }
 
     /* ---------- Table card ---------- */
@@ -395,12 +386,13 @@
 
     .ord-table-scroll {
         overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
     }
 
     .ord-table {
         width: 100%;
         border-collapse: collapse;
-        min-width: 920px;
+        min-width: 1040px;
     }
 
     .ord-table thead th {
@@ -410,7 +402,7 @@
         text-transform: uppercase;
         letter-spacing: .6px;
         font-weight: 700;
-        padding: 14px 16px;
+        padding: 14px 14px;
         text-align: left;
         white-space: nowrap;
         border-bottom: 3px solid var(--ord-gold);
@@ -426,7 +418,7 @@
     }
 
     .ord-table tbody td {
-        padding: 14px 16px;
+        padding: 14px;
         border-bottom: 1px solid #f1f2f5;
         vertical-align: middle;
     }
@@ -472,6 +464,7 @@
         font-size: .8rem;
         text-decoration: none;
         display: inline-block;
+        white-space: nowrap;
     }
 
     .ord-id-tag:hover {
@@ -480,15 +473,21 @@
         color: #fff;
     }
 
+    /* Buyer */
     .ord-buyer {
         display: flex;
         align-items: center;
         gap: 12px;
+        min-width: 0;
+    }
+
+    .ord-buyer-info {
+        min-width: 0;
     }
 
     .ord-avatar {
-        width: 38px;
-        height: 38px;
+        width: 40px;
+        height: 40px;
         border-radius: 50%;
         flex-shrink: 0;
         background: linear-gradient(135deg, #3b82f6, #1d4ed8);
@@ -505,6 +504,12 @@
         font-weight: 700;
         color: var(--ord-dark);
         font-size: .89rem;
+        line-height: 1.3;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
     }
 
     .ord-buyer-sub {
@@ -512,37 +517,124 @@
         color: var(--ord-muted);
         display: flex;
         align-items: center;
-        gap: 5px;
+        gap: 6px;
+        line-height: 1.5;
+        min-width: 0;
     }
 
+    .ord-buyer-sub i {
+        width: 12px;
+        text-align: center;
+        flex-shrink: 0;
+    }
+
+    .ord-buyer-sub span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    /* Product */
     .ord-product {
         display: flex;
         align-items: center;
-        gap: 10px;
+        gap: 12px;
+        min-width: 0;
     }
 
-    .ord-product img {
-        width: 38px;
-        height: 38px;
-        object-fit: cover;
-        border-radius: 9px;
+    .ord-product-img {
+        width: 46px;
+        height: 46px;
+        flex-shrink: 0;
+        border-radius: 10px;
         border: 1px solid var(--ord-border);
+        background: #f3f4f6;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #9ca3af;
+    }
+
+    .ord-product-img img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }
+
+    .ord-product-info {
+        min-width: 0;
     }
 
     .ord-product-name {
         font-weight: 600;
         color: var(--ord-dark);
-        font-size: .87rem;
+        font-size: .88rem;
+        line-height: 1.35;
+        display: block;
+        word-break: break-word;
     }
 
-    .ord-qty-badge {
-        font-size: .76rem;
+    .ord-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+        margin-top: 5px;
+    }
+
+    .ord-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        white-space: nowrap;
+        font-size: .68rem;
         font-weight: 700;
-        padding: 5px 11px;
+        line-height: 1;
+        padding: 4px 9px;
         border-radius: 999px;
-        background: #f3f4f6;
+    }
+
+    .ord-chip-size {
+        background: #fffbeb;
+        color: #92400e;
+        border: 1px solid #fde68a;
+    }
+
+    .ord-chip-more {
+        background: #eff6ff;
+        color: #1d4ed8;
+        border: 1px solid #bfdbfe;
+    }
+
+    /* Quantity */
+    .ord-qty {
+        display: inline-flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 2px;
+        white-space: nowrap;
+    }
+
+    .ord-qty-main {
+        display: inline-flex;
+        align-items: baseline;
+        gap: 5px;
+        font-weight: 800;
+        font-size: 1rem;
         color: var(--ord-dark);
-        border: 1px solid var(--ord-border);
+    }
+
+    .ord-qty-main small {
+        font-size: .74rem;
+        font-weight: 600;
+        color: var(--ord-muted);
+    }
+
+    .ord-qty-sub {
+        font-size: .7rem;
+        font-weight: 600;
+        color: var(--ord-muted);
         display: inline-flex;
         align-items: center;
         gap: 5px;
@@ -552,17 +644,26 @@
         font-weight: 800;
         color: var(--ord-dark);
         font-size: .95rem;
+        white-space: nowrap;
     }
 
     .ord-date {
         font-size: .83rem;
         font-weight: 600;
         color: var(--ord-dark);
+        white-space: nowrap;
     }
 
     .ord-time {
         font-size: .73rem;
         color: var(--ord-muted);
+        white-space: nowrap;
+        margin-top: 2px;
+    }
+
+    .ord-date i,
+    .ord-time i {
+        margin-right: 5px;
     }
 
     /* status badges */
@@ -646,6 +747,12 @@
         animation: ordPulse 1.8s infinite;
     }
 
+    @media (prefers-reduced-motion: reduce) {
+        .ord-pulse {
+            animation: none;
+        }
+    }
+
     /* action buttons */
     .ord-actions {
         display: flex;
@@ -662,11 +769,18 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
+        gap: 8px;
         font-size: .86rem;
+        font-weight: 700;
+        font-family: inherit;
         border: 1.5px solid transparent;
         cursor: pointer;
         text-decoration: none;
         transition: all .18s ease;
+    }
+
+    .ord-btn-text {
+        display: none;
     }
 
     .ord-btn-view {
@@ -756,6 +870,7 @@
 
     .ord-pagination {
         display: flex;
+        flex-wrap: wrap;
         gap: 6px;
         list-style: none;
         margin: 0;
@@ -794,88 +909,304 @@
         pointer-events: none;
     }
 
-    /* ============ Mobile: table -> card transform ============ */
-    @media (max-width:767px) {
+    /* ============ Tablet ============ */
+    @media (max-width: 991px) {
+        .ord-kpi-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    /* ============ Mobile: each row becomes a clean order card ============ */
+    @media (max-width: 767px) {
+        .ord-header {
+            margin-bottom: 16px;
+        }
+
+        .ord-header>div {
+            flex: 1 1 100%;
+        }
+
+        .ord-refresh-btn {
+            width: 100%;
+            justify-content: center;
+        }
+
+        /* KPI: compact 2x2 */
+        .ord-kpi-grid {
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .ord-kpi-card {
+            padding: 14px;
+            flex-direction: column-reverse;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .ord-kpi-icon {
+            width: 38px;
+            height: 38px;
+            font-size: 1rem;
+            border-radius: 11px;
+        }
+
+        .ord-kpi-value {
+            font-size: 1.2rem;
+        }
+
+        .ord-kpi-label {
+            font-size: .64rem;
+            margin-bottom: 6px;
+        }
+
+        .ord-kpi-sub {
+            font-size: .68rem;
+        }
+
+        /* Filters */
+        .ord-filter-card {
+            padding: 14px;
+            margin-bottom: 16px;
+        }
+
+        .ord-pills-bar {
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            gap: 8px;
+            margin: 0 -14px 14px;
+            padding: 0 14px 14px;
+            scrollbar-width: none;
+        }
+
+        .ord-pills-bar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .ord-pill {
+            padding: 8px 14px;
+            font-size: .8rem;
+        }
+
+        .ord-filter-inputs {
+            gap: 10px;
+        }
+
+        .ord-search-wrap {
+            flex: 1 1 100%;
+        }
+
+        .ord-status-select {
+            flex: 1 1 0;
+            min-width: 0;
+        }
+
+        .ord-reset-btn {
+            flex: 0 0 auto;
+        }
+
+        .ord-table-bar {
+            padding: 14px 16px;
+        }
+
+        /* Table -> cards */
         .ord-table-scroll {
             overflow-x: visible;
         }
 
         .ord-table {
             min-width: 0;
+            display: block;
         }
 
         .ord-table thead {
             display: none;
         }
 
-        .ord-table tbody tr {
+        .ord-table tbody {
             display: block;
+            padding: 4px 12px 12px;
+        }
+
+        .ord-table tbody tr {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-areas:
+                "id      status"
+                "buyer   buyer"
+                "product product"
+                "qty     amount"
+                "date    date"
+                "actions actions";
+            background: #fff;
             border: 1px solid var(--ord-border);
-            border-radius: 14px;
-            margin: 14px;
-            padding: 8px 4px;
-            box-shadow: 0 2px 6px rgba(17, 24, 39, .05);
+            border-radius: 16px;
+            margin-top: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(17, 24, 39, .05);
         }
 
         .ord-table tbody tr:hover {
             background: #fff;
         }
 
-        .ord-table tbody td {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 12px;
-            padding: 10px 14px;
-            border-bottom: 1px dashed #f0f1f5;
-            text-align: right;
+        .ord-table tbody tr.ord-row-highlight {
+            background: #fffdf5;
+            border-left: 4px solid var(--ord-gold);
         }
 
+        .ord-table tbody tr.ord-empty-row {
+            display: block;
+        }
+
+        .ord-table tbody td,
         .ord-table tbody td:first-child,
-        .ord-table tbody td:last-child {
-            padding-left: 14px;
+        .ord-table tbody td.text-end {
+            display: block;
+            padding: 12px 16px;
+            border: none;
+            text-align: left;
         }
 
-        .ord-table tbody td:last-child {
+        .ord-table tbody tr:last-child td {
             border-bottom: none;
         }
 
-        .ord-table tbody td::before {
+        .ord-td-idx {
+            display: none !important;
+        }
+
+        .ord-td-id {
+            grid-area: id;
+            display: flex !important;
+            align-items: center;
+            background: #f9fafb;
+            border-bottom: 1px solid var(--ord-border) !important;
+        }
+
+        .ord-td-status {
+            grid-area: status;
+            display: flex !important;
+            align-items: center;
+            justify-content: flex-end;
+            background: #f9fafb;
+            border-bottom: 1px solid var(--ord-border) !important;
+        }
+
+        .ord-td-buyer {
+            grid-area: buyer;
+        }
+
+        .ord-td-product {
+            grid-area: product;
+            border-top: 1px dashed #eceef3 !important;
+            border-bottom: 1px dashed #eceef3 !important;
+        }
+
+        .ord-td-qty {
+            grid-area: qty;
+        }
+
+        .ord-td-amount {
+            grid-area: amount;
+            text-align: right !important;
+        }
+
+        .ord-td-date {
+            grid-area: date;
+            border-top: 1px dashed #eceef3 !important;
+        }
+
+        .ord-td-actions {
+            grid-area: actions;
+            background: #f9fafb;
+            border-top: 1px solid var(--ord-border) !important;
+        }
+
+        /* Small labels only on the stat cells */
+        .ord-td-qty::before,
+        .ord-td-amount::before,
+        .ord-td-date::before {
             content: attr(data-label);
-            font-size: .72rem;
+            display: block;
+            margin-bottom: 4px;
+            font-size: .66rem;
             font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: .4px;
+            letter-spacing: .5px;
             color: var(--ord-muted);
-            text-align: left;
-            flex-shrink: 0;
         }
 
-        .ord-table tbody td.ord-td-buyer,
-        .ord-table tbody td.ord-td-product {
-            justify-content: flex-start;
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 8px;
+        .ord-td-date {
+            display: flex !important;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 4px 14px;
         }
 
-        .ord-table tbody td.ord-td-buyer::before,
-        .ord-table tbody td.ord-td-product::before {
-            margin-bottom: 2px;
+        .ord-td-date::before {
+            flex: 0 0 100%;
+            margin-bottom: 0;
         }
 
-        .ord-buyer,
-        .ord-product {
-            width: 100%;
+        .ord-amount {
+            font-size: 1.1rem;
         }
 
-        .ord-table tbody td.text-end {
-            justify-content: flex-end;
+        .ord-qty-main {
+            font-size: 1.05rem;
         }
 
+        .ord-buyer-sub span {
+            white-space: normal;
+            word-break: break-all;
+        }
+
+        .ord-product-img {
+            width: 52px;
+            height: 52px;
+        }
+
+        /* Full-width tappable action buttons */
         .ord-actions {
-            justify-content: flex-end;
-            width: 100%;
+            gap: 10px;
+        }
+
+        .ord-btn-view,
+        .ord-btn-delete {
+            flex: 1;
+            width: auto;
+            height: 42px;
+            font-size: .86rem;
+        }
+
+        .ord-btn-text {
+            display: inline;
+        }
+
+        .ord-footer {
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            padding: 14px;
+        }
+
+        .ord-pagination {
+            justify-content: center;
+        }
+
+        .ord-page-link {
+            padding: 8px 12px;
+        }
+    }
+
+    @media (max-width: 380px) {
+        .ord-kpi-card {
+            padding: 12px;
+        }
+
+        .ord-kpi-value {
+            font-size: 1.05rem;
         }
     }
 </style>
@@ -896,7 +1227,7 @@
     <!-- KPI Cards -->
     <div class="ord-kpi-grid">
         <div class="ord-kpi-card orders">
-            <div>
+            <div class="ord-kpi-body">
                 <span class="ord-kpi-label">Total Orders</span>
                 <h3 class="ord-kpi-value"><?php echo number_format($kpi_total_orders ?? 0); ?></h3>
                 <span class="ord-kpi-sub"><i class="fa-solid fa-chart-line" style="color:#4f46e5;"></i>All system orders</span>
@@ -905,7 +1236,7 @@
         </div>
 
         <div class="ord-kpi-card revenue">
-            <div>
+            <div class="ord-kpi-body">
                 <span class="ord-kpi-label">Paid Order Value</span>
                 <h3 class="ord-kpi-value">₹<?php echo number_format($kpi_total_revenue ?? 0, 2); ?></h3>
                 <span class="ord-kpi-sub"><i class="fa-solid fa-shield-check" style="color:#b45309;"></i>Active &amp; completed</span>
@@ -914,7 +1245,7 @@
         </div>
 
         <div class="ord-kpi-card delivered">
-            <div>
+            <div class="ord-kpi-body">
                 <span class="ord-kpi-label">Delivered / Done</span>
                 <h3 class="ord-kpi-value"><?php echo number_format($kpi_delivered_orders ?? 0); ?></h3>
                 <span class="ord-kpi-sub"><i class="fa-solid fa-circle-check" style="color:#059669;"></i>Fulfilled deliveries</span>
@@ -923,7 +1254,7 @@
         </div>
 
         <div class="ord-kpi-card pending">
-            <div>
+            <div class="ord-kpi-body">
                 <span class="ord-kpi-label">Pending Action</span>
                 <h3 class="ord-kpi-value"><?php echo number_format($kpi_pending_orders ?? 0); ?></h3>
                 <span class="ord-kpi-sub"><i class="fa-solid fa-clock" style="color:#ea580c;"></i>Awaiting pay / fulfillment</span>
@@ -972,12 +1303,10 @@
         <form id="filterForm" class="ord-filter-inputs" onsubmit="return false;">
             <div class="ord-search-wrap">
                 <i class="fa-solid fa-magnifying-glass ord-search-icon"></i>
-                <input type="text" name="search" id="searchInput" placeholder="Search by Order ID (#), customer name, email, or product..." value="<?php echo htmlspecialchars($search ?? ''); ?>" autocomplete="off">
-                <?php if (!empty($search)): ?>
-                    <button type="button" id="clearSearchBtn" class="ord-clear-search" title="Clear search">
-                        <i class="fa-solid fa-xmark"></i>
-                    </button>
-                <?php endif; ?>
+                <input type="text" name="search" id="searchInput" placeholder="Search order ID, customer, email or product..." value="<?php echo htmlspecialchars($search ?? ''); ?>" autocomplete="off">
+                <button type="button" id="clearSearchBtn" class="ord-clear-search" title="Clear search" style="<?php echo empty($search) ? 'display:none;' : ''; ?>">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
             </div>
 
             <select name="status" id="statusFilter" class="ord-status-select">
@@ -1009,20 +1338,20 @@
                 <table class="ord-table">
                     <thead>
                         <tr>
-                            <th style="width:60px;">#</th>
-                            <th style="width:100px;">Order ID</th>
-                            <th>Buyer Account</th>
+                            <th style="width:56px;">#</th>
+                            <th style="width:90px;">Order ID</th>
+                            <th style="width:250px;">Buyer Account</th>
                             <th>Product Details</th>
-                            <th>Quantity</th>
-                            <th>Total Amount</th>
-                            <th style="width:170px;">Status</th>
-                            <th>Ordered Date</th>
-                            <th class="text-end" style="width:110px;">Actions</th>
+                            <th style="width:110px;">Quantity</th>
+                            <th style="width:120px;">Total Amount</th>
+                            <th style="width:160px;">Status</th>
+                            <th style="width:130px;">Ordered Date</th>
+                            <th class="text-end" style="width:100px;">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php if (empty($orders)): ?>
-                            <tr>
+                            <tr class="ord-empty-row">
                                 <td colspan="9">
                                     <div class="ord-empty">
                                         <i class="fa-solid fa-box-open"></i>
@@ -1039,27 +1368,39 @@
                             $index_num = ($current_page - 1) * 10 + 1;
                             foreach ($orders as $order):
                                 $is_new_placed = in_array($order->status, ['placed', 'pending']);
-                                $initials = strtoupper(substr(trim($order->buyer_name ?? 'C'), 0, 2));
+
+                                // Initials: first letter of first two words (e.g. "Kaushik Makwana" => "KM")
+                                $name_parts = preg_split('/\s+/', trim($order->buyer_name ?? 'Customer'));
+                                $initials = strtoupper(substr($name_parts[0] ?? 'C', 0, 1) . (isset($name_parts[1]) ? substr($name_parts[1], 0, 1) : ''));
+
+                                $items_count = (int)($order->items_count ?? 1);
+                                $extra_items = max(0, $items_count - 1);
+                                $qty = (int)($order->quantity ?? 1);
                             ?>
                                 <tr id="order-row-<?php echo $order->id; ?>" class="<?php echo $is_new_placed ? 'ord-row-highlight' : ''; ?>">
-                                    <td data-label="#"><span class="ord-idx"><?php echo $index_num++; ?></span></td>
+                                    <td data-label="#" class="ord-td-idx"><span class="ord-idx"><?php echo $index_num++; ?></span></td>
 
-                                    <td data-label="Order ID">
-                                        <a href="<?php echo base_url('admin/orders/detail/' . $order->id); ?>" class="ord-id-tag" title="View details for Order #<?php echo $order->id; ?>">
-                                            #<?php echo $order->id; ?>
+                                    <td data-label="Order ID" class="ord-td-id">
+                                        <?php 
+                                            $display_order_id = !empty($order->order_number) 
+                                                ? $order->order_number 
+                                                : ('DS' . date('Ymd', strtotime($order->created_at ?: date('Y-m-d'))) . sprintf('%04d', $order->id));
+                                        ?>
+                                        <a href="<?php echo base_url('admin/orders/detail/' . $order->id); ?>" class="ord-id-tag" title="View details for Order <?php echo htmlspecialchars($display_order_id); ?>">
+                                            <?php echo htmlspecialchars($display_order_id); ?>
                                         </a>
                                     </td>
 
                                     <td data-label="Buyer Account" class="ord-td-buyer">
                                         <div class="ord-buyer">
                                             <div class="ord-avatar"><?php echo htmlspecialchars($initials); ?></div>
-                                            <div>
+                                            <div class="ord-buyer-info">
                                                 <div class="ord-buyer-name"><?php echo htmlspecialchars($order->buyer_name ?? 'Customer'); ?></div>
                                                 <?php if (!empty($order->buyer_email)): ?>
-                                                    <div class="ord-buyer-sub"><i class="fa-regular fa-envelope"></i><?php echo htmlspecialchars($order->buyer_email); ?></div>
+                                                    <div class="ord-buyer-sub" title="<?php echo htmlspecialchars($order->buyer_email); ?>"><i class="fa-regular fa-envelope"></i><span><?php echo htmlspecialchars($order->buyer_email); ?></span></div>
                                                 <?php endif; ?>
                                                 <?php if (!empty($order->buyer_phone)): ?>
-                                                    <div class="ord-buyer-sub"><i class="fa-solid fa-phone"></i><?php echo htmlspecialchars($order->buyer_phone); ?></div>
+                                                    <div class="ord-buyer-sub"><i class="fa-solid fa-phone"></i><span><?php echo htmlspecialchars($order->buyer_phone); ?></span></div>
                                                 <?php endif; ?>
                                             </div>
                                         </div>
@@ -1067,39 +1408,43 @@
 
                                     <td data-label="Product Details" class="ord-td-product">
                                         <div class="ord-product">
-                                            <?php if (!empty($order->product_image)): ?>
-                                                <img src="<?php echo base_url($order->product_image); ?>" alt="Product" onerror="this.style.display='none';">
-                                            <?php endif; ?>
-                                            <div>
-                                                <span class="ord-product-name"><?php echo htmlspecialchars($order->product_name ?? 'Product'); ?></span>
-                                                <?php if (!empty($order->size)): ?>
-                                                    <span class="badge bg-warning-subtle text-dark border border-warning-subtle d-inline-block mt-1" style="font-size: 0.68rem; font-weight: 700; border-radius: 999px; padding: 2px 8px;">
-                                                        <i class="fa-solid fa-shirt me-1 text-warning"></i>Size: <?php echo htmlspecialchars($order->size); ?>
-                                                    </span>
+                                            <div class="ord-product-img">
+                                                <?php if (!empty($order->product_image)): ?>
+                                                    <img src="<?php echo base_url($order->product_image); ?>" alt="Product" loading="lazy" onerror="this.style.display='none';">
+                                                <?php else: ?>
+                                                    <i class="fa-regular fa-image"></i>
                                                 <?php endif; ?>
-                                                <?php if (!empty($order->items_count) && (int)$order->items_count > 1): ?>
-                                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle d-inline-block mt-1" style="font-size: 0.68rem; font-weight: 700; border-radius: 999px; padding: 2px 8px;">
-                                                        <i class="fa-solid fa-boxes-stacked me-1"></i>+<?php echo ((int)$order->items_count - 1); ?> more item<?php echo ((int)$order->items_count - 1) > 1 ? 's' : ''; ?>
-                                                    </span>
+                                            </div>
+                                            <div class="ord-product-info">
+                                                <span class="ord-product-name"><?php echo htmlspecialchars($order->product_name ?? 'Product'); ?></span>
+                                                <?php if (!empty($order->size) || $extra_items > 0): ?>
+                                                    <div class="ord-chips">
+                                                        <?php if (!empty($order->size)): ?>
+                                                            <span class="ord-chip ord-chip-size"><i class="fa-solid fa-shirt"></i>Size: <?php echo htmlspecialchars($order->size); ?></span>
+                                                        <?php endif; ?>
+                                                        <?php if ($extra_items > 0): ?>
+                                                            <span class="ord-chip ord-chip-more"><i class="fa-solid fa-boxes-stacked"></i>+<?php echo $extra_items; ?> more item<?php echo $extra_items > 1 ? 's' : ''; ?></span>
+                                                        <?php endif; ?>
+                                                    </div>
                                                 <?php endif; ?>
                                             </div>
                                         </div>
                                     </td>
 
-                                    <td data-label="Quantity">
-                                        <span class="ord-qty-badge">
-                                            <i class="fa-solid fa-layer-group"></i><?php echo (int)($order->quantity ?? 1); ?> units
-                                            <?php if (!empty($order->items_count) && (int)$order->items_count > 1): ?>
-                                                <span style="font-size: 0.68rem; opacity: 0.85; margin-left: 2px;">(<?php echo (int)$order->items_count; ?> items)</span>
+                                    <td data-label="Quantity" class="ord-td-qty">
+                                        <div class="ord-qty">
+                                            <span class="ord-qty-main"><?php echo $qty; ?> <small><?php echo $qty === 1 ? 'unit' : 'units'; ?></small></span>
+                                            <?php if ($items_count > 1): ?>
+                                                <span class="ord-qty-sub"><i class="fa-solid fa-layer-group"></i><?php echo $items_count; ?> items</span>
                                             <?php endif; ?>
-                                        </span>
+                                        </div>
                                     </td>
 
-                                    <td data-label="Total Amount">
+                                    <td data-label="Total Amount" class="ord-td-amount">
                                         <span class="ord-amount">₹<?php echo number_format($order->amount, 2); ?></span>
                                     </td>
 
-                                    <td data-label="Status">
+                                    <td data-label="Status" class="ord-td-status">
                                         <?php if ($order->status === 'pending'): ?>
                                             <span class="ord-status ord-status-pending" title="Buyer has not completed payment yet">
                                                 <i class="fa-solid fa-clock ord-pulse"></i> Awaiting Payment
@@ -1135,18 +1480,18 @@
                                         <?php endif; ?>
                                     </td>
 
-                                    <td data-label="Ordered Date">
-                                        <div class="ord-date"><i class="fa-regular fa-calendar me-1"></i><?php echo date('M d, Y', strtotime($order->created_at)); ?></div>
-                                        <div class="ord-time"><i class="fa-regular fa-clock me-1"></i><?php echo date('h:i A', strtotime($order->created_at)); ?></div>
+                                    <td data-label="Ordered Date" class="ord-td-date">
+                                        <div class="ord-date"><i class="fa-regular fa-calendar"></i><?php echo date('M d, Y', strtotime($order->created_at)); ?></div>
+                                        <div class="ord-time"><i class="fa-regular fa-clock"></i><?php echo date('h:i A', strtotime($order->created_at)); ?></div>
                                     </td>
 
-                                    <td data-label="Actions" class="text-end">
+                                    <td data-label="Actions" class="text-end ord-td-actions">
                                         <div class="ord-actions">
                                             <a href="<?php echo base_url('admin/orders/detail/' . $order->id); ?>" class="ord-btn-view" title="View Order Details">
-                                                <i class="fa-solid fa-eye"></i>
+                                                <i class="fa-solid fa-eye"></i><span class="ord-btn-text">View Details</span>
                                             </a>
                                             <button type="button" class="ord-btn-delete btn-delete-order" data-order-id="<?php echo $order->id; ?>" data-order-name="Order #<?php echo $order->id; ?>" title="Delete Order #<?php echo $order->id; ?>">
-                                                <i class="fa-solid fa-trash-can"></i>
+                                                <i class="fa-solid fa-trash-can"></i><span class="ord-btn-text">Delete</span>
                                             </button>
                                         </div>
                                     </td>
@@ -1203,8 +1548,15 @@
         const statusFilter = document.getElementById('statusFilter');
         const resetBtn = document.getElementById('resetBtn');
         const refreshBtn = document.getElementById('refreshBtn');
+        const clearSearchBtn = document.getElementById('clearSearchBtn');
         const quickStatusBtns = document.querySelectorAll('.ord-pill');
         let debounceTimer;
+
+        function toggleClearBtn() {
+            if (clearSearchBtn && searchInput) {
+                clearSearchBtn.style.display = searchInput.value ? '' : 'none';
+            }
+        }
 
         // Load table data via AJAX
         function loadTable(page = 1) {
@@ -1218,7 +1570,6 @@
 
             window.history.pushState({}, '', url.toString());
 
-            // Visual loading indicator
             const container = document.getElementById('table-container');
             if (container) {
                 container.style.opacity = '0.5';
@@ -1256,47 +1607,40 @@
         // Sync quick status pill active states with status select
         function syncQuickPills(selectedStatus) {
             quickStatusBtns.forEach(btn => {
-                if (btn.getAttribute('data-status') === selectedStatus) {
-                    btn.classList.add('active');
-                } else {
-                    btn.classList.remove('active');
-                }
+                btn.classList.toggle('active', btn.getAttribute('data-status') === selectedStatus);
             });
         }
 
-        // Quick Status Pills Click Handler
+        // Quick Status Pills
         quickStatusBtns.forEach(btn => {
             btn.addEventListener('click', function(e) {
                 e.preventDefault();
                 const chosenStatus = this.getAttribute('data-status');
-                if (statusFilter) {
-                    statusFilter.value = chosenStatus;
-                }
+                if (statusFilter) statusFilter.value = chosenStatus;
                 syncQuickPills(chosenStatus);
                 loadTable(1);
             });
         });
 
-        // Search Input Debounce
+        // Search (debounced)
         if (searchInput) {
             searchInput.addEventListener('input', function() {
+                toggleClearBtn();
                 clearTimeout(debounceTimer);
-                debounceTimer = setTimeout(() => {
-                    loadTable(1);
-                }, 300);
+                debounceTimer = setTimeout(() => loadTable(1), 300);
             });
         }
 
-        // Clear search button if present
-        const clearSearchBtn = document.getElementById('clearSearchBtn');
+        // Clear search
         if (clearSearchBtn) {
             clearSearchBtn.addEventListener('click', function() {
                 if (searchInput) searchInput.value = '';
+                toggleClearBtn();
                 loadTable(1);
             });
         }
 
-        // Status Dropdown Change
+        // Status dropdown
         if (statusFilter) {
             statusFilter.addEventListener('change', function() {
                 syncQuickPills(this.value);
@@ -1304,17 +1648,18 @@
             });
         }
 
-        // Reset Button
+        // Reset
         if (resetBtn) {
             resetBtn.addEventListener('click', function() {
                 if (searchInput) searchInput.value = '';
                 if (statusFilter) statusFilter.value = '';
+                toggleClearBtn();
                 syncQuickPills('');
                 loadTable(1);
             });
         }
 
-        // Refresh Button
+        // Refresh
         if (refreshBtn) {
             refreshBtn.addEventListener('click', function() {
                 const spinIcon = this.querySelector('i');
@@ -1326,23 +1671,19 @@
             });
         }
 
-        // Pagination Click Handler
+        // Pagination
         document.addEventListener('click', function(e) {
             const pageLink = e.target.closest('#table-container .ord-pagination .ord-page-link');
             if (pageLink) {
                 e.preventDefault();
                 const page = pageLink.getAttribute('data-page');
-                if (page) {
-                    loadTable(page);
-                }
+                if (page) loadTable(page);
             }
         });
 
-        // Delete Order Handler using dsConfirm & dsToast
+        // Delete handler (dsConfirm / dsToast / dsAlert)
         function bindDeleteHandlers() {
-            const deleteBtns = document.querySelectorAll('.btn-delete-order');
-            deleteBtns.forEach(btn => {
-                // Remove existing listener to prevent duplicate triggers
+            document.querySelectorAll('.btn-delete-order').forEach(btn => {
                 const newBtn = btn.cloneNode(true);
                 btn.parentNode.replaceChild(newBtn, btn);
 
@@ -1381,11 +1722,9 @@
                                             title: data.message || (orderName + ' has been deleted successfully.')
                                         });
                                         if (row) {
-                                            row.style.transform = 'scale(0.9)';
+                                            row.style.transform = 'scale(0.96)';
                                             row.style.opacity = '0';
-                                            setTimeout(() => {
-                                                loadTable(1);
-                                            }, 350);
+                                            setTimeout(() => loadTable(1), 350);
                                         } else {
                                             loadTable(1);
                                         }
@@ -1412,7 +1751,6 @@
             });
         }
 
-        // Initial binding
         bindDeleteHandlers();
     });
 </script>

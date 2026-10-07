@@ -66,6 +66,10 @@ $route['api/dashboard'] = 'Api/dashboard';
 $route['api/get_profile'] = 'Api/get_profile';
 $route['api/update_profile'] = 'Api/update_profile';
 $route['api/get_referrals'] = 'Api/get_referrals';
+$route['api/get_member_details'] = 'Api/get_member_details';
+$route['api/get_member_details/(:num)'] = 'Api/get_member_details/$1';
+$route['api/member_details'] = 'Api/get_member_details';
+$route['api/member_details/(:num)'] = 'Api/get_member_details/$1';
 $route['api/get_category_list'] = 'Api/get_category_list';
 $route['api/get_category_detail'] = 'Api/get_category_detail';
 $route['api/get_product_list'] = 'Api/get_product_list';
@@ -91,12 +95,12 @@ $route['api/verify_order_payment'] = 'Api/verify_order_payment';
 $route['api/get_orders'] = 'Api/get_orders';
 
 $route['api/get_order_details'] = 'Api/get_order_details';
-$route['api/get_order_details/(:num)'] = 'Api/get_order_details/$1';
+$route['api/get_order_details/(:any)'] = 'Api/get_order_details/$1';
 
 $route['api/cancel_order'] = 'Api/cancel_order';
-$route['api/cancel_order/(:num)'] = 'Api/cancel_order/$1';
+$route['api/cancel_order/(:any)'] = 'Api/cancel_order/$1';
 $route['api/update_order_status'] = 'Api/update_order_status';
-$route['api/update_order_status/(:num)'] = 'Api/update_order_status/$1';
+$route['api/update_order_status/(:any)'] = 'Api/update_order_status/$1';
 
 
 // Cart Operations
@@ -109,6 +113,8 @@ $route['api/remove_from_cart'] = 'Api/remove_from_cart';
 $route['api/clear_cart'] = 'Api/clear_cart';
 
 // User Wallet Deposit Request APIs
+$route['api/get_payment_settings'] = 'Api/get_payment_settings';
+$route['api/payment_settings'] = 'Api/get_payment_settings';
 $route['api/request_wallet_deposit'] = 'Api/request_wallet_deposit';
 $route['api/get_deposit_requests'] = 'Api/get_deposit_requests';
 $route['api/get_deposit_requests/(:num)'] = 'Api/get_deposit_requests/$1';
@@ -178,7 +184,7 @@ $route['admin/members/transactions/(:num)'] = 'Member/transactions/$1';
 // Admin Order Routes
 $route['admin/orders'] = 'Order/index';
 $route['admin/order'] = 'Order/index';
-$route['admin/orders/detail/(:num)'] = 'Order/detail/$1';
+$route['admin/orders/detail/(:any)'] = 'Order/detail/$1';
 $route['admin/orders/status/(:num)'] = 'Order/update_status/$1';
 $route['admin/orders/delete/(:num)'] = 'Order/delete/$1';
 
@@ -198,6 +204,12 @@ $route['admin/withdrawal'] = 'Withdraw/index';
 $route['admin/withdrawals/approve/(:num)'] = 'Withdraw/approve/$1';
 $route['admin/withdrawals/reject/(:num)'] = 'Withdraw/reject/$1';
 $route['admin/withdrawals/set_min_amount'] = 'Withdraw/set_min_amount';
+
+// Admin Payment Settings Routes
+$route['admin/payment_settings'] = 'Payment_setting/index';
+$route['admin/payment_settings/update'] = 'Payment_setting/update';
+$route['admin/payment-settings'] = 'Payment_setting/index';
+$route['admin/payment-settings/update'] = 'Payment_setting/update';
 
 // Admin CMS Content Management Routes
 $route['admin/cms'] = 'Cms/index';
