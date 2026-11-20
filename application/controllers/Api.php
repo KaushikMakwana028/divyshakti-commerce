@@ -159,7 +159,8 @@ class Api extends CI_Controller
                         return $payload;
                     }
                 }
-            } catch (\Exception $ex) {}
+            } catch (\Exception $ex) {
+            }
             return null;
         } catch (\Exception $e) {
             return null;
@@ -287,9 +288,7 @@ class Api extends CI_Controller
 
     /**
      * Check if user is eligible to add to cart or place an order
-     * Requires:
-     * 1. 100% Profile completion
-     * 2. Profile activation by Admin (is_profile_active == 1)
+     * Registered members can shop and order without requiring 100% KYC or Admin approval.
      */
     private function check_profile_eligibility($user_id, &$error_msg = null, &$error_data = null)
     {
@@ -303,29 +302,6 @@ class Api extends CI_Controller
         if ((int)$user->status === 0) {
             $error_msg = 'Your account has been blocked. Please contact admin.';
             $error_data = null;
-            return false;
-        }
-
-        $completion = $this->calculate_profile_completion($user);
-
-        if (!$completion['is_completed']) {
-            $error_msg = 'Please complete 100% of your profile (Aadhar, PAN, and Bank details) before adding items to cart or purchasing products.';
-            $error_data = [
-                'profile_completion_percentage' => $completion['percentage'],
-                'is_profile_completed'          => false,
-                'is_profile_active'             => (bool)($user->is_profile_active ?? 0),
-                'missing_fields'                => $completion['missing_fields']
-            ];
-            return false;
-        }
-
-        if (empty($user->is_profile_active) || (int)$user->is_profile_active !== 1) {
-            $error_msg = 'Your profile is 100% complete and submitted for review. Please wait for admin to activate your profile before adding items to cart or purchasing products.';
-            $error_data = [
-                'profile_completion_percentage' => 100,
-                'is_profile_completed'          => true,
-                'is_profile_active'             => false
-            ];
             return false;
         }
 
@@ -399,11 +375,11 @@ class Api extends CI_Controller
             }
         }
 
-        $message = "Your profile is {$percentage}% complete. Please complete remaining KYC and Bank details to activate shopping and rewards.";
+        $message = "Your profile is {$percentage}% complete. Complete 100% of your profile (Aadhar, PAN, and Bank details) to enable withdrawals.";
         if ($completion['is_completed']) {
             $message = $is_profile_active
                 ? 'Your profile is 100% complete and verified.'
-                : 'Your profile is 100% complete and submitted for review. Please wait for admin approval.';
+                : 'Your profile is 100% complete and submitted for review. Please wait for admin approval to enable withdrawals.';
         }
 
         return [
@@ -412,8 +388,8 @@ class Api extends CI_Controller
             'total_fields'            => (int)$completion['total_fields'],
             'is_profile_completed'    => (bool)$completion['is_completed'],
             'is_profile_active'       => $is_profile_active,
-            'can_purchase'            => ($completion['is_completed'] && $is_profile_active),
-            'can_add_to_cart'         => ($completion['is_completed'] && $is_profile_active),
+            'can_purchase'            => ((int)($user->status ?? 1) === 1),
+            'can_add_to_cart'         => ((int)($user->status ?? 1) === 1),
             'status_label'            => $status_label,
             'progress_color'          => $progress_color,
             'progress_level'          => $progress_level,
@@ -464,8 +440,8 @@ class Api extends CI_Controller
             'is_profile_completed'          => (bool)$completion['is_completed'],
             'is_profile_active'             => (bool)($user->is_profile_active ?? 0),
             'missing_fields'                => $completion['missing_fields'],
-            'can_purchase'                  => ($completion['is_completed'] && (int)($user->is_profile_active ?? 0) === 1),
-            'can_add_to_cart'               => ($completion['is_completed'] && (int)($user->is_profile_active ?? 0) === 1),
+            'can_purchase'                  => ((int)($user->status ?? 1) === 1),
+            'can_add_to_cart'               => ((int)($user->status ?? 1) === 1),
             'profile_progression_bar'       => $progression_bar,
             'role'                          => (int)($user->role ?? 0),
             'referral_code'                 => $user->referral_code,
@@ -1010,8 +986,8 @@ class Api extends CI_Controller
 
         $recent_orders = [];
         foreach ($recent_orders_raw as $ord) {
-            $order_num = !empty($ord->order_number) 
-                ? $ord->order_number 
+            $order_num = !empty($ord->order_number)
+                ? $ord->order_number
                 : ('DS' . date('Ymd', strtotime($ord->created_at ?: date('Y-m-d'))) . sprintf('%04d', (int)$ord->id));
             $recent_orders[] = [
                 'order_id'      => (int)$ord->id,
@@ -1494,8 +1470,7 @@ class Api extends CI_Controller
         $min_price = $this->input->get('min_price', TRUE);
         $max_price = $this->input->get('max_price', TRUE);
         $sort_by = $this->input->get('sort_by', TRUE);
-        $page = $this->input->get('page', TRUE) ?: 1;
-        $limit = $this->input->get('limit', TRUE) ?: 10;
+        // Pagination removed: page/limit params are ignored and all products are returned
 
         // Build total count query parameters
         $this->db->from('products');
@@ -1531,12 +1506,8 @@ class Api extends CI_Controller
         }
 
         // Apply pagination
-        $page = (int)$page < 1 ? 1 : (int)$page;
-        $limit = (int)$limit < 1 ? 10 : (int)$limit;
-        $offset = ($page - 1) * $limit;
-
+        // No pagination: return all matching products
         $this->db->select('products.*, categories.name as category_name');
-        $this->db->limit($limit, $offset);
         $query = $this->db->get();
         $products_raw = $query->result();
 
@@ -1561,11 +1532,12 @@ class Api extends CI_Controller
             ];
         }
 
+        // Keep same response keys so the live app keeps working without changes
         $response_data = [
             'products' => $products,
             'total'    => (int)$total,
-            'page'     => (int)$page,
-            'limit'    => (int)$limit
+            'page'     => 1,
+            'limit'    => max((int)$total, 1)
         ];
 
         $this->response(true, 'Products retrieved successfully', $response_data, 200);
@@ -3250,8 +3222,8 @@ class Api extends CI_Controller
                 ];
             }
 
-            $order_num = !empty($row->order_number) 
-                ? $row->order_number 
+            $order_num = !empty($row->order_number)
+                ? $row->order_number
                 : ('DS' . date('Ymd', strtotime($row->created_at ?: date('Y-m-d'))) . sprintf('%04d', (int)$row->id));
 
             $orders[] = [
@@ -3452,8 +3424,8 @@ class Api extends CI_Controller
             ];
         }
 
-        $order_num = !empty($order->order_number) 
-            ? $order->order_number 
+        $order_num = !empty($order->order_number)
+            ? $order->order_number
             : ('DS' . date('Ymd', strtotime($order->created_at ?: date('Y-m-d'))) . sprintf('%04d', (int)$order->id));
 
         $order_detail = [
@@ -3929,7 +3901,8 @@ class Api extends CI_Controller
                     $wallet_balance = (float)$user->wallet_balance;
                 }
             }
-        } catch (\Throwable $e) {}
+        } catch (\Throwable $e) {
+        }
 
         $data = [
             'qr_code'               => $qr_url,
@@ -4304,6 +4277,9 @@ class Api extends CI_Controller
         if (!$completion['is_completed']) {
             $can_withdraw = false;
             $ineligibility_reason = 'Your profile is ' . $completion['percentage'] . '% complete. You must complete 100% of your profile (Aadhar, PAN, and Bank details) before requesting a withdrawal.';
+        } elseif (empty($user->is_profile_active) || (int)$user->is_profile_active !== 1) {
+            $can_withdraw = false;
+            $ineligibility_reason = 'Your profile is 100% complete and submitted for review. Withdrawals will be enabled once Admin verifies and approves your account.';
         } elseif (!$has_bank_details) {
             $can_withdraw = false;
             $ineligibility_reason = 'Please complete your bank details in profile before withdrawing.';
@@ -4325,7 +4301,8 @@ class Api extends CI_Controller
             'ineligibility_reason'          => $ineligibility_reason,
             'is_profile_completed'          => (bool)$completion['is_completed'],
             'profile_completion_percentage' => (int)$completion['percentage'],
-            'missing_fields'                => $completion['missing_fields']
+            'missing_fields'                => $completion['missing_fields'],
+            'is_profile_active'             => (bool)($user->is_profile_active ?? 0)
         ], 200);
     }
 
@@ -4359,11 +4336,8 @@ class Api extends CI_Controller
         if ((int)$user->status === 0) {
             $this->response(false, 'Your account is suspended. Please contact support.', null, 403);
         }
-        if ((int)$user->is_profile_active === 0) {
-            $this->response(false, 'Your account is not active yet. Please contact support.', null, 403);
-        }
 
-        // Enforce 100% profile completion before allowing withdrawal
+        // 1. Enforce 100% profile completion before allowing withdrawal
         $completion = $this->calculate_profile_completion($user);
         if (!$completion['is_completed']) {
             $this->response(
@@ -4375,6 +4349,20 @@ class Api extends CI_Controller
                     'missing_fields'                => $completion['missing_fields']
                 ],
                 400
+            );
+        }
+
+        // 2. Enforce Admin approval of profile before allowing withdrawal
+        if (empty($user->is_profile_active) || (int)$user->is_profile_active !== 1) {
+            $this->response(
+                false,
+                'Your profile is 100% complete and submitted for review. Withdrawals will be enabled once Admin verifies and approves your account.',
+                [
+                    'profile_completion_percentage' => 100,
+                    'is_profile_completed'          => true,
+                    'is_profile_active'             => false
+                ],
+                403
             );
         }
 
@@ -5166,7 +5154,7 @@ class Api extends CI_Controller
         $total_downlines = 0;
         $active_downlines = 0;
         $visited = [$target_id];
-        $count_downline = function($pid) use (&$count_downline, &$children_by_parent, &$active_status_by_id, &$total_downlines, &$active_downlines, &$visited) {
+        $count_downline = function ($pid) use (&$count_downline, &$children_by_parent, &$active_status_by_id, &$total_downlines, &$active_downlines, &$visited) {
             $c_list = $children_by_parent[$pid] ?? [];
             foreach ($c_list as $cid) {
                 if (in_array($cid, $visited)) continue;

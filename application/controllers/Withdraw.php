@@ -160,6 +160,15 @@ class Withdraw extends CI_Controller
             redirect('admin/withdrawals');
         }
 
+        // Enforce Admin approval of member profile before allowing withdrawal approval
+        if (empty($user->is_profile_active) || (int)$user->is_profile_active !== 1) {
+            $this->session->set_flashdata(
+                'error',
+                "Cannot approve request #{$id}: Member's profile has not been approved/activated yet. Please activate the member in Members management first."
+            );
+            redirect('admin/withdrawals');
+        }
+
         $admin_id = $this->session->userdata('user_id');
         $admin_remark = trim($this->input->post('admin_remark', TRUE) ?: '');
 
