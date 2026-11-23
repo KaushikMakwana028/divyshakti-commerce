@@ -229,6 +229,7 @@ $route['process_delete_account'] = 'Home/process_delete_account';
 $route['api/privacy_policy'] = 'Api/privacy_policy';
 $route['api/terms_conditions'] = 'Api/terms_conditions';
 $route['api/delete_account'] = 'Api/delete_account';
+$route['api/delete-account'] = 'Api/delete_account';
 $route['api/migrate_activation_commission'] = 'Api/migrate_activation_commission';
 $route['api/migrate_db_slug'] = 'Api/migrate_db_slug';
 $route['api/migrate_gender_and_commission'] = 'Api/migrate_gender_and_commission';
